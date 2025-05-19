@@ -1,17 +1,51 @@
 -- init.lua
 -- Point d'entrée principal pour la librairie de composants UI natifs Lua/Vim pour CoC-Vue
 
+-- Helper function to safely get Vim options in both Vim and Neovim
+local function get_vim_option(option_name, default_value)
+  -- Check if we're in Neovim (vim.o is available)
+  if vim and vim.o then
+    return vim.o[option_name] or default_value
+  -- Check if we're in Vim with vim.eval
+  elseif vim and vim.eval then
+    local success, result = pcall(function() return vim.eval('&' .. option_name) end)
+    if success then return result else return default_value end
+  -- Fallback for other environments
+  else
+    return default_value
+  end
+end
+
+-- Helper function to get data directory path in a cross-compatible way
+local function get_data_path()
+  -- Check if we're in Neovim with stdpath function
+  if vim and vim.fn and vim.fn.stdpath then
+    return vim.fn.stdpath('data')
+  -- Check if we're in Vim with expand function
+  elseif vim and vim.fn and vim.fn.expand then
+    return vim.fn.expand('~/.vim')
+  -- Fallback for minimal environments
+  else
+    return '.'
+  end
+end
+
 -- Vérification et initialisation du chemin d'exécution
 local function ensure_runtime_path()
-  local current_path = vim.fn.expand('<sfile>:p:h:h:h')
-  local rtp = vim.o.runtimepath
+  local current_path = vim.fn and vim.fn.expand('<sfile>:p:h:h:h') or '.'
+  local rtp = get_vim_option('runtimepath', '')
   
   if not string.find(rtp, current_path, 1, true) then
-    vim.api.nvim_echo({{
-      "[VueUI] Attention: Le chemin d'exécution ne contient pas le répertoire de l'extension. "
-      .. "Certaines fonctionnalités pourraient ne pas fonctionner correctement.",
-      "WarningMsg"
-    }}, false, {})
+    -- Use a safer way to display messages that works in both Vim and Neovim
+    if vim and vim.api and vim.api.nvim_echo then
+      vim.api.nvim_echo({{
+        "[VueUI] Attention: Le chemin d'exécution ne contient pas le répertoire de l'extension. "
+        .. "Certaines fonctionnalités pourraient ne pas fonctionner correctement.",
+        "WarningMsg"
+      }}, false, {})
+    else
+      print("[VueUI] Attention: Le chemin d'exécution ne contient pas le répertoire de l'extension.")
+    end
     return false
   end
   
@@ -31,7 +65,7 @@ local schema = require('vue-ui.events.schema')
 local default_config = {
   debug = false,
   log_events = true,
-  log_path = vim.fn.stdpath('data') .. '/vue-ui-events.json',
+  log_path = get_data_path() .. '/vue-ui-events.json',
   highlight_groups = {
     default = { fg = "Normal", bg = "Normal" },
     primary = { fg = "Function", bg = "Normal" },
