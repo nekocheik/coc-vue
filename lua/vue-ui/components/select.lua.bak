@@ -4,21 +4,11 @@
 -- @license MIT
 -- @copyright Cheik Kone 2025
 
--- Original dependencies
 local validation = require('vue-ui.utils.validation')
 local render_utils = require('vue-ui.utils.render')
 local event_bridge = require('vue-ui.utils.event_bridge')
 local schema = require('vue-ui.events.schema')
 local test_helpers = require('vue-ui.utils.test_helpers')
-
--- Core modules (for refactoring)
-local core_validation = require('vue-ui.core.core_validation')
-local core_state = require('vue-ui.core.core_state')
-local core_event = require('vue-ui.core.core_event')
-local core_render = require('vue-ui.core.core_render')
-local core_options = require('vue-ui.core.core_options')
-local core_keymap = require('vue-ui.core.core_keymap')
-local core_utils = require('vue-ui.core.core_utils')
 
 local M = {}
 
@@ -49,9 +39,9 @@ end
 -- @param config table Select configuration
 -- @return Select Created Select instance
 function Select:new(config)
-  core_validation.validate_table(config, "Configuration must be a table")
-  core_validation.validate_not_empty(config.id, "Select ID cannot be empty")
-  core_validation.validate_not_empty(config.title, "Select title cannot be empty")
+  validation.validate_table(config, "Configuration must be a table")
+  validation.validate_not_empty(config.id, "Select ID cannot be empty")
+  validation.validate_not_empty(config.title, "Select title cannot be empty")
   
   -- Default configuration
   local default_config = {
@@ -72,8 +62,26 @@ function Select:new(config)
     end
   end
   
-  -- Validate and normalize options
-  config.options = core_options.validate_options(config.options)
+  -- Validate options
+  if type(config.options) ~= 'table' then
+    config.options = {}
+  end
+  
+  for i, option in ipairs(config.options) do
+    if type(option) ~= 'table' then
+      config.options[i] = { id = tostring(i), text = tostring(option), value = tostring(option) }
+    elseif not option.id then
+      option.id = tostring(i)
+    end
+    
+    if not option.text then
+      option.text = option.id
+    end
+    
+    if not option.value then
+      option.value = option.id
+    end
+  end
   
   -- Create instance
   local instance = setmetatable({
@@ -98,8 +106,8 @@ function Select:new(config)
     component_type = 'select'
   }, Select)
   
-  -- Register component with event bridge
-  core_event.register_component(config.id, instance)
+  -- Register component
+  event_bridge.register_component(config.id, instance)
   
   -- Emit creation event
   local event_data = {
@@ -109,8 +117,8 @@ function Select:new(config)
     config = config
   }
   
-  -- Use core_event to emit the component created event
-  core_event.emit_component_created(event_data)
+  -- Always use event_bridge.emit to ensure events are properly tracked in tests
+  event_bridge.emit(schema.EVENT_TYPES.COMPONENT_CREATED, event_data)
   
   return instance
 end
@@ -328,8 +336,7 @@ end
 --- Opens the select
 -- @return boolean True if the select was opened
 function Select:open()
-  -- Use core_state to manage component state
-  if not core_state.can_open(self) then
+  if self.is_open or self.disabled then
     return false
   end
   
@@ -338,15 +345,22 @@ function Select:open()
   
   -- For tests, simulate opening
   if test_helpers.is_test_env() then
-    -- Emit event using core_event
-    core_event.emit_select_opened(self)
+    -- Emit event
+    event_bridge.emit(schema.EVENT_TYPES.SELECT_OPENED, {
+      id = self.id,
+      config = {
+        multi = self.multi,
+        options = self.options
+      }
+    })
+    
     return true
   end
   
   -- Render the select
   local render_result = self:render()
   
-  -- Create a floating buffer using core_render
+  -- Create a floating buffer
   local buffer_id, window_id = render_utils.create_floating_buffer(
     render_result.lines,
     {
@@ -373,8 +387,14 @@ function Select:open()
   -- Configure key mappings
   self:_setup_keymaps()
   
-  -- Emit open event using core_event
-  core_event.emit_select_opened(self)
+  -- Emit open event
+  event_bridge.emit(schema.EVENT_TYPES.SELECT_OPENED, {
+    id = self.id,
+    config = {
+      multi = self.multi,
+      options = self.options
+    }
+  })
   
   return true
 end
@@ -382,8 +402,7 @@ end
 --- Closes the select
 -- @return boolean True if the select was closed
 function Select:close()
-  -- Use core_state to manage component state
-  if not core_state.can_close(self) then
+  if not self._is_open then
     return true
   end
   
@@ -394,8 +413,10 @@ function Select:close()
   if test_helpers.is_test_env() then
     self.focused_option_index = -1
     
-    -- Emit event using core_event
-    core_event.emit_select_closed(self)
+    -- Emit event
+    event_bridge.emit(schema.EVENT_TYPES.SELECT_CLOSED, {
+      id = self.id
+    })
     
     return true
   end
@@ -413,8 +434,10 @@ function Select:close()
   
   self.focused_option_index = -1
   
-  -- Emit close event using core_event
-  core_event.emit_select_closed(self)
+  -- Emit close event
+  event_bridge.emit(schema.EVENT_TYPES.SELECT_CLOSED, {
+    id = self.id
+  })
   
   return true
 end
@@ -423,8 +446,12 @@ end
 -- @param index number Index of the option to focus
 -- @return boolean True if the focus was changed
 function Select:focus_option(index)
-  -- Use core_state to manage focus state
-  if not core_state.can_focus_option(self, index) then
+  if not self._is_open or #self.options == 0 then
+    return false
+  end
+  
+  -- Check if the index is valid
+  if index < 0 or index >= #self.options then
     return false
   end
   
@@ -443,8 +470,23 @@ function Select:focus_option(index)
     self:_update_render()
   end
   
-  -- Emit change event using core_event
-  core_event.emit_select_changed(self, previous_value)
+  -- Emit change event
+  local event_data = {
+    id = self.id,
+    value = self.options[index + 1].value,
+    previous_value = previous_value,
+    option = self.options[index + 1],
+    option_id = self.options[index + 1].id,
+    option_index = index,
+    is_multi = self.multi
+  }
+  
+  if self.multi then
+    event_data.selected_options = self.selected_options
+  end
+  
+  -- Emit change event through the event bridge
+  event_bridge.emit(schema.EVENT_TYPES.SELECT_CHANGED, event_data)
   
   return true
 end
@@ -494,75 +536,18 @@ function Select:is_open()
   return self._is_open
 end
 
---- Selects an option by index
--- @param index number Index of the option to select
--- @return boolean True if the option was selected
-function Select:select_option(index)
-  -- Use core_state to manage selection state
-  if not core_state.can_select_option(self, index) then
-    return false
-  end
-  
-  -- Get the option
-  local option = self.options[index + 1]
-  
-  -- Save the old value for the event
-  local previous_value = self.selected_value
-  
-  -- Update the selection
-  if self.multi then
-    -- Multi-select mode: toggle the selection
-    local found_index = nil
-    for i, selected_option in ipairs(self.selected_options) do
-      if selected_option.id == option.id then
-        found_index = i
-        break
-      end
-    end
-    
-    if found_index then
-      -- Option is already selected, deselect it
-      table.remove(self.selected_options, found_index)
-      
-      -- Emit deselect event using core_event
-      core_event.emit_select_option_deselected(self, index, option)
-    else
-      -- Option is not selected, select it
-      table.insert(self.selected_options, option)
-      
-      -- Emit select event using core_event
-      core_event.emit_select_option_selected(self, index)
-    end
-  else
-    -- Single-select mode: replace the selection
-    self.selected_option_index = index
-    self.selected_value = option.value
-    self.selected_text = option.text
-    
-    -- Emit select event using core_event
-    core_event.emit_select_option_selected(self, index)
-  end
-  
-  -- Update the render if necessary
-  if not test_helpers.is_test_env() then
-    self:_update_render()
-  end
-  
-  -- Emit change event using core_event
-  core_event.emit_select_changed(self, previous_value)
-  
-  return true
-end
-
 --- Selects the currently focused option
 -- @return boolean True if the option was selected
 function Select:select_current_option()
-  -- Use core_state to manage selection state
-  if not core_state.can_select_current_option(self) then
+  if not self._is_open or self.focused_option_index < 0 or self.focused_option_index >= #self.options then
     return false
   end
   
   local option = self.options[self.focused_option_index + 1]
+  if not option then
+    return false
+  end
+  
   local previous_value = self.selected_value
   
   if self.multi then
@@ -575,11 +560,24 @@ function Select:select_current_option()
       self:add_selected_option(self.focused_option_index)
     end
     
-    -- Emit select event using core_event
-    core_event.emit_select_option_selected(self, self.focused_option_index)
+    -- Emit change event
+    local event_data = {
+      id = self.id,
+      value = option.value,
+      option_value = option.value,  -- Add option_value for test compatibility
+      previous_value = previous_value,
+      option = option,
+      option_id = option.id,
+      option_index = self.focused_option_index,
+      is_multi = true,
+      selected_options = self.selected_options
+    }
     
-    -- Emit change event using core_event
-    core_event.emit_select_changed(self, previous_value)
+    -- Emit change event through the event bridge
+    event_bridge.emit(schema.EVENT_TYPES.SELECT_CHANGED, event_data)
+    
+    -- Also emit the SELECT_OPTION_SELECTED event that tests expect
+    event_bridge.emit(schema.EVENT_TYPES.SELECT_OPTION_SELECTED, event_data)
     
     -- Update render if not in test mode
     if not test_helpers.is_test_env() then
@@ -593,11 +591,23 @@ function Select:select_current_option()
     self.selected_value = option.value
     self.selected_text = option.text
     
-    -- Emit select event using core_event
-    core_event.emit_select_option_selected(self, self.focused_option_index)
+    -- Emit change event
+    local event_data = {
+      id = self.id,
+      value = option.value,
+      option_value = option.value,  -- Add option_value for test compatibility
+      previous_value = previous_value,
+      option = option,
+      option_id = option.id,
+      option_index = self.focused_option_index,
+      is_multi = false
+    }
     
-    -- Emit change event using core_event
-    core_event.emit_select_changed(self, previous_value)
+    -- Emit change event through the event bridge
+    event_bridge.emit(schema.EVENT_TYPES.SELECT_CHANGED, event_data)
+    
+    -- Also emit the SELECT_OPTION_SELECTED event that tests expect
+    event_bridge.emit(schema.EVENT_TYPES.SELECT_OPTION_SELECTED, event_data)
     
     -- Close the select component
     self:close()
@@ -610,8 +620,7 @@ end
 -- @param value string Value of the option to select
 -- @return boolean True if the option was selected
 function Select:select_by_value(value)
-  -- Use core_state to check if the value can be selected
-  if not core_state.can_select_by_value(self, value) then
+  if not value then
     return false
   end
   
@@ -619,10 +628,11 @@ function Select:select_by_value(value)
   for i, option in ipairs(self.options) do
     if option.value == value then
       local previous_value = self.selected_value
-      local index = i - 1
       
       if self.multi then
         -- Multi-select mode
+        local index = i - 1
+        
         if self:is_option_selected(index) then
           -- Already selected, do nothing
           return true
@@ -631,11 +641,24 @@ function Select:select_by_value(value)
         -- Add the option to the list of selected options
         self:add_selected_option(index)
         
-        -- Emit select event using core_event
-        core_event.emit_select_option_selected(self, index)
+        -- Emit change event
+        local event_data = {
+          id = self.id,
+          value = option.value,
+          option_value = option.value,  -- Add option_value for test compatibility
+          previous_value = previous_value,
+          option = option,
+          option_id = option.id,
+          option_index = index,
+          is_multi = true,
+          selected_options = self.selected_options
+        }
         
-        -- Emit change event using core_event
-        core_event.emit_select_changed(self, previous_value)
+        -- Emit change event through the event bridge
+        event_bridge.emit(schema.EVENT_TYPES.SELECT_CHANGED, event_data)
+        
+        -- Also emit the SELECT_OPTION_SELECTED event that tests expect
+        event_bridge.emit(schema.EVENT_TYPES.SELECT_OPTION_SELECTED, event_data)
         
         -- Update render if not in test mode and component is open
         if not test_helpers.is_test_env() and self.is_open then
@@ -643,15 +666,27 @@ function Select:select_by_value(value)
         end
       else
         -- Single-select mode
-        self.selected_option_index = index
+        self.selected_option_index = i - 1
         self.selected_value = option.value
         self.selected_text = option.text
         
-        -- Emit select event using core_event
-        core_event.emit_select_option_selected(self, index)
+        -- Emit change event
+        local event_data = {
+          id = self.id,
+          value = option.value,
+          option_value = option.value,  -- Add option_value for test compatibility
+          previous_value = previous_value,
+          option = option,
+          option_id = option.id,
+          option_index = self.selected_option_index,
+          is_multi = false
+        }
         
-        -- Emit change event using core_event
-        core_event.emit_select_changed(self, previous_value)
+        -- Emit change event through the event bridge
+        event_bridge.emit(schema.EVENT_TYPES.SELECT_CHANGED, event_data)
+        
+        -- Also emit the SELECT_OPTION_SELECTED event that tests expect
+        event_bridge.emit(schema.EVENT_TYPES.SELECT_OPTION_SELECTED, event_data)
         
         -- Close component if it's open
         if self._is_open then
@@ -669,8 +704,7 @@ end
 --- Confirms the current selection
 -- @return boolean True if the confirmation was successful
 function Select:confirm()
-  -- Use core_state to check if the component can be confirmed
-  if not core_state.can_confirm(self) then
+  if not self._is_open then
     return false
   end
   
@@ -691,8 +725,19 @@ function Select:confirm()
     end
   end
   
-  -- Emit confirmation event using core_event
-  core_event.emit_select_confirmed(self)
+  -- Emit confirmation event
+  local event_data = {
+    id = self.id,
+    value = value,
+    is_multi = self.multi
+  }
+  
+  if self.multi then
+    event_data.selected_options = self.selected_options
+  end
+  
+  -- Always use event_bridge.emit to ensure consistent event tracking
+  event_bridge.emit(schema.EVENT_TYPES.SELECT_CONFIRMED, event_data)
   
   -- Close the select
   self:close()
@@ -704,13 +749,18 @@ end
 -- @param reason string Reason for the cancellation
 -- @return boolean True if the cancellation was successful
 function Select:cancel(reason)
-  -- Use core_state to check if the component can be cancelled
-  if not core_state.can_cancel(self) then
+  if not self._is_open then
     return false
   end
   
-  -- Emit cancellation event using core_event
-  core_event.emit_select_cancelled(self, reason)
+  -- Emit cancellation event
+  local event_data = {
+    id = self.id,
+    reason = reason or "user_cancelled"
+  }
+  
+  -- Always use event_bridge.emit to ensure consistent event tracking
+  event_bridge.emit(schema.EVENT_TYPES.SELECT_CANCELLED, event_data)
   
   -- Close the select
   self:close()

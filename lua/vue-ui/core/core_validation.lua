@@ -95,6 +95,11 @@ function M.is_array(t)
     return false
   end
   
+  -- Empty tables are considered arrays
+  if next(t) == nil then
+    return true
+  end
+  
   local count = 0
   for _ in pairs(t) do
     count = count + 1
@@ -301,11 +306,11 @@ function M.validate_schema(obj, schema)
     end
     
     -- Check limits for numbers
-    if not M.is_empty(obj[field]) and rules.min and obj[field] < rules.min then
+    if not M.is_empty(obj[field]) and rules.min and type(obj[field]) == "number" and obj[field] < rules.min then
       table.insert(errors, field .. " must be greater than or equal to " .. rules.min)
     end
     
-    if not M.is_empty(obj[field]) and rules.max and obj[field] > rules.max then
+    if not M.is_empty(obj[field]) and rules.max and type(obj[field]) == "number" and obj[field] > rules.max then
       table.insert(errors, field .. " must be less than or equal to " .. rules.max)
     end
     
@@ -319,12 +324,20 @@ function M.validate_schema(obj, schema)
     end
     
     -- Check limits for arrays
-    if not M.is_empty(obj[field]) and M.is_array(obj[field]) and rules.minItems and #obj[field] < rules.minItems then
-      table.insert(errors, field .. " must contain at least " .. rules.minItems .. " items")
+    if not M.is_empty(obj[field]) and type(obj[field]) == "table" and rules.minItems then
+      local count = 0
+      for _ in pairs(obj[field]) do count = count + 1 end
+      if count < rules.minItems then
+        table.insert(errors, field .. " must contain at least " .. rules.minItems .. " items")
+      end
     end
     
-    if not M.is_empty(obj[field]) and M.is_array(obj[field]) and rules.maxItems and #obj[field] > rules.maxItems then
-      table.insert(errors, field .. " must contain at most " .. rules.maxItems .. " items")
+    if not M.is_empty(obj[field]) and type(obj[field]) == "table" and rules.maxItems then
+      local count = 0
+      for _ in pairs(obj[field]) do count = count + 1 end
+      if count > rules.maxItems then
+        table.insert(errors, field .. " must contain at most " .. rules.maxItems .. " items")
+      end
     end
   end
   
