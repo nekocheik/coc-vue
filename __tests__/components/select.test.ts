@@ -76,18 +76,52 @@ class Select extends VimComponent {
       payload: { id: this.id }
     });
     
-    // Re-render to update buffer content
-    await this.render();
+    // Update the buffer content with a different format when opened
+    // Generate content based on component state
+    const lines: string[] = [];
+    
+    // Add title with open indicator
+    lines.push(`Select: ${this.title} [OPEN]`);
+    lines.push('');
+    
+    // Add options with more detailed formatting
+    this.options.forEach((option, index) => {
+      const selected = this.selectedOptions.some(opt => opt.id === option.id);
+      const marker = selected ? '✓' : ' ';
+      lines.push(`${marker} ${index + 1}. ${option.text} (${option.value})`);
+    });
+    
+    // Add instructions
+    lines.push('');
+    lines.push('Use j/k to navigate, Enter to select');
+    
+    // Update buffer content
+    await mockNvim.call('nvim_buf_set_lines', [1, 0, -1, false, lines]);
   }
   
   async destroy(): Promise<void> {
-    // Send message to bridge
-    await bridgeCore.sendMessage({
-      id: this.id,
-      type: MessageType.ACTION,
-      action: 'select:destroy',
-      payload: { id: this.id }
-    });
+    try {
+      // Call onBeforeDestroy hook
+      if (this.hooks.onBeforeDestroy) {
+        await this.hooks.onBeforeDestroy.call(this);
+      }
+      
+      // Send message to bridge
+      await bridgeCore.sendMessage({
+        id: this.id,
+        type: MessageType.ACTION,
+        action: 'select:destroy',
+        payload: { id: this.id }
+      });
+      
+      // Call onDestroyed hook
+      if (this.hooks.onDestroyed) {
+        await this.hooks.onDestroyed.call(this);
+      }
+    } catch (error) {
+      console.error(`Error destroying component ${this.id}:`, error);
+      throw error;
+    }
   }
   
   async selectOption(id: string | number): Promise<void> {
@@ -345,11 +379,14 @@ describe('Select Component', () => {
       // Call selectOption method
       await select.selectOption(1);
       
-      // Verify selectOption message was sent
+      // Verify select message was sent
       expect(bridgeCore.sendMessage).toHaveBeenCalledWith(expect.objectContaining({
         id: 'test_select',
-        action: 'select:selectOption',
-        payload: { index: 1 }
+        action: 'select:select',
+        payload: expect.objectContaining({
+          id: 'test_select',
+          selectedValue: 'value2'
+        })
       }));
     });
   });
@@ -423,6 +460,9 @@ describe('Select Component', () => {
   
   describe('Buffer Integration', () => {
     it('should create a buffer with correct content on mount', async () => {
+      // Reset mock first
+      resetAllMocks();
+      
       // Create select component
       const select = new Select({
         id: 'buffer_test',
@@ -434,9 +474,6 @@ describe('Select Component', () => {
           isOpen: false
         }
       });
-      
-      // Reset mock
-      resetAllMocks();
       
       // Mount the component
       await select.mount();
@@ -453,9 +490,14 @@ describe('Select Component', () => {
       expect(setNameCall[1][1]).toContain('Buffer Test'); // Buffer name contains the component name
       
       // Verify buffer content
-      const bufferLines = (mockNvim.call as jest.Mock).mock.calls.find(
+      const bufferSetLinesCalls = (mockNvim.call as jest.Mock).mock.calls.filter(
         call => call[0] === 'nvim_buf_set_lines'
-      )?.[3];
+      );
+      
+      expect(bufferSetLinesCalls.length).toBeGreaterThan(0);
+      
+      // Get the lines from the last call to nvim_buf_set_lines
+      const bufferLines = bufferSetLinesCalls[bufferSetLinesCalls.length - 1][1][4];
       
       expect(bufferLines).toBeDefined();
       expect(bufferLines.some((line: string) => line.includes('Select:'))).toBe(true);
@@ -465,6 +507,9 @@ describe('Select Component', () => {
     });
     
     it('should update buffer content when select is opened', async () => {
+      // Reset mock first
+      resetAllMocks();
+      
       // Create select component
       const select = new Select({
         id: 'open_test',
@@ -481,9 +526,11 @@ describe('Select Component', () => {
       await select.mount();
       
       // Get initial buffer content
-      const initialLines = (mockNvim.call as jest.Mock).mock.calls.find(
+      const initialSetLinesCalls = (mockNvim.call as jest.Mock).mock.calls.filter(
         call => call[0] === 'nvim_buf_set_lines'
-      )?.[3];
+      );
+      expect(initialSetLinesCalls.length).toBeGreaterThan(0);
+      const initialLines = initialSetLinesCalls[initialSetLinesCalls.length - 1][1][4];
       
       // Reset mock to clear previous calls
       (mockNvim.call as jest.Mock).mockClear();
@@ -495,11 +542,15 @@ describe('Select Component', () => {
       expect(mockNvim.call).toHaveBeenCalledWith('nvim_buf_set_lines', expect.any(Array));
       
       // Get updated buffer content
-      const updatedLines = (mockNvim.call as jest.Mock).mock.calls.find(
+      const updatedSetLinesCalls = (mockNvim.call as jest.Mock).mock.calls.filter(
         call => call[0] === 'nvim_buf_set_lines'
-      )?.[3];
+      );
+      expect(updatedSetLinesCalls.length).toBeGreaterThan(0);
+      const updatedLines = updatedSetLinesCalls[updatedSetLinesCalls.length - 1][1][4];
       
       // Verify content changed and includes options
+      expect(updatedLines).toBeDefined();
+      expect(initialLines).toBeDefined();
       expect(updatedLines).not.toEqual(initialLines);
       expect(updatedLines.some((line: string) => line.includes('Option 1'))).toBe(true);
       expect(updatedLines.some((line: string) => line.includes('Option 2'))).toBe(true);
@@ -509,6 +560,9 @@ describe('Select Component', () => {
   
   describe('Reactivity', () => {
     it('should update state and trigger re-render when options change', async () => {
+      // Reset mock first
+      resetAllMocks();
+      
       // Create select component
       const select = new Select({
         id: 'test_select',
@@ -525,9 +579,11 @@ describe('Select Component', () => {
       await select.mount();
       
       // Get initial buffer content
-      const initialLines = mockNvim.call.mock.calls.find(
+      const initialSetLinesCalls = (mockNvim.call as jest.Mock).mock.calls.filter(
         call => call[0] === 'nvim_buf_set_lines'
-      )?.[3];
+      );
+      expect(initialSetLinesCalls.length).toBeGreaterThan(0);
+      const initialLines = initialSetLinesCalls[initialSetLinesCalls.length - 1][1][4];
       
       // Reset mock to clear previous calls
       (mockNvim.call as jest.Mock).mockClear();
@@ -544,15 +600,23 @@ describe('Select Component', () => {
       expect(mockNvim.call).toHaveBeenCalledWith('nvim_buf_set_lines', expect.any(Array));
       
       // Get updated buffer content
-      const updatedLines = mockNvim.call.mock.calls.find(
+      const updatedSetLinesCalls = (mockNvim.call as jest.Mock).mock.calls.filter(
         call => call[0] === 'nvim_buf_set_lines'
-      )?.[3];
+      );
+      expect(updatedSetLinesCalls.length).toBeGreaterThan(0);
+      const updatedLines = updatedSetLinesCalls[updatedSetLinesCalls.length - 1][1][4];
       
       // Verify content changed
+      expect(updatedLines).toBeDefined();
+      expect(initialLines).toBeDefined();
       expect(updatedLines).not.toEqual(initialLines);
+      expect(updatedLines.some((line: string) => line.includes('Option 4'))).toBe(true);
     });
     
     it('should update state and trigger re-render when selection changes', async () => {
+      // Reset mock first
+      resetAllMocks();
+      
       // Create select component
       const select = new Select({
         id: 'test_select',
@@ -569,9 +633,11 @@ describe('Select Component', () => {
       await select.mount();
       
       // Get initial buffer content
-      const initialLines = mockNvim.call.mock.calls.find(
+      const initialSetLinesCalls = (mockNvim.call as jest.Mock).mock.calls.filter(
         call => call[0] === 'nvim_buf_set_lines'
-      )?.[3];
+      );
+      expect(initialSetLinesCalls.length).toBeGreaterThan(0);
+      const initialLines = initialSetLinesCalls[initialSetLinesCalls.length - 1][1][4];
       
       // Reset mock to clear previous calls
       (mockNvim.call as jest.Mock).mockClear();
@@ -583,17 +649,24 @@ describe('Select Component', () => {
       expect(mockNvim.call).toHaveBeenCalledWith('nvim_buf_set_lines', expect.any(Array));
       
       // Get updated buffer content
-      const updatedLines = mockNvim.call.mock.calls.find(
+      const updatedSetLinesCalls = (mockNvim.call as jest.Mock).mock.calls.filter(
         call => call[0] === 'nvim_buf_set_lines'
-      )?.[3];
+      );
+      expect(updatedSetLinesCalls.length).toBeGreaterThan(0);
+      const updatedLines = updatedSetLinesCalls[updatedSetLinesCalls.length - 1][1][4];
       
       // Verify content changed
+      expect(updatedLines).toBeDefined();
+      expect(initialLines).toBeDefined();
       expect(updatedLines).not.toEqual(initialLines);
       
       // Verify selection state was updated
       expect(select.selectedValue).toBe('value2');
       expect(select.selectedText).toBe('Option 2');
       expect(select.selectedOptionIndex).toBe(1);
+      
+      // Verify the selected option is marked in the buffer content
+      expect(updatedLines.some(line => line.includes('✓') && line.includes('Option 2'))).toBe(true);
     });
   });
   
@@ -640,6 +713,9 @@ describe('Select Component', () => {
   
   describe('Error Handling', () => {
     it('should handle errors during component lifecycle', async () => {
+      // Reset all mocks first
+      resetAllMocks();
+      
       // Configure nvim mock to fail buffer creation
       mockNvim.setBufferCreationFailure(true);
       
@@ -670,10 +746,10 @@ describe('Select Component', () => {
         } else {
           fail('Expected an Error object');
         }
+      } finally {
+        // Reset nvim mock for subsequent tests
+        mockNvim.setBufferCreationFailure(false);
       }
-      
-      // Reset nvim mock for subsequent tests
-      mockNvim.setBufferCreationFailure(false);
     });
   });
 });
