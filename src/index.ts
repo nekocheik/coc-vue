@@ -115,9 +115,10 @@ export class VueNeovimIntegration {
       
       this.isInitialized = true;
       return true;
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('[COC-VUE] Erreur lors de l\'initialisation:', error);
-      window.showErrorMessage(`Erreur d'initialisation: ${error.message}`);
+      window.showErrorMessage(`Erreur d'initialisation: ${errorMessage}`);
       return false;
     }
   }
@@ -127,7 +128,8 @@ export class VueNeovimIntegration {
    */
   registerCommands() {
     try {
-      console.log('[COC-VUE] Enregistrement des commandes');
+      console.log('[COC-VUE] Début de l\'enregistrement des commandes');
+      console.log('[COC-VUE] Nombre de subscriptions avant enregistrement:', this.subscriptions.length);
       
       // Commande pour ouvrir l'application Vue
       this.subscriptions.push(
@@ -146,9 +148,10 @@ export class VueNeovimIntegration {
         commands.registerCommand('vue.closeApp', async () => {
           try {
             return await this.closeVueApp();
-          } catch (error) {
+          } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
             console.error('[COC-VUE] Erreur lors de la fermeture de l\'app:', error);
-            window.showErrorMessage(`Erreur lors de la fermeture de l'app: ${error.message}`);
+            window.showErrorMessage(`Erreur lors de la fermeture de l'app: ${errorMessage}`);
           }
         })
       );
@@ -168,16 +171,21 @@ export class VueNeovimIntegration {
       );
       
       // Commande pour la démo du composant Select
+      console.log('[COC-VUE] Enregistrement de la commande vue.selectDemo');
       this.subscriptions.push(
         commands.registerCommand('vue.selectDemo', async () => {
           try {
-            // Utiliser la commande Vim pour créer un Select via l'API Lua
+            console.log('[COC-VUE] Exécution de la commande vue.selectDemo');
             const nvim = workspace.nvim;
+            
+            // Utiliser la commande VueUISelect pour créer et ouvrir un composant Select
             await nvim.command('VueUISelect select_demo "Select Demo" {"multi":false,"options":[{"id":"option1","text":"Option 1","value":"value1"},{"id":"option2","text":"Option 2","value":"value2"},{"id":"option3","text":"Option 3","value":"value3"}]}');
-            console.log('[COC-VUE] Select demo launched');
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors du lancement de la démo Select:', error);
-            window.showErrorMessage(`Erreur lors du lancement de la démo Select: ${error.message}`);
+            
+            console.log('[COC-VUE] Select demo launched successfully');
+          } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('[COC-VUE] Erreur lors du lancement de la démo Select:', errorMessage);
+            window.showErrorMessage(`Erreur lors du lancement de la démo Select: ${errorMessage}`);
           }
         })
       );
@@ -542,15 +550,54 @@ export class VueNeovimIntegration {
 export async function activate(context: ExtensionContext): Promise<any> {
   try {
     console.log('[COC-VUE] Démarrage de l\'activation...');
+    console.log('[COC-VUE] Contexte COC disponible:', !!context);
+    console.log('[COC-VUE] Commandes COC disponibles:', !!commands);
+    
+    // Log subscriptions before creating integration
+    console.log('[COC-VUE] Subscriptions initiales:', context.subscriptions.length);
+    
     const integration = new VueNeovimIntegration(context);
     console.log('[COC-VUE] Intégration créée, activation...');
+    
     // Utilisation de await pour s'assurer que l'activation est complète
     const result = await integration.activate();
+    console.log('[COC-VUE] Activation terminée, résultat:', !!result);
+    
+    // Log subscriptions after activation
+    console.log('[COC-VUE] Subscriptions après activation:', context.subscriptions.length);
+    
+    // Vérifier explicitement si la commande vue.selectDemo est enregistrée
+    try {
+      // Liste des commandes enregistrées dans l'extension
+      const extensionCommands = [
+        'vue.openApp',
+        'vue.closeApp',
+        'vue.directDemo',
+        'vue.directIncrementCounter',
+        'vue.enhancedInputDemo',
+        'vue.simpleFormDemo',
+        'vue.basicFormDemo',
+        'vue.selectDemo'
+      ];
+      
+      console.log('[COC-VUE] Commandes que l\'extension devrait enregistrer:', extensionCommands.join(', '));
+      
+      // Vérification explicite de l'enregistrement de vue.selectDemo
+      const selectDemoCommand = context.subscriptions.find(sub => {
+        return sub && typeof sub === 'object' && 'id' in sub && sub.id === 'vue.selectDemo';
+      });
+      
+      console.log('[COC-VUE] Commande vue.selectDemo trouvée dans les subscriptions:', !!selectDemoCommand);
+    } catch (verifyError: unknown) {
+      const errorMessage = verifyError instanceof Error ? verifyError.message : String(verifyError);
+      console.error('[COC-VUE] Erreur lors de la vérification des commandes:', errorMessage);
+    }
     
     return result;
-  } catch (error) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('[COC-VUE] Erreur pendant l\'activation:', error);
-    window.showErrorMessage(`Erreur d'activation de coc-vue: ${error.message}`);
+    window.showErrorMessage(`Erreur d'activation de coc-vue: ${errorMessage}`);
     return null;
   }
 }
