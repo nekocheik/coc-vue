@@ -48,7 +48,9 @@
     "build": "webpack",
     "watch": "webpack --watch",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:integration": "./scripts/run_integration_tests.sh",
+    "test:bridge": "jest __tests__/integration/select-bridge-integration.test.ts"
   },
   "dependencies": {
     "@babel/core": "^7.27.1",
