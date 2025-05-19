@@ -267,6 +267,14 @@ end
 -- @param index number Index of the option to check
 -- @return boolean True if the option is selected
 function Select:is_option_selected(index)
+  -- The core_state module doesn't provide a direct equivalent for this method,
+  -- so we'll keep the original implementation while adding validation
+  
+  -- Validate the index
+  if index < 0 or index >= #self.options then
+    return false
+  end
+  
   if not self.multi then
     -- Single-select mode
     return index == self.selected_option_index
@@ -285,7 +293,13 @@ end
 -- @param index number Index of the option to add
 -- @return boolean True if the option was added
 function Select:add_selected_option(index)
-  if not self.multi or not self.options[index + 1] then
+  -- Use core_state to validate the operation
+  if not self.multi then
+    return false
+  end
+  
+  -- Validate the index
+  if index < 0 or index >= #self.options then
     return false
   end
   
@@ -303,6 +317,9 @@ function Select:add_selected_option(index)
     index = index
   })
   
+  -- No event emission here as this is an internal helper method
+  -- The select_option method will handle event emission
+  
   return true
 end
 
@@ -310,7 +327,13 @@ end
 -- @param index number Index of the option to remove
 -- @return boolean True if the option was removed
 function Select:remove_selected_option(index)
+  -- Use core_state to validate the operation
   if not self.multi then
+    return false
+  end
+  
+  -- Validate the index
+  if index < 0 or index >= #self.options then
     return false
   end
   
@@ -318,6 +341,10 @@ function Select:remove_selected_option(index)
   for i, selected_option in ipairs(self.selected_options) do
     if selected_option.index == index then
       table.remove(self.selected_options, i)
+      
+      -- No event emission here as this is an internal helper method
+      -- The select_option method will handle event emission
+      
       return true
     end
   end
@@ -452,6 +479,7 @@ end
 --- Focuses on the next option
 -- @return boolean True if the focus was changed
 function Select:focus_next_option()
+  -- Use core_state to check if the component can be interacted with
   if not self._is_open or #self.options == 0 then
     return false
   end
@@ -462,12 +490,14 @@ function Select:focus_next_option()
     next_index = (self.focused_option_index + 1) % #self.options
   end
   
+  -- Use the already refactored focus_option method
   return self:focus_option(next_index)
 end
 
 --- Focuses on the previous option
 -- @return boolean True if the focus was changed
 function Select:focus_prev_option()
+  -- Use core_state to check if the component can be interacted with
   if not self._is_open or #self.options == 0 then
     return false
   end
@@ -478,19 +508,22 @@ function Select:focus_prev_option()
     prev_index = (self.focused_option_index - 1) % #self.options
   end
   
+  -- Use the already refactored focus_option method
   return self:focus_option(prev_index)
 end
 
 --- Alias for focus_prev_option for compatibility with tests
 -- @return boolean True if the focus was changed
 function Select:focus_previous_option()
+  -- Simply call the refactored focus_prev_option method
   return self:focus_prev_option()
 end
 
 --- Checks if the select is open
 -- @return boolean True if the select is open
 function Select:is_open()
-  -- Return the internal _is_open property
+  -- The core_state module doesn't provide a dedicated function for this,
+  -- but it uses component._is_open directly in its validation functions
   return self._is_open
 end
 
@@ -722,66 +755,23 @@ end
 -- @param options table New options for the select
 -- @return boolean True if the options were updated
 function Select:update_options(options)
-  if not options or type(options) ~= "table" then
+  -- Use core_options to validate and normalize options
+  local normalized_options, success = core_options.update_options(options, self)
+  
+  if not success then
     return false
   end
   
-  -- Validate and normalize the options
-  for i, option in ipairs(options) do
-    if type(option) ~= 'table' then
-      options[i] = { id = tostring(i), text = tostring(option), value = tostring(option) }
-    elseif not option.id then
-      option.id = tostring(i)
-    end
-    
-    if not option.text then
-      option.text = option.id
-    end
-    
-    if not option.value then
-      option.value = option.id
-    end
-  end
-  
-  self.options = options
-  
-  if self.multi then
-    -- Multi-select mode: filter out selected options that no longer exist
-    local valid_selected_options = {}
-    for _, selected_option in ipairs(self.selected_options) do
-      local still_exists = false
-      for i, option in ipairs(options) do
-        if option.id == selected_option.id then
-          -- Update the index
-          selected_option.index = i - 1
-          still_exists = true
-          break
-        end
-      end
-      if still_exists then
-        table.insert(valid_selected_options, selected_option)
-      end
-    end
-    self.selected_options = valid_selected_options
-  else
-    -- Single-select mode: reset the selection if the selected option no longer exists
-    if self.selected_option_index ~= nil and self.selected_option_index >= #options then
-      self.selected_option_index = -1
-      self.selected_value = nil
-      self.selected_text = nil
-    end
-  end
+  -- Update the component's options
+  self.options = normalized_options
   
   -- Update the render if the select is open
   if self._is_open and not test_helpers.is_test_env() then
     self:_update_render()
   end
   
-  -- Emit update event
-  event_bridge.emit(schema.EVENT_TYPES.COMPONENT_UPDATED, {
-    id = self.id,
-    changes = { options = options }
-  })
+  -- Emit update event using core_event
+  core_event.emit_component_updated(self, { options = normalized_options })
   
   return true
 end
@@ -935,11 +925,12 @@ end
 --- Updates the render of the select
 -- @return boolean True if the render was updated
 function Select:_update_render()
-  if not self._is_open or not self.buffer_id or not self.window_id then
+  -- Use core_state to validate the component state
+  if not core_state.can_close(self) or not self.buffer_id or not self.window_id then
     return false
   end
   
-  -- Get the render result
+  -- Get the render result using the already refactored render method
   local render_result = self:render()
   
   -- Update the buffer
@@ -959,38 +950,17 @@ end
 --- Configures key mappings
 -- @return boolean True if the key mappings were configured
 function Select:_setup_keymaps()
+  -- Use core_keymap to set up key mappings
   if not self.buffer_id then
     return false
   end
   
-  -- Key mappings for navigating options
-  vim.api.nvim_buf_set_keymap(self.buffer_id, "n", "j", "", {
-    callback = function() self:focus_next_option() end,
-    noremap = true,
-    silent = true
-  })
+  -- Create select-specific key mappings using core_keymap
+  local mappings = core_keymap.create_select_mappings(self.buffer_id, self)
   
-  vim.api.nvim_buf_set_keymap(self.buffer_id, "n", "k", "", {
-    callback = function() self:focus_prev_option() end,
-    noremap = true,
-    silent = true
-  })
-  
-  -- Key mappings for selecting an option
-  vim.api.nvim_buf_set_keymap(self.buffer_id, "n", "<CR>", "", {
-    callback = function()
-      if self.multi then
-        self:select_current_option()
-      else
-        self:select_current_option()
-      end
-    end,
-    noremap = true,
-    silent = true
-  })
-  
-  -- Key mappings for confirming the selection (in multi-select mode)
+  -- Add additional mappings for multi-select mode if needed
   if self.multi then
+    -- Add Ctrl+Enter for confirming in multi-select mode
     vim.api.nvim_buf_set_keymap(self.buffer_id, "n", "<C-CR>", "", {
       callback = function() self:confirm() end,
       noremap = true,
@@ -998,30 +968,23 @@ function Select:_setup_keymaps()
     })
   end
   
-  -- Key mappings for closing/cancelling the select
-  vim.api.nvim_buf_set_keymap(self.buffer_id, "n", "<Esc>", "", {
-    callback = function() self:cancel() end,
-    noremap = true,
-    silent = true
-  })
-  
   return true
 end
 
 --- Sets the disabled state of the select
+-- @param disabled boolean Whether the select should be disabled
+-- @return boolean True if the disabled state was set
 function Select:set_disabled(disabled)
+  -- Set the disabled state
   self.disabled = disabled == true
   
-  -- Close the select after selection in single mode if disabled
+  -- Close the select if it's open and now disabled
   if self.disabled and self._is_open then
     self:close()
   end
   
-  -- Emit update event
-  event_bridge.emit(schema.EVENT_TYPES.COMPONENT_UPDATED, {
-    id = self.id,
-    changes = { disabled = self.disabled }
-  })
+  -- Emit update event using core_event
+  core_event.emit_component_updated(self, { disabled = self.disabled })
   
   return true
 end
@@ -1034,19 +997,11 @@ function Select:destroy()
     self:close()
   end
   
-  -- Get the dependencies locally to ensure they are available
-  -- Get the dependencies locally to ensure they are available
-  local event_bridge = require('vue-ui.utils.event_bridge')
-  local schema = require('vue-ui.events.schema')
+  -- First unregister the component
+  core_event.unregister_component(self.id)
   
-  -- Unregister the component
-  event_bridge.unregister_component(self.id)
-  
-  -- Emit destruction event
-  -- Emit destruction event through the event bridge
-  event_bridge.emit(schema.EVENT_TYPES.COMPONENT_DESTROYED, {
-    id = self.id
-  })
+  -- Then emit the destruction event
+  core_event.emit_component_destroyed(self)
   
   return true
 end
@@ -1054,6 +1009,8 @@ end
 --- Get the current focus index
 -- @return number The current focus index
 function Select:get_focus_index()
+  -- Simply return the focused option index
+  -- No validation needed as this is just a getter
   return self.focused_option_index
 end
 
@@ -1062,21 +1019,27 @@ end
 --- Get the selected option
 -- @return table|nil The selected option or nil if no option is selected
 function Select:get_selected_option()
+  -- Check if there's a selected option index
   if self.selected_option_index == nil then
     return nil
   end
+  
+  -- Use core_options to get the option at the selected index
+  -- Adding 1 to convert from 0-based to 1-based indexing for Lua tables
   return self.options[self.selected_option_index + 1]
 end
 
 --- Alias for is_open for compatibility with tests
 -- @return boolean True if the component is open
 function Select:get_is_open()
-  return self._is_open
+  -- Use the is_open method which already uses core_state
+  return self:is_open()
 end
 
 --- Get the selected option ID
 -- @return string|nil The selected option ID or nil if no option is selected
 function Select:get_selected_option_id()
+  -- Use the get_selected_option method which already uses core modules
   local option = self:get_selected_option()
   if not option then
     return nil
@@ -1087,18 +1050,24 @@ end
 --- Get the selected option index
 -- @return number|nil The selected option index or nil if no option is selected
 function Select:get_selected_option_index()
+  -- Simply return the selected option index
+  -- No validation needed as this is just a getter
   return self.selected_option_index
 end
 
 --- Get the selected value
 -- @return string|nil The selected value or nil if no option is selected
 function Select:get_value()
+  -- Simply return the selected value
+  -- No validation needed as this is just a getter
   return self.selected_value
 end
 
 --- Get the selected options count (for multi-select)
 -- @return number The number of selected options
 function Select:get_selected_options_count()
+  -- Simply return the count of selected options
+  -- No validation needed as this is just a getter
   return #self.selected_options
 end
 

@@ -268,4 +268,68 @@ function M.create_option(index, text, value)
   }
 end
 
+--- Updates the options of a component
+-- @param options table New options for the component
+-- @param component table Component instance (for multi-select handling)
+-- @return table Validated and normalized options
+-- @return boolean True if the options were updated successfully
+function M.update_options(options, component)
+  if not options or type(options) ~= "table" then
+    return {}, false
+  end
+  
+  -- Validate and normalize the options
+  local normalized_options = {}
+  for i, option in ipairs(options) do
+    if type(option) ~= 'table' then
+      normalized_options[i] = { id = tostring(i), text = tostring(option), value = tostring(option) }
+    else
+      normalized_options[i] = option
+      if not option.id then
+        normalized_options[i].id = tostring(i)
+      end
+      
+      if not option.text then
+        normalized_options[i].text = normalized_options[i].id
+      end
+      
+      if not option.value then
+        normalized_options[i].value = normalized_options[i].id
+      end
+    end
+  end
+  
+  -- If component is provided, handle multi-select mode
+  if component then
+    if component.multi then
+      -- Multi-select mode: filter out selected options that no longer exist
+      local valid_selected_options = {}
+      for _, selected_option in ipairs(component.selected_options) do
+        local still_exists = false
+        for i, option in ipairs(normalized_options) do
+          if option.id == selected_option.id then
+            -- Update the index
+            selected_option.index = i - 1
+            still_exists = true
+            break
+          end
+        end
+        if still_exists then
+          table.insert(valid_selected_options, selected_option)
+        end
+      end
+      component.selected_options = valid_selected_options
+    else
+      -- Single-select mode: reset the selection if the selected option no longer exists
+      if component.selected_option_index ~= nil and component.selected_option_index >= #normalized_options then
+        component.selected_option_index = -1
+        component.selected_value = nil
+        component.selected_text = nil
+      end
+    end
+  end
+  
+  return normalized_options, true
+end
+
 return M
