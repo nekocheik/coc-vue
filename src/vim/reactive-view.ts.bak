@@ -1,0 +1,560 @@
+/**
+ * Implementation d'une vue réactive pour Vim
+ * Ce système s'inspire de Vue.js mais est optimisé pour l'environnement Vim
+ */
+import { workspace } from 'coc.nvim';
+import { VimBufferManager } from './buffer-manager';
+import { ReactiveProperty } from '../renderer/reactive-core';
+
+// Interface pour un composant réactif
+export interface ReactiveComponent {
+  // Méthode pour rendre le composant
+  render(): string[];
+  // Méthode pour gérer une interaction utilisateur
+  handleKeypress?(key: string): Promise<boolean>;
+  // Position dans le buffer
+  lineStart: number;
+  lineCount: number;
+  // Méthodes du cycle de vie
+  mounted?(): Promise<void>;
+  beforeUnmount?(): Promise<void>;
+}
+
+// Classe principale pour la vue réactive
+export class ReactiveView {
+  private bufferManager: VimBufferManager | null = null;
+  private components: Map<string, ReactiveComponent> = new Map();
+  private activeComponentId: string | null = null;
+  private bufnr: number = -1;
+  private updateInterval: number = 1000; // ms
+  private isDestroyed: boolean = false;
+  private keymapHandlers: Map<string, (key: string) => Promise<void>> = new Map();
+  private needsBufferRestore: boolean = false;
+  
+  constructor(title: string = 'Vue.js Demo') {
+    this.title = title;
+  }
+  
+  private title: string;
+  
+  /**
+   * Obtenir le numéro du buffer
+   */
+  public getBufferNumber(): number {
+    return this.bufnr;
+  }
+  
+  /**
+   * Monter la vue dans un nouveau buffer
+   */
+  public async mount(): Promise<void> {
+    try {
+      // Créer un nouveau buffer
+      const nvim = workspace.nvim;
+      await nvim.command('new');
+      this.bufnr = await nvim.eval('bufnr("%")') as number;
+      
+      // Initialiser le gestionnaire de buffer
+      this.bufferManager = new VimBufferManager(this.bufnr, this.title);
+      await this.bufferManager.initialize();
+      
+      // Configurer les mises à jour périodiques
+      this.bufferManager.addUpdateCallback(async () => {
+        await this.updateVisibleComponents();
+      });
+      this.bufferManager.startContentUpdates(this.updateInterval);
+      
+      // Configurer les mappages clavier de base
+      await this.setupKeyMappings();
+      
+      // Monter les composants initiaux
+      await this.renderAllComponents();
+      
+      console.log(`[REACTIVE-VIEW] Vue montée dans le buffer #${this.bufnr}`);
+    } catch (error) {
+      console.error('[REACTIVE-VIEW] Erreur lors du montage de la vue:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Configurer les mappages clavier de base
+   */
+  private async setupKeyMappings(): Promise<void> {
+    if (!this.bufferManager) return;
+    
+    const nvim = workspace.nvim;
+    
+    // Utiliser des variables globales pour gérer les événements de touches
+    // Nous utilisons des fonctions Vim qui mettent à jour une variable globale
+    // que nous vérifions périodiquement
+    await nvim.command(`
+      let g:vue_reactive_view_buffers = get(g:, 'vue_reactive_view_buffers', {})
+      let g:vue_reactive_view_buffers[${this.bufnr}] = 1
+      let g:vue_reactive_key_pressed = ''
+      let g:vue_reactive_key_buffer = ${this.bufnr}
+      
+      function! ReactiveViewKeyHandler(key)
+        let g:vue_reactive_key_pressed = a:key
+        let g:vue_reactive_key_buffer = ${this.bufnr}
+        return ''
+      endfunction
+    `);
+    
+    // Enregistrer cette vue dans le registre global
+    if (typeof global.activeReactiveViews === 'undefined') {
+      global.activeReactiveViews = {};
+    }
+    global.activeReactiveViews[this.bufnr] = this;
+    
+    // Démarrer une vérification périodique pour les touches pressées
+    const keyCheckInterval = setInterval(async () => {
+      try {
+        if (this.isDestroyed) {
+          clearInterval(keyCheckInterval);
+          return;
+        }
+        
+        // Vérifier si le buffer existe encore
+        const bufExists = await this.bufferManager?.exists();
+        if (!bufExists) {
+          clearInterval(keyCheckInterval);
+          return;
+        }
+        
+        // Vérifier si une touche a été pressée
+        const keyPressed = await nvim.eval('get(g:, "vue_reactive_key_pressed", "")') as string;
+        const keyBuffer = await nvim.eval('get(g:, "vue_reactive_key_buffer", -1)') as number;
+        
+        if (keyPressed && keyBuffer === this.bufnr) {
+          console.log(`[REACTIVE-KEY] Détection touche '${keyPressed}' pour buffer #${this.bufnr}`);
+          // Réinitialiser la variable globale
+          await nvim.command('let g:vue_reactive_key_pressed = ""');
+          
+          // Traiter la touche
+          await this.handleKeypress(keyPressed);
+        }
+      } catch (error) {
+        console.error(`[REACTIVE-VIEW] Erreur lors de la vérification des touches:`, error);
+      }
+    }, 100); // Vérifier toutes les 100ms
+    
+    // Mappages pour les touches de navigation et d'interaction
+    const mappings = [
+      'j', 'k', 'h', 'l', 'i', 'q', '<CR>', '<Esc>', '<Tab>', '<Space>', '<Up>', '<Down>', '<Left>', '<Right>'
+    ];
+    
+    for (const key of mappings) {
+      await this.bufferManager.executeBufferCommand(
+        `nnoremap <silent><buffer> ${key} :call ReactiveViewKeyHandler('${key}')<CR>`
+      );
+    }
+  }
+  
+  /**
+   * Gérer l'appui sur une touche
+   */
+  private async handleKeypress(key: string): Promise<void> {
+    try {
+      // Gérer les touches spéciales au niveau de la vue
+      if (key === 'q' || key === '<Esc>') {
+        await this.destroy();
+        return;
+      }
+      
+      // Si un composant est actif, lui transmettre l'événement
+      if (this.activeComponentId) {
+        const component = this.components.get(this.activeComponentId);
+        if (component && component.handleKeypress) {
+          const handled = await component.handleKeypress(key);
+          if (handled) {
+            // Le composant a géré la touche, mettre à jour son rendu
+            await this.updateComponent(this.activeComponentId);
+            return;
+          }
+        }
+      }
+      
+      // Navigation entre les composants
+      if (key === 'j' || key === '<Down>') {
+        await this.focusNextComponent();
+      } else if (key === 'k' || key === '<Up>') {
+        await this.focusPreviousComponent();
+      }
+      
+      // Gestionnaires personnalisés
+      if (this.keymapHandlers.has(key)) {
+        const handler = this.keymapHandlers.get(key);
+        if (handler) {
+          await handler(key);
+        }
+      }
+    } catch (error) {
+      console.error('[REACTIVE-VIEW] Erreur lors de la gestion des touches:', error);
+    }
+  }
+  
+  /**
+   * Ajouter un composant à la vue
+   */
+  public registerComponent(id: string, component: ReactiveComponent): void {
+    this.components.set(id, component);
+    
+    // Si c'est le premier composant, le définir comme actif
+    if (this.components.size === 1) {
+      this.activeComponentId = id;
+    }
+  }
+  
+  /**
+   * Obtenir un composant par son ID
+   */
+  public getComponent(id: string): ReactiveComponent | undefined {
+    return this.components.get(id);
+  }
+  
+  /**
+   * Définir le composant actif
+   */
+  public async setActiveComponent(id: string): Promise<void> {
+    if (!this.components.has(id)) return;
+    
+    this.activeComponentId = id;
+    await this.renderAllComponents();
+  }
+  
+  /**
+   * Passer au composant suivant
+   */
+  private async focusNextComponent(): Promise<void> {
+    if (this.components.size === 0) return;
+    
+    const componentIds = Array.from(this.components.keys());
+    if (!this.activeComponentId) {
+      this.activeComponentId = componentIds[0];
+    } else {
+      const currentIndex = componentIds.indexOf(this.activeComponentId);
+      const nextIndex = (currentIndex + 1) % componentIds.length;
+      this.activeComponentId = componentIds[nextIndex];
+    }
+    
+    await this.renderAllComponents();
+  }
+  
+  /**
+   * Passer au composant précédent
+   */
+  private async focusPreviousComponent(): Promise<void> {
+    if (this.components.size === 0) return;
+    
+    const componentIds = Array.from(this.components.keys());
+    if (!this.activeComponentId) {
+      this.activeComponentId = componentIds[0];
+    } else {
+      const currentIndex = componentIds.indexOf(this.activeComponentId);
+      const prevIndex = (currentIndex - 1 + componentIds.length) % componentIds.length;
+      this.activeComponentId = componentIds[prevIndex];
+    }
+    
+    await this.renderAllComponents();
+  }
+  
+  /**
+   * Mettre à jour uniquement les composants visibles
+   */
+  private async updateVisibleComponents(): Promise<void> {
+    if (!this.bufferManager || this.isDestroyed) return;
+    
+    try {
+      // Vérification stricte du buffer avant toute mise à jour
+      if (!await this.isValidBufferForUpdate()) {
+        return;
+      }
+
+      console.log('[REACTIVE-VIEW] Mise à jour des composants du buffer #' + this.bufnr);
+      
+      // Forçage de la mise à jour 
+      const nvim = workspace.nvim;
+      
+      // Force la redirection de l'attention sur ce buffer si nécessaire
+      const currentBuf = await nvim.eval('bufnr("%")') as number;
+      if (currentBuf !== this.bufnr) {
+        console.log(`[REACTIVE-VIEW] Buffer actuel: ${currentBuf}, buffer cible: ${this.bufnr}`);
+      }
+      
+      // Mettre à jour tous les composants
+      for (const [id, component] of this.components.entries()) {
+        await this.updateComponent(id);
+      }
+    } catch (error) {
+      console.error('[REACTIVE-VIEW] Erreur lors de la mise à jour des composants visibles:', error);
+    }
+  }
+  
+  /**
+   * Vérifie si le buffer est valide pour la mise à jour
+   * Permet les mises à jour automatiques sans forcer le focus
+   */
+  private async isValidBufferForUpdate(): Promise<boolean> {
+    try {
+      if (!this.bufferManager) return false;
+      
+      // Vérifier si le buffer existe encore
+      const exists = await this.bufferManager.exists();
+      if (!exists) {
+        console.log('[REACTIVE-VIEW] Buffer n\'existe plus, arrêt des mises à jour');
+        this.destroy();
+        return false;
+      }
+      
+      // Vérification que le buffer est bien chargé et valide
+      const nvim = workspace.nvim;
+      const isLoaded = await nvim.eval(`bufloaded(${this.bufnr})`) as number;
+      if (!isLoaded) {
+        console.log(`[REACTIVE-VIEW] Buffer ${this.bufnr} n'est pas chargé`);
+        return false;
+      }
+      
+      // Vérification du nom de buffer (pour s'assurer qu'il s'agit bien du notre)
+      const bufferName = await nvim.eval(`bufname(${this.bufnr})`) as string;
+      
+      // Normalisation des noms pour la comparaison (espaces et underscores sont considérés équivalents)
+      const normalizedBufferName = bufferName.replace(/_/g, ' ');
+      const normalizedTitle = this.title.replace(/ /g, ' '); // garder les espaces pour une comparaison cohérente
+      
+      // Extraction de l'identifiant unique pour une comparaison plus précise
+      const bufferIdMatch = normalizedBufferName.match(/\(([^)]+)\)/);
+      const titleIdMatch = normalizedTitle.match(/\(([^)]+)\)/);
+      
+      // Si l'ID unique est disponible dans les deux noms, l'utiliser pour la comparaison
+      if (bufferIdMatch && titleIdMatch && bufferIdMatch[1] === titleIdMatch[1]) {
+        return true;
+      }
+      
+      // Sinon, vérifier si le nom normalisé contient le titre
+      if (normalizedBufferName.includes(normalizedTitle) || bufferName.includes(this.title)) {
+        return true;
+      }
+      
+      console.log(`[REACTIVE-VIEW] Nom de buffer invalide: ${bufferName}, attendu: ${this.title}`);
+      console.log(`[REACTIVE-VIEW] Après normalisation: ${normalizedBufferName} vs ${normalizedTitle}`);
+      return false;
+      
+      // NE PAS forcer la sélection du buffer pour permettre les mises à jour en arrière-plan
+      // Stocker le buffer actuel pour savoir si nous devons le restaurer après mise à jour
+      const currentBuf = await nvim.eval('bufnr("%")') as number;
+      this.needsBufferRestore = (currentBuf !== this.bufnr);
+      if (this.needsBufferRestore) {
+        console.log(`[REACTIVE-VIEW] Mise à jour en arrière-plan, buffer actuel: ${currentBuf}`);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('[REACTIVE-VIEW] Erreur lors de la vérification du buffer:', error);
+      return false;
+    }
+  }
+  
+  /**
+   * Mettre à jour un composant spécifique
+   * Permet la mise à jour en arrière-plan (buffer non actif)
+   */
+  public async updateComponent(id: string): Promise<void> {
+    if (!this.bufferManager || this.isDestroyed) {
+      console.log(`[DEBUG-VIEW-${this.bufnr}] Impossible de mettre à jour ${id}: gestionnaire null ou vue détruite`);
+      return;
+    }
+    
+    console.log(`[DEBUG-VIEW-${this.bufnr}] Début mise à jour du composant '${id}'...`);
+    
+    const component = this.components.get(id);
+    if (!component) {
+      console.log(`[DEBUG-VIEW-${this.bufnr}] Composant '${id}' non trouvé!`);
+      return;
+    }
+    
+    try {
+      const nvim = workspace.nvim;
+      let originalBufnr = -1;
+      
+      // Utiliser notre nouvelle vérification de buffer
+      if (!await this.isValidBufferForUpdate()) {
+        console.log(`[DEBUG-VIEW-${this.bufnr}] Buffer non valide pour la mise à jour du composant ${id}`);
+        return;
+      }
+      
+      // Si nous avons besoin de basculer temporairement le buffer, enregistrer le buffer actuel
+      if (this.needsBufferRestore) {
+        originalBufnr = await nvim.eval('bufnr("%")') as number;
+        console.log(`[DEBUG-VIEW-${this.bufnr}] Sauvegarde du buffer original: ${originalBufnr}`);
+        // Basculer temporairement vers notre buffer pour effectuer la mise à jour
+        await nvim.command(`silent! buffer ${this.bufnr}`);
+      }
+      
+      // Rendre le composant
+      console.log(`[DEBUG-VIEW-${this.bufnr}] Rendu du composant '${id}'...`);
+      const renderedLines = component.render();
+      console.log(`[DEBUG-VIEW-${this.bufnr}] Rendu complet: ${renderedLines.length} lignes`);
+      
+      // Mettre à jour les lignes dans le buffer
+      let updateSuccess = true;
+      for (let i = 0; i < renderedLines.length; i++) {
+        const lineNumber = component.lineStart + i;
+        console.log(`[DEBUG-VIEW-${this.bufnr}] Mise à jour ligne ${lineNumber}...`);
+        
+        try {
+          // Tracer le contenu pour débog
+          const beforeUpdate = await this.getBufferLine(lineNumber);
+          console.log(`[DEBUG-VIEW-${this.bufnr}] Avant: "${beforeUpdate}", Après: "${renderedLines[i]}", Changement: ${beforeUpdate !== renderedLines[i]}`);
+          
+          // Ne mettre à jour que si le contenu a changé
+          if (beforeUpdate !== renderedLines[i]) {
+            await this.bufferManager.updateLine(lineNumber, renderedLines[i]);
+            console.log(`[DEBUG-VIEW-${this.bufnr}] Ligne ${lineNumber} mise à jour`); 
+          } else {
+            console.log(`[DEBUG-VIEW-${this.bufnr}] Ligne ${lineNumber} inchangée, pas de mise à jour`);
+          }
+        } catch (lineError) {
+          console.error(`[DEBUG-VIEW-${this.bufnr}] Erreur lors de la mise à jour de la ligne ${lineNumber}:`, lineError);
+          updateSuccess = false;
+          break;
+        }
+      }
+      
+      // Restaurer le buffer original si nécessaire
+      if (this.needsBufferRestore && originalBufnr > 0) {
+        console.log(`[DEBUG-VIEW-${this.bufnr}] Restauration du buffer original: ${originalBufnr}`);
+        await nvim.command(`silent! buffer ${originalBufnr}`);
+      }
+      
+      if (updateSuccess) {
+        console.log(`[DEBUG-VIEW-${this.bufnr}] Mise à jour du composant '${id}' terminée avec succès`);
+      } else {
+        console.error(`[DEBUG-VIEW-${this.bufnr}] Mise à jour du composant '${id}' partielle ou échouée`);
+      }
+    } catch (error) {
+      console.error(`[DEBUG-VIEW-${this.bufnr}] ERREUR lors de la mise à jour du composant ${id}:`, error);
+    }
+  }
+  
+  /**
+   * Obtenir le contenu d'une ligne du buffer
+   */
+  private async getBufferLine(lineNumber: number): Promise<string> {
+    try {
+      if (!this.bufferManager) return '';
+      
+      const nvim = workspace.nvim;
+      // Utiliser getline() au lieu de nvim_buf_get_lines
+      const line = await nvim.eval(`getline(${lineNumber})`) as string;
+      console.log(`[DEBUG-VIEW-${this.bufnr}] Lecture ligne ${lineNumber}: "${line}"`); 
+      return line || '';
+    } catch (error) {
+      console.error(`[DEBUG-VIEW-${this.bufnr}] Erreur lors de la lecture de la ligne ${lineNumber}:`, error);
+      return '';
+    }
+  }
+  
+  /**
+   * Rendre tous les composants
+   */
+  private async renderAllComponents(): Promise<void> {
+    if (!this.bufferManager || this.isDestroyed) return;
+    
+    try {
+      // Calculer le contenu complet du buffer
+      let allLines: string[] = [];
+      
+      // Trier les composants par position
+      const sortedComponents = Array.from(this.components.entries())
+        .sort(([, a], [, b]) => a.lineStart - b.lineStart);
+      
+      // Rendre chaque composant
+      for (const [id, component] of sortedComponents) {
+        const isActive = id === this.activeComponentId;
+        const renderedLines = component.render();
+        
+        // Mettre à jour les lignes du composant dans le contenu complet
+        while (allLines.length < component.lineStart) {
+          allLines.push('');
+        }
+        
+        // Ajouter le rendu du composant
+        for (let i = 0; i < renderedLines.length; i++) {
+          let line = renderedLines[i];
+          
+          // Ajouter un indicateur visuel pour le composant actif
+          if (isActive && i === 0) {
+            line = '> ' + line;
+          } else if (isActive) {
+            line = '  ' + line;
+          }
+          
+          if (allLines.length <= component.lineStart + i) {
+            allLines.push(line);
+          } else {
+            allLines[component.lineStart + i] = line;
+          }
+        }
+      }
+      
+      // Mettre à jour le contenu complet du buffer
+      await this.bufferManager.setContent(allLines);
+    } catch (error) {
+      console.error('[REACTIVE-VIEW] Erreur lors du rendu des composants:', error);
+    }
+  }
+  
+  /**
+   * Ajouter un gestionnaire de touche personnalisé
+   */
+  public registerKeyHandler(key: string, handler: (key: string) => Promise<void>): void {
+    this.keymapHandlers.set(key, handler);
+  }
+  
+  /**
+   * Définir l'intervalle de mise à jour (en ms)
+   */
+  public setUpdateInterval(interval: number): void {
+    this.updateInterval = interval;
+    
+    if (this.bufferManager) {
+      this.bufferManager.startContentUpdates(interval);
+    }
+  }
+  
+  /**
+   * Nettoyer et fermer la vue
+   */
+  public async destroy(): Promise<void> {
+    if (this.isDestroyed) return;
+    
+    try {
+      this.isDestroyed = true;
+      
+      // Appeler beforeUnmount sur tous les composants
+      for (const [id, component] of this.components.entries()) {
+        if (component.beforeUnmount) {
+          try {
+            await component.beforeUnmount();
+          } catch (error) {
+            console.error(`[REACTIVE-VIEW] Erreur lors du démontage du composant ${id}:`, error);
+          }
+        }
+      }
+      
+      // Nettoyer le gestionnaire de buffer
+      if (this.bufferManager) {
+        this.bufferManager.dispose();
+      }
+      
+      // Fermer le buffer
+      const nvim = workspace.nvim;
+      await nvim.command(`silent! bwipeout! ${this.bufnr}`);
+      
+      console.log('[REACTIVE-VIEW] Vue détruite avec succès');
+    } catch (error) {
+      console.error('[REACTIVE-VIEW] Erreur lors de la destruction de la vue:', error);
+    }
+  }
+}

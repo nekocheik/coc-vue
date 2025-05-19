@@ -1,0 +1,17 @@
+# Vim swap files
+*.swp
+
+# Build and output
+dist/
+lib/
+
+# Test coverage output
+coverage/
+coverage-bridge/
+coverage-renderer/
+
+# Node dependencies
+node_modules/
+
+# Lock file (optional: keep it if you want deterministic installs)
+package-lock.json

@@ -1,0 +1,154 @@
+# Test du composant Button
+# Ce fichier de test vérifie le fonctionnement du composant Button
+
+# Configuration
+Execute (Configuration):
+  " Configurer l'environnement de test
+  let g:test_button_id = 'test_button_' . strftime('%s')
+  lua require('vue-ui').setup({debug = true, log_events = true, log_path = vim.fn.stdpath('data') .. '/vue-ui-events_button.json'})
+  lua require('vue-ui').clear_event_log()
+
+# Création du composant
+Execute (Création du bouton):
+  " Créer un bouton de test
+  lua local button = require('vue-ui').button.create(g:test_button_id, 'Test Button', {style = 'primary', width = 20})
+  
+  " Vérifier que le bouton a été créé
+  lua assert(require('vue-ui.utils.event_bridge').get_component(vim.g.test_button_id) ~= nil, "Le bouton n'a pas été créé")
+  
+  " Vérifier que l'événement de création a été émis
+  lua local events = require('vue-ui.utils.event_bridge')._get_events_for_test()
+  lua local found = false
+  lua for _, event in ipairs(events or {}) do
+  lua   if event.event == require('vue-ui.events.schema').EVENT_TYPES.COMPONENT_CREATED and event.data.id == vim.g.test_button_id then
+  lua     found = true
+  lua     break
+  lua   end
+  lua end
+  lua assert(found, "L'événement de création n'a pas été émis")
+
+# Test du rendu
+Execute (Rendu du bouton):
+  " Créer un buffer temporaire pour le rendu
+  new
+  let g:test_buf = bufnr('%')
+  
+  " Récupérer le bouton et le dessiner
+  lua local button = require('vue-ui.utils.event_bridge').get_component(vim.g.test_button_id)
+  lua local render_result = button:render()
+  lua assert(render_result ~= nil, "Le rendu du bouton a échoué")
+  lua assert(#render_result.lines > 0, "Le rendu du bouton ne contient pas de lignes")
+  
+  " Vérifier que le rendu contient le texte du bouton
+  lua assert(table.concat(render_result.lines, '\n'):find('Test Button') ~= nil, "Le rendu ne contient pas le texte du bouton")
+  
+  " Nettoyer
+  bwipeout!
+
+# Test du focus
+Execute (Focus du bouton):
+  " Récupérer le bouton
+  lua local button = require('vue-ui.utils.event_bridge').get_component(vim.g.test_button_id)
+  
+  " Donner le focus au bouton
+  lua local focus_result = button:focus()
+  lua assert(focus_result == true, "La mise au focus a échoué")
+  lua assert(button.is_focused == true, "Le bouton n'est pas en état de focus")
+  
+  " Vérifier que l'événement de focus a été émis
+  lua local events = require('vue-ui.utils.event_bridge')._get_events_for_test()
+  lua local found = false
+  lua for _, event in ipairs(events or {}) do
+  lua   if event.event == require('vue-ui.events.schema').EVENT_TYPES.COMPONENT_FOCUSED and event.data.id == vim.g.test_button_id then
+  lua     found = true
+  lua     break
+  lua   end
+  lua end
+  lua assert(found, "L'événement de focus n'a pas été émis")
+  
+  " Retirer le focus
+  lua local blur_result = button:blur()
+  lua assert(blur_result == true, "Le retrait du focus a échoué")
+  lua assert(button.is_focused == false, "Le bouton est toujours en état de focus")
+
+# Test du clic
+Execute (Clic sur le bouton):
+  " Récupérer le bouton
+  lua local button = require('vue-ui.utils.event_bridge').get_component(vim.g.test_button_id)
+  
+  " Cliquer sur le bouton
+  lua local click_result = button:click()
+  lua assert(click_result == true, "Le clic a échoué")
+  
+  " Vérifier que l'événement de clic a été émis
+  lua local events = require('vue-ui.utils.event_bridge')._get_events_for_test()
+  lua local found = false
+  lua for _, event in ipairs(events or {}) do
+  lua   if event.event == require('vue-ui.events.schema').EVENT_TYPES.BUTTON_CLICKED and event.data.id == vim.g.test_button_id then
+  lua     found = true
+  lua     break
+  lua   end
+  lua end
+  lua assert(found, "L'événement de clic n'a pas été émis")
+
+# Test de mise à jour
+Execute (Mise à jour du bouton):
+  " Récupérer le bouton
+  lua local button = require('vue-ui.utils.event_bridge').get_component(vim.g.test_button_id)
+  
+  " Mettre à jour le texte du bouton
+  lua local update_result = button:set_text("Nouveau texte")
+  lua assert(update_result == true, "La mise à jour du texte a échoué")
+  lua assert(button.text == "Nouveau texte", "Le texte du bouton n'a pas été mis à jour")
+  
+  " Vérifier que l'événement de mise à jour a été émis
+  lua local events = require('vue-ui.utils.event_bridge')._get_events_for_test()
+  lua local found = false
+  lua for _, event in ipairs(events or {}) do
+  lua   if event.event == require('vue-ui.events.schema').EVENT_TYPES.COMPONENT_UPDATED and event.data.id == vim.g.test_button_id then
+  lua     found = true
+  lua     break
+  lua   end
+  lua end
+  lua assert(found, "L'événement de mise à jour n'a pas été émis")
+  
+  " Désactiver le bouton
+  lua local disable_result = button:set_enabled(false)
+  lua assert(disable_result == true, "La désactivation du bouton a échoué")
+  lua assert(button.is_disabled == true, "Le bouton n'a pas été désactivé")
+  
+  " Vérifier que le clic ne fonctionne pas quand le bouton est désactivé
+  lua local click_result = button:click()
+  lua assert(click_result == false, "Le clic fonctionne alors que le bouton est désactivé")
+
+# Test de destruction
+Execute (Destruction du bouton):
+  " Récupérer le bouton
+  lua local button = require('vue-ui.utils.event_bridge').get_component(vim.g.test_button_id)
+  
+  " Détruire le bouton
+  lua local destroy_result = button:destroy()
+  lua assert(destroy_result == true, "La destruction du bouton a échoué")
+  
+  " Vérifier que le bouton a été supprimé du registre
+  lua assert(require('vue-ui.utils.event_bridge').get_component(vim.g.test_button_id) == nil, "Le bouton n'a pas été supprimé du registre")
+  
+  " Vérifier que l'événement de destruction a été émis
+  lua local events = require('vue-ui.utils.event_bridge')._get_events_for_test()
+  lua local found = false
+  lua for _, event in ipairs(events or {}) do
+  lua   if event.event == require('vue-ui.events.schema').EVENT_TYPES.COMPONENT_DESTROYED and event.data.id == vim.g.test_button_id then
+  lua     found = true
+  lua     break
+  lua   end
+  lua end
+  lua assert(found, "L'événement de destruction n'a pas été émis")
+
+# Sauvegarde des événements
+Execute (Sauvegarde des événements):
+  " Sauvegarder le journal des événements
+  lua require('vue-ui').save_event_log('button')
+  
+  " Vérifier que le fichier de journal existe
+  lua local log_path = vim.fn.stdpath('data') .. '/vue-ui-events_button.json'
+  lua assert(vim.fn.filereadable(log_path) == 1, "Le fichier de journal n'a pas été créé")

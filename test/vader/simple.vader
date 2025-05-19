@@ -1,0 +1,13 @@
+# Test simple pour comprendre le fonctionnement de Vader
+
+Execute (Test simple):
+  " Test d'une variable Vim
+  let g:test_var = 'test'
+  
+  " Test d'un bloc Lua simple
+  lua print('Test Lua')
+  lua local test = 'test'
+  lua print(test)
+  
+  " Test d'assertion
+  lua assert(true, "Ceci devrait passer")
