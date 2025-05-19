@@ -18,7 +18,44 @@ The integration between Node.js and the command server has been established usin
    - Client: `{"type": "add", "id": "...", "a": number, "b": number}`
    - Server: `{"type": "result", "id": "...", "result": number}`
 
+4. **Load Component**: Load a Vue UI component (currently only Select)
+   - Client: `{"type": "load_component", "id": "...", "component": "Select"}`
+   - Server: `{"type": "component_loaded", "id": "...", "component": "Select"}`
+
+5. **Call Method**: Call a method on a loaded component
+   - Client: `{"type": "call_method", "id": "...", "component": "Select", "method": string, "args": any[]}`
+   - Server: `{"type": "method_called", "id": "...", "component": "Select", "method": string, "result": any}`
+
+6. **Get State**: Get the current state of a component
+   - Client: `{"type": "get_state", "id": "...", "component": "Select"}`
+   - Server: `{"type": "state", "id": "...", "component": "Select", "state": any}`
+
+7. **Set Props**: Update the props of a component
+   - Client: `{"type": "set_props", "id": "...", "component": "Select", "props": any}`
+   - Server: `{"type": "props_updated", "id": "...", "component": "Select"}`
+
+8. **Unload Component**: Unload a component
+   - Client: `{"type": "unload_component", "id": "...", "component": "Select"}`
+   - Server: `{"type": "component_unloaded", "id": "...", "component": "Select"}`
+
 All commands pass 100% automated tests. The protocol is ready for adding business logic commands (components, events, etc.).
+
+## Select Component
+
+The Select component supports the following methods:
+
+- `open`: Open the dropdown menu
+- `close`: Close the dropdown menu
+- `focus_option`: Focus a specific option
+- `focus_next_option`: Focus the next option
+- `focus_prev_option`: Focus the previous option
+- `select_option`: Select an option by index
+- `select_current_option`: Select the currently focused option
+- `select_by_value`: Select an option by its value
+- `confirm`: Confirm the current selection
+- `cancel`: Cancel the selection and close the menu
+- `update_options`: Update the list of options
+- `set_disabled`: Enable/disable the component
 
 ## Running the Server and Tests
 
