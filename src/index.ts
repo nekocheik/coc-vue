@@ -167,6 +167,21 @@ export class VueNeovimIntegration {
         })
       );
       
+      // Commande pour la démo du composant Select
+      this.subscriptions.push(
+        commands.registerCommand('vue.selectDemo', async () => {
+          try {
+            // Utiliser la commande Vim pour créer un Select via l'API Lua
+            const nvim = workspace.nvim;
+            await nvim.command('VueUISelect select_demo "Select Demo" {"multi":false,"options":[{"id":"option1","text":"Option 1","value":"value1"},{"id":"option2","text":"Option 2","value":"value2"},{"id":"option3","text":"Option 3","value":"value3"}]}');
+            console.log('[COC-VUE] Select demo launched');
+          } catch (error) {
+            console.error('[COC-VUE] Erreur lors du lancement de la démo Select:', error);
+            window.showErrorMessage(`Erreur lors du lancement de la démo Select: ${error.message}`);
+          }
+        })
+      );
+      
       // Commande pour incrémenter le compteur de la démo directe
       this.subscriptions.push(
         commands.registerCommand('vue.directIncrementCounter', async (instanceId: string) => {

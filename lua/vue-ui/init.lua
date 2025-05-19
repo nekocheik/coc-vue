@@ -38,6 +38,7 @@ function M.setup(opts)
   M.button = require('vue-ui.components.button')
   M.input = require('vue-ui.components.input')
   M.modal = require('vue-ui.components.modal')
+  M.select = require('vue-ui.components.select')
   
   -- Exposer les utilitaires
   M.render = require('vue-ui.utils.render')
@@ -307,6 +308,59 @@ function M.define_commands()
     M.clear_event_log()
     vim.api.nvim_echo({{"[VueUI] Event log cleared", "Normal"}}, false, {})
   end, {})
+  
+  -- Command to create a Select component
+  vim.api.nvim_create_user_command('VueUISelect', function(opts)
+    local args = opts.args
+    if not args or args == "" then
+      vim.api.nvim_echo({{"[VueUI] Arguments manquants pour la commande VueUISelect", "ErrorMsg"}}, false, {})
+      return
+    end
+    
+    local parts = vim.split(args, ' ')
+    local id = parts[1]
+    local title = parts[2] or "Select Component"
+    
+    -- Parse options from the remaining arguments
+    local options_str = table.concat(parts, ' ', 3)
+    local options = {}
+    
+    if options_str and options_str ~= "" then
+      local success, parsed_options = pcall(vim.fn.json_decode, options_str)
+      if success then
+        options = parsed_options
+      else
+        -- Fallback to some default options if JSON parsing fails
+        options = {
+          multi = false,
+          options = {
+            { id = "option1", text = "Option 1", value = "value1" },
+            { id = "option2", text = "Option 2", value = "value2" },
+            { id = "option3", text = "Option 3", value = "value3" }
+          }
+        }
+      end
+    else
+      -- Default options if none provided
+      options = {
+        multi = false,
+        options = {
+          { id = "option1", text = "Option 1", value = "value1" },
+          { id = "option2", text = "Option 2", value = "value2" },
+          { id = "option3", text = "Option 3", value = "value3" }
+        }
+      }
+    end
+    
+    -- Create and open the select component
+    local select = M.select.create(id, title, options)
+    if select then
+      select:open()
+      vim.api.nvim_echo({{"[VueUI] Select component created and opened: " .. id, "Normal"}}, false, {})
+    else
+      vim.api.nvim_echo({{"[VueUI] Failed to create select component", "ErrorMsg"}}, false, {})
+    end
+  end, { nargs = '+' })
 end
 
 -- Fonction pour créer un test de composant
