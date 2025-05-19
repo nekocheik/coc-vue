@@ -395,4 +395,15 @@ M.input = require('vue-ui.components.input')
 M.modal = require('vue-ui.components.modal')
 M.select = require('vue-ui.components.select')
 
+-- Initialize the bridge
+print('[VUE-UI] Initializing bridge core...')
+M.bridge = require('vue-ui.core.bridge')
+M.bridge.initialize()
+
+-- Initialize bridge test module
+print('[VUE-UI] Initializing bridge test module...')
+M.bridge_test = require('vue-ui.core.bridge_test')
+M.bridge_test.initialize()
+print('[VUE-UI] Bridge initialized successfully')
+
 return M
