@@ -79,7 +79,8 @@ local function get_component_state(component)
   
   -- Select-specific properties
   if component.component_type == 'select' then
-    state.is_open = component:is_open()
+    -- Accéder à is_open comme une propriété et non comme une méthode
+    state.is_open = component.is_open
     state.disabled = component.disabled
     state.required = component.required
     state.multi = component.multi
@@ -100,6 +101,19 @@ local function get_component_state(component)
   end
   
   return state
+end
+
+-- Clean all loaded components
+local function clean_all_components()
+  log("Cleaning all loaded components")
+  for component_id, component in pairs(loaded_components) do
+    log("Destroying component: " .. component_id)
+    pcall(function()
+      component:destroy()
+    end)
+  end
+  loaded_components = {}
+  log("All components cleaned")
 end
 
 -- Handle load_component command
@@ -133,13 +147,22 @@ local function handle_load_component(client, command)
   
   -- Check if component with this ID already exists
   if loaded_components[component_id] then
-    send_response(client, {
-      type = "error",
-      id = command.id,
-      error = "Component with ID " .. component_id .. " already exists",
-      code = "COMPONENT_EXISTS"
-    })
-    return
+    -- If force option is provided, destroy the existing component first
+    if command.force then
+      log("Force option provided, destroying existing component: " .. component_id)
+      pcall(function()
+        loaded_components[component_id]:destroy()
+      end)
+      loaded_components[component_id] = nil
+    else
+      send_response(client, {
+        type = "error",
+        id = command.id,
+        error = "Component with ID " .. component_id .. " already exists",
+        code = "COMPONENT_EXISTS"
+      })
+      return
+    end
   end
   
   -- Create configuration for the component
@@ -544,6 +567,15 @@ local function process_command(client, command)
       id = cmd_id,
       result = result
     })
+  elseif cmd_type == "clean_all" then
+    -- Clean all components command
+    log("Received clean_all command")
+    clean_all_components()
+    send_response(client, {
+      type = "cleaned",
+      id = cmd_id,
+      success = true
+    })
   elseif cmd_type == "load_component" then
     -- Load component command
     handle_load_component(client, command)
@@ -692,30 +724,81 @@ function server.start(host, port)
     return nil
   end
   
-  -- Start listening
-  status, err = pcall(function()
-    server_socket:listen(128, function(listen_err)
-      if listen_err then
-        log("Listen error: " .. tostring(listen_err))
+  -- Connection handler function
+  local function on_connection(err)
+    if err then
+      log("Connection error: " .. tostring(err))
+      return
+    end
+    
+    -- Create client socket
+    local client = vim.loop.new_tcp()
+    
+    -- Accept the connection
+    if not server_socket:accept(client) then
+      log("Accept error: Failed to accept client connection")
+      client:close()
+      return
+    end
+    
+    -- Set up client
+    local ip, port
+    local ok, err = pcall(function()
+      ip, port = client:getpeername()
+    end)
+    
+    if ok and ip and port then
+      log("Client connected from " .. ip .. ":" .. port)
+    else
+      log("Client connected (unable to get peer info)")
+    end
+    
+    -- Create client state
+    local client_state = {
+      buffer = "",
+      client = client
+    }
+    
+    -- Add to active clients
+    table.insert(active_clients, {client = client, state = client_state})
+    
+    -- Set up read handler
+    client:read_start(function(read_err, data)
+      if read_err then
+        log("Read error: " .. tostring(read_err))
+        client:close()
         return
       end
       
-      log("Listen callback triggered, starting to accept connections")
+      if data then
+        -- Process data
+        local status, err = pcall(handle_client_data, client, client_state, data)
+        if not status then
+          log("Error handling client data: " .. tostring(err))
+        end
+      else
+        -- EOF - client disconnected
+        log("Client disconnected")
+        
+        -- Remove from active clients
+        for i, c in ipairs(active_clients) do
+          if c.client == client then
+            table.remove(active_clients, i)
+            break
+          end
+        end
+        
+        client:close()
+      end
     end)
     
-    -- Accept connections in a loop
-    local function accept_client()
-      server_socket:accept(function(accept_err, client)
-        on_new_client(accept_err, client)
-        -- Continue accepting new clients
-        vim.schedule(accept_client)
-      end)
-    end
-    
-    -- Start accepting clients
-    accept_client()
-    
-    log("Acceptance loop started")
+    -- Continue accepting connections
+    server_socket:listen(128, on_connection)
+  end
+  
+  -- Start listening for connections
+  status, err = pcall(function()
+    server_socket:listen(128, on_connection)
   end)
   
   if not status then
