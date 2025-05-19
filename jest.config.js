@@ -1,7 +1,11 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
-  roots: ['<rootDir>/src/', '<rootDir>/test/'],
+  roots: ['<rootDir>/src/', '<rootDir>/test/', '<rootDir>/__tests__/'],
+  moduleNameMapper: {
+    '^coc.nvim$': '<rootDir>/__tests__/mocks/coc.ts',
+    '^@/(.*)$': '<rootDir>/src/$1'
+  },
   transform: {
     '^.+\.tsx?$': 'ts-jest',
     '^.+\.vue$': '@vue/vue3-jest'

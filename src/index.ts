@@ -1,6 +1,10 @@
-// Minimal implementation for COC-VUE Select component
+// COC-VUE Implementation with Vue-like Reactive Bridge
 import { workspace, ExtensionContext, commands, window } from 'coc.nvim';
 import { BridgeCore, BridgeMessage, MessageType, bridgeCore } from './bridge/core';
+import { Select } from './components/select';
+
+// Registry to keep track of active components
+const componentRegistry = new Map<string, any>();
 
 // Main activation function for the extension
 export async function activate(context: ExtensionContext): Promise<void> {
@@ -129,10 +133,25 @@ export async function activate(context: ExtensionContext): Promise<void> {
     })
   );
   
-  console.log('[COC-VUE] Select component integration activated successfully');
+  console.log('[COC-VUE] Vue-like reactive bridge activated successfully');
 }
 
 // Cleanup function called when the extension is deactivated
 export function deactivate(): void {
-  console.log('[COC-VUE] Deactivating Select component integration');
+  console.log('[COC-VUE] Deactivating Vue-like reactive bridge');
+  
+  // Destroy all active components
+  for (const [id, component] of componentRegistry.entries()) {
+    try {
+      if (typeof component.destroy === 'function') {
+        component.destroy();
+        console.log(`[COC-VUE] Component ${id} destroyed during deactivation`);
+      }
+    } catch (error) {
+      console.error(`[COC-VUE] Error destroying component ${id}:`, error);
+    }
+  }
+  
+  // Clear the registry
+  componentRegistry.clear();
 }
