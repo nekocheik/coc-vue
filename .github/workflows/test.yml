@@ -1,124 +1,110 @@
 name: Docker Tests
 
 on:
-  push: # Run on every push to any branch
-  pull_request: # Run on all pull requests
-  workflow_dispatch: # Allow manual triggering
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       
-      - name: Set up Docker
-        run: |
-          docker --version
+      - name: Check Docker version
+        run: docker --version
       
       - name: Build Docker image
-        run: |
-          docker build -t coc-vue-test .
+        run: docker build -t coc-vue-test .
+      
+      - name: Create test results directory
+        run: mkdir -p test-results
       
       - name: Run tests in Docker
-        run: |
-          mkdir -p test-results
-          # Créer un volume pour les artefacts CI
-          mkdir -p .ci-artifacts
-          # Exécuter les tests et copier les artefacts CI depuis le conteneur
-          docker run --rm -v $(pwd)/.ci-artifacts:/app/.ci-artifacts coc-vue-test ./scripts/docker-run-tests.sh | tee test-output.log
-          echo "Test execution completed with exit code ${PIPESTATUS[0]}"
-        env:
-          MOCK_NEOVIM: true
-          NODE_ENV: test
-          CI: true
+        run: docker run --rm -v $(pwd)/.ci-artifacts:/app/.ci-artifacts coc-vue-test ./scripts/docker-run-tests.sh
       
-      # Create test summary
-      - name: Create test summary
+      - name: Add test summary to GitHub Actions output
         if: always()
         run: |
           echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
-          if [ -f test-output.log ]; then
-            if grep -q "Tous les tests ont réussi" test-output.log || grep -q "All tests passed" test-output.log; then
-              echo "✅ All tests passed successfully!" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if Jest test results exist
+          if [ -f "test-results/jest-results.json" ]; then
+            TOTAL_TESTS=$(jq '.numTotalTests' test-results/jest-results.json)
+            PASSED_TESTS=$(jq '.numPassedTests' test-results/jest-results.json)
+            FAILED_TESTS=$(jq '.numFailedTests' test-results/jest-results.json)
+            
+            echo "### Jest Tests" >> $GITHUB_STEP_SUMMARY
+            echo "- Total: $TOTAL_TESTS" >> $GITHUB_STEP_SUMMARY
+            echo "- Passed: $PASSED_TESTS" >> $GITHUB_STEP_SUMMARY
+            echo "- Failed: $FAILED_TESTS" >> $GITHUB_STEP_SUMMARY
+            
+            if [ "$FAILED_TESTS" -gt 0 ]; then
+              echo "❌ Some Jest tests failed." >> $GITHUB_STEP_SUMMARY
             else
-              echo "❌ Some tests failed. See logs for details." >> $GITHUB_STEP_SUMMARY
+              echo "✅ All Jest tests passed." >> $GITHUB_STEP_SUMMARY
             fi
-            echo "\n### Test Output" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            cat test-output.log >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ No test output log found." >> $GITHUB_STEP_SUMMARY
+            echo "### Jest Tests" >> $GITHUB_STEP_SUMMARY
+            echo "❓ No Jest test results found." >> $GITHUB_STEP_SUMMARY
           fi
           
-      # Add Vader test results to summary
-      - name: Add Vader test results to summary
-        if: always()
-        run: |
-          if [ -d ".ci-artifacts/vader-reports" ]; then
-            echo "\n## Vader Tests Results" >> $GITHUB_STEP_SUMMARY
+          # Check if Vader test results exist
+          if [ -d ".ci-artifacts/vader-reports" ] && [ "$(ls -A .ci-artifacts/vader-reports)" ]; then
+            echo "### Vader Tests" >> $GITHUB_STEP_SUMMARY
             
-            # Compter les tests réussis et échoués
-            total_success=0
-            total_tests=0
+            # Count total tests and successes
+            TOTAL_TESTS=0
+            PASSED_TESTS=0
             
-            for json_file in .ci-artifacts/vader-reports/*_results.json; do
-              if [ -f "$json_file" ]; then
-                test_name=$(grep -o '"test_name": "[^"]*"' "$json_file" | cut -d'"' -f4)
-                success_count=$(grep -o '"success_count": [0-9]*' "$json_file" | grep -o '[0-9]*')
-                total_count=$(grep -o '"total_count": [0-9]*' "$json_file" | grep -o '[0-9]*')
-                status=$(grep -o '"status": "[^"]*"' "$json_file" | cut -d'"' -f4)
+            for file in .ci-artifacts/vader-reports/*_results.json; do
+              if [ -f "$file" ]; then
+                FILE_TOTAL=$(jq '.total' "$file")
+                FILE_SUCCESS=$(jq '.success' "$file")
+                TOTAL_TESTS=$((TOTAL_TESTS + FILE_TOTAL))
+                PASSED_TESTS=$((PASSED_TESTS + FILE_SUCCESS))
                 
-                total_success=$((total_success + success_count))
-                total_tests=$((total_tests + total_count))
-              fi
-            done
-            
-            # Afficher le résumé
-            echo "### Résumé" >> $GITHUB_STEP_SUMMARY
-            echo "- Total des tests: **$total_tests**" >> $GITHUB_STEP_SUMMARY
-            echo "- Tests réussis: **$total_success**" >> $GITHUB_STEP_SUMMARY
-            echo "- Tests échoués: **$((total_tests - total_success))**" >> $GITHUB_STEP_SUMMARY
-            
-            if [ $total_tests -gt 0 ]; then
-              success_rate=$((total_success * 100 / total_tests))
-              echo "- Taux de réussite: **${success_rate}%**" >> $GITHUB_STEP_SUMMARY
-            fi
-            
-            # Afficher les détails par fichier de test
-            echo "\n### Détails par fichier de test" >> $GITHUB_STEP_SUMMARY
-            echo "| Fichier | Statut | Tests réussis | Temps d'exécution |" >> $GITHUB_STEP_SUMMARY
-            echo "| ------- | ------ | ------------- | ---------------- |" >> $GITHUB_STEP_SUMMARY
-            
-            for json_file in .ci-artifacts/vader-reports/*_results.json; do
-              if [ -f "$json_file" ]; then
-                test_name=$(grep -o '"test_name": "[^"]*"' "$json_file" | cut -d'"' -f4)
-                success_count=$(grep -o '"success_count": [0-9]*' "$json_file" | grep -o '[0-9]*')
-                total_count=$(grep -o '"total_count": [0-9]*' "$json_file" | grep -o '[0-9]*')
-                status=$(grep -o '"status": "[^"]*"' "$json_file" | cut -d'"' -f4)
-                execution_time=$(grep -o '"execution_time": "[^"]*"' "$json_file" | cut -d'"' -f4)
+                TEST_NAME=$(basename "$file" _results.json)
+                FILE_FAILED=$((FILE_TOTAL - FILE_SUCCESS))
                 
-                status_icon="❌"
-                if [ "$status" = "success" ]; then
-                  status_icon="✅"
+                echo "#### $TEST_NAME" >> $GITHUB_STEP_SUMMARY
+                echo "- Total: $FILE_TOTAL" >> $GITHUB_STEP_SUMMARY
+                echo "- Passed: $FILE_SUCCESS" >> $GITHUB_STEP_SUMMARY
+                echo "- Failed: $FILE_FAILED" >> $GITHUB_STEP_SUMMARY
+                
+                if [ "$FILE_FAILED" -gt 0 ]; then
+                  echo "❌ Some tests failed in $TEST_NAME." >> $GITHUB_STEP_SUMMARY
+                else
+                  echo "✅ All tests passed in $TEST_NAME." >> $GITHUB_STEP_SUMMARY
                 fi
-                
-                echo "| $test_name | $status_icon | $success_count/$total_count | $execution_time |" >> $GITHUB_STEP_SUMMARY
               fi
             done
+            
+            FAILED_TESTS=$((TOTAL_TESTS - PASSED_TESTS))
+            
+            echo "#### Summary" >> $GITHUB_STEP_SUMMARY
+            echo "- Total Vader Tests: $TOTAL_TESTS" >> $GITHUB_STEP_SUMMARY
+            echo "- Total Passed: $PASSED_TESTS" >> $GITHUB_STEP_SUMMARY
+            echo "- Total Failed: $FAILED_TESTS" >> $GITHUB_STEP_SUMMARY
+            
+            if [ "$FAILED_TESTS" -gt 0 ]; then
+              echo "❌ Some Vader tests failed." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "✅ All Vader tests passed." >> $GITHUB_STEP_SUMMARY
+            fi
           else
-            echo "\n## Vader Tests Results" >> $GITHUB_STEP_SUMMARY
+            echo "### Vader Tests" >> $GITHUB_STEP_SUMMARY
             echo "❌ No Vader test results found." >> $GITHUB_STEP_SUMMARY
           fi
       
-      # Upload test artifacts
-      - name: Upload test artifacts
-        if: always()
-        uses: actions/upload-artifact@v2
-        with:
-          name: test-artifacts
-          path: |
-            test-output.log
-            .ci-artifacts/vader-reports/
-          retention-days: 7
+      # Temporarily disabled artifact upload due to GitHub Actions issues
+      # - name: Upload test artifacts
+      #   if: always()
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: test-artifacts
+      #     path: |
+      #       test-output.log
+      #       .ci-artifacts/vader-reports/
+      #     retention-days: 7
