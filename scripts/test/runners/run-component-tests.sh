@@ -161,17 +161,43 @@ start_component_server() {
     sleep 2
   fi
   
-  # Démarrer le serveur de composants
-  SERVER_PID=$(start_server "$PROJECT_ROOT/scripts/server/run_component_server.sh" "/tmp/component-server.log")
+  # Créer un fichier de log pour le serveur
+  LOG_FILE="/tmp/component-server.log"
+  touch "$LOG_FILE"
+  chmod 666 "$LOG_FILE" 2>/dev/null || true
+  
+  # Démarrer le serveur de composants directement (sans utiliser start_server)
+  print_info "Démarrage du serveur Neovim avec le component server..."
+  "$PROJECT_ROOT/scripts/server/run_component_server.sh" > "$LOG_FILE" 2>&1 &
+  SERVER_PID=$!
   
   # Attendre que le serveur soit prêt
   print_info "Attente du démarrage du serveur de composants..."
-  sleep 5
   
-  # Vérifier si le serveur est en cours d'exécution
-  if ! ps -p $SERVER_PID > /dev/null; then
-    print_error "Le serveur de composants n'a pas démarré correctement."
-    print_info "Consultez les logs dans /tmp/component-server.log pour plus de détails."
+  # Attendre jusqu'à 15 secondes pour que le serveur démarre
+  for i in {1..15}; do
+    if grep -q "Component server running on 127.0.0.1:9999" "$LOG_FILE" 2>/dev/null; then
+      print_success "Serveur de composants démarré avec succès!"
+      break
+    fi
+    
+    # Vérifier si le processus est toujours en cours d'exécution
+    if ! ps -p $SERVER_PID > /dev/null; then
+      print_error "Le processus du serveur de composants s'est arrêté de manière inattendue."
+      print_info "Contenu du log:"
+      cat "$LOG_FILE"
+      return 1
+    fi
+    
+    echo -n "."
+    sleep 1
+  done
+  
+  # Vérifier si le serveur écoute sur le port 9999
+  if ! lsof -i :9999 > /dev/null 2>&1; then
+    print_error "Le serveur de composants n'écoute pas sur le port 9999."
+    print_info "Contenu du log:"
+    cat "$LOG_FILE"
     return 1
   fi
   
