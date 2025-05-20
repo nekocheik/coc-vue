@@ -30,13 +30,15 @@ run_vader_test() {
   local total_count=$(echo "$success_total" | grep -o "[0-9]*/[0-9]*" | cut -d'/' -f2)
   
   # Créer un rapport JSON pour l'intégration CI
-  echo "{" > "$json_file"
-  echo "  \"test_name\": \"$test_name\"," >> "$json_file"
-  echo "  \"success_count\": $success_count," >> "$json_file"
-  echo "  \"total_count\": $total_count," >> "$json_file"
-  echo "  \"status\": $([ "$success_count" -eq "$total_count" ] && echo "\"success\"" || echo "\"failure\"")," >> "$json_file"
-  echo "  \"execution_time\": \"$(grep -o "Elapsed time: [0-9.]* sec" "$output_file" | cut -d' ' -f3-4)\"" >> "$json_file"
-  echo "}" >> "$json_file"
+  cat > "$json_file" << EOF
+{
+  "test_name": "$test_name",
+  "success": $success_count,
+  "total": $total_count,
+  "status": $([ "$success_count" -eq "$total_count" ] && echo "\"success\"" || echo "\"failure\""),
+  "execution_time": "$(grep -o "Elapsed time: [0-9.]* sec" "$output_file" | cut -d' ' -f3-4)"
+}
+EOF
   
   # Afficher le résultat
   if [ "$success_count" -eq "$total_count" ]; then
