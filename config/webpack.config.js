@@ -2,7 +2,7 @@ const path = require('path');
 const { VueLoaderPlugin } = require('vue-loader');
 
 module.exports = {
-  entry: './src/index.ts',
+  entry: path.resolve(__dirname, '../src/index.ts'),
   target: 'node',
   mode: 'production',
   module: {
@@ -32,12 +32,12 @@ module.exports = {
   resolve: {
     extensions: ['.ts', '.js', '.vue', '.json'],
     alias: {
-      '@': path.resolve(__dirname, 'src')
+      '@': path.resolve(__dirname, '../src')
     }
   },
   output: {
     filename: 'index.js',
-    path: path.resolve(__dirname, 'lib'),
+    path: path.resolve(__dirname, '../lib'),
     libraryTarget: 'commonjs2'
   },
   externals: {

@@ -3,7 +3,7 @@
 # Script to start a headless Neovim instance and run the ping test
 
 # Set the path to the project root
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # Colors for output
@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 echo -e "${YELLOW}Starting Neovim test server...${NC}"
 
 # Use the embedded ping server init script
-PING_INIT_VIM="$PROJECT_ROOT/scripts/ping_init.vim"
+PING_INIT_VIM="$PROJECT_ROOT/scripts/vim/ping_init.vim"
 
 # Start Neovim in headless mode with our ping server init.vim
 nvim --headless -u "$PING_INIT_VIM" &
@@ -41,7 +41,7 @@ trap cleanup EXIT
 
 # Run the ping test
 echo -e "${GREEN}Running ping test...${NC}"
-node "$PROJECT_ROOT/scripts/ping_test.js"
+node "$PROJECT_ROOT/scripts/test/ping_test.js"
 PING_RESULT=$?
 
 if [ $PING_RESULT -eq 0 ]; then
