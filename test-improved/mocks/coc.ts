@@ -1,12 +1,12 @@
 /**
- * Mock amélioré pour coc.nvim
- * Ce mock est plus propre et plus facile à maintenir
+ * Enhanced mock for coc.nvim
+ * This mock is cleaner and easier to maintain
  */
 
-// Créer un mock pour nvim
+// Create mock for nvim
 export const mockNvim = {
   call: jest.fn().mockImplementation((method, args) => {
-    // Retourner des valeurs par défaut pour les méthodes courantes
+    // Return default values for common methods
     if (method === 'nvim_create_buf') return Promise.resolve(1);
     if (method === 'nvim_buf_set_lines') return Promise.resolve(null);
     if (method === 'nvim_open_win') return Promise.resolve(2);
@@ -41,7 +41,7 @@ export const mockNvim = {
     position: { line: 0, character: 0 },
     close: jest.fn().mockResolvedValue(null),
   }),
-  // Méthode pour réinitialiser tous les mocks
+  // Method to reset all mocks
   clearAllMocks: () => {
     mockNvim.call.mockClear();
     mockNvim.command.mockClear();
@@ -54,7 +54,7 @@ export const mockNvim = {
   }
 };
 
-// Créer un mock pour workspace
+// Create mock for workspace
 export const mockWorkspace = {
   nvim: mockNvim,
   createOutputChannel: jest.fn().mockReturnValue({
@@ -86,7 +86,7 @@ export const mockWorkspace = {
     update: jest.fn().mockResolvedValue(null),
     inspect: jest.fn().mockReturnValue(null),
   }),
-  // Méthode pour réinitialiser tous les mocks
+  // Method to reset all mocks
   clearAllMocks: () => {
     mockWorkspace.createOutputChannel.mockClear();
     mockWorkspace.onDidOpenTextDocument.mockClear();
@@ -108,13 +108,13 @@ export const mockWorkspace = {
   }
 };
 
-// Fonction utilitaire pour réinitialiser tous les mocks
+// Utility function to reset all mocks
 export function resetAllMocks() {
   mockNvim.clearAllMocks();
   mockWorkspace.clearAllMocks();
 }
 
-// Exporter le module coc.nvim mocké
+// Export mocked coc.nvim module
 export default {
   workspace: mockWorkspace,
   Disposable: class Disposable {
