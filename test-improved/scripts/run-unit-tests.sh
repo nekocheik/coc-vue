@@ -20,7 +20,7 @@ echo -e "${YELLOW}Timeout set to ${MAX_TIMEOUT} seconds${NC}"
 # Function to clean up processes on exit
 cleanup() {
   echo -e "\n${YELLOW}Cleaning up processes...${NC}"
-  # Tuer le processus Jest s'il est toujours en cours d'exécution
+  # Kill the Jest process if it's still running
   if [ -n "$JEST_PID" ]; then
     echo -e "${YELLOW}Force stopping Jest...${NC}"
     kill -9 $JEST_PID 2>/dev/null

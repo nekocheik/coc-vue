@@ -61,66 +61,66 @@ function acquireLock(retries = 10, delay = 200) {
               }
             }
             
-            // Vérifier si le processus qui détient le verrou est toujours en cours d'exécution
+            // Check if the process that holds the lock is still running
             if (lockInfo.pid) {
               try {
-                process.kill(lockInfo.pid, 0); // Vérifie si le processus existe sans l'arrêter
+                process.kill(lockInfo.pid, 0); // Check if process exists without stopping it
                 
-                // Le processus existe toujours
+                // Process still exists
                 if (lockAge > 30000) {
-                  // Mais le verrou est périmé, on le supprime
-                  log(`Verrou périmé détecté (${Math.round(lockAge / 1000)}s), suppression...`);
+                  // But lock is expired, remove it
+                  log(`Expired lock detected (${Math.round(lockAge / 1000)}s), removing...`);
                   try {
                     fs.unlinkSync(LOCK_FILE);
                   } catch (unlinkErr) {
-                    // Ignorer les erreurs lors de la suppression
+                    // Ignore errors during removal
                   }
                 } else if (attempt < retries) {
-                  // Le verrou est valide et récent, on attend et on réessaie
+                  // Lock is valid and recent, wait and retry
                   if (VERBOSE) {
-                    log(`Verrou détenu par le processus ${lockInfo.pid}, attente (tentative ${attempt + 1}/${retries})...`);
+                    log(`Lock held by process ${lockInfo.pid}, waiting (attempt ${attempt + 1}/${retries})...`);
                   }
                   setTimeout(() => tryAcquire(attempt + 1), delay);
                   return;
                 } else {
-                  return reject(new Error(`Impossible d'acquérir le verrou après ${retries} tentatives, détenu par le processus ${lockInfo.pid}`));
+                  return reject(new Error(`Unable to acquire lock after ${retries} attempts, held by process ${lockInfo.pid}`));
                 }
               } catch (e) {
-                // Le processus n'existe plus, on supprime le verrou
-                log(`Verrou détenu par un processus ${lockInfo.pid} qui n'existe plus, suppression...`);
+                // Process no longer exists, remove the lock
+                log(`Lock held by process ${lockInfo.pid} that no longer exists, removing...`);
                 try {
                   fs.unlinkSync(LOCK_FILE);
                 } catch (unlinkErr) {
-                  // Ignorer les erreurs lors de la suppression
+                  // Ignore errors during removal
                 }
               }
             } else if (lockAge > 10000) {
-              // Verrou sans PID et ancien, on le supprime
-              log(`Verrou sans PID et ancien (${Math.round(lockAge / 1000)}s), suppression...`);
+              // Lock without PID and old, remove it
+              log(`Lock without PID and old (${Math.round(lockAge / 1000)}s), removing...`);
               try {
                 fs.unlinkSync(LOCK_FILE);
               } catch (unlinkErr) {
-                // Ignorer les erreurs lors de la suppression
+                // Ignore errors during removal
               }
             } else if (attempt < retries) {
-              // Verrou sans PID mais récent, on attend et on réessaie
+              // Lock without PID but recent, wait and retry
               setTimeout(() => tryAcquire(attempt + 1), delay);
               return;
             } else {
-              return reject(new Error(`Impossible d'acquérir le verrou après ${retries} tentatives`));
+              return reject(new Error(`Unable to acquire lock after ${retries} attempts`));
             }
           } catch (statErr) {
-            // Erreur lors de la vérification du verrou, on suppose qu'il est corrompu
-            log(`Erreur lors de la vérification du verrou: ${statErr.message}, suppression...`);
+            // Error checking lock, assume it's corrupted
+            log(`Error checking lock: ${statErr.message}, removing...`);
             try {
               fs.unlinkSync(LOCK_FILE);
             } catch (unlinkErr) {
-              // Ignorer les erreurs lors de la suppression
+              // Ignore errors during removal
             }
           }
         }
         
-        // Créer le verrou
+        // Create lock
         const lockData = {
           pid: process.pid,
           hostname: os.hostname(),
@@ -131,15 +131,15 @@ function acquireLock(retries = 10, delay = 200) {
         try {
           fs.writeFileSync(LOCK_FILE, JSON.stringify(lockData, null, 2));
           if (VERBOSE) {
-            log(`Verrou acquis par le processus ${process.pid}`);
+            log(`Lock acquired by process ${process.pid}`);
           }
           resolve();
         } catch (writeErr) {
           if (attempt < retries) {
-            log(`Erreur lors de l'écriture du verrou: ${writeErr.message}, nouvelle tentative...`);
+            log(`Error writing lock: ${writeErr.message}, retrying...`);
             setTimeout(() => tryAcquire(attempt + 1), delay);
           } else {
-            reject(new Error(`Erreur lors de l'écriture du verrou: ${writeErr.message}`));
+            reject(new Error(`Error writing lock: ${writeErr.message}`));
           }
         }
       } catch (err) {
@@ -156,47 +156,47 @@ function acquireLock(retries = 10, delay = 200) {
   });
 }
 
-// Libérer le verrou
+// Release lock
 function releaseLock() {
   try {
     if (fs.existsSync(LOCK_FILE)) {
-      // Vérifier si le verrou appartient à ce processus
+      // Check if lock belongs to this process
       try {
         const lockContent = fs.readFileSync(LOCK_FILE, 'utf8');
         const lockInfo = JSON.parse(lockContent);
         
         if (lockInfo.pid === process.pid) {
-          // Le verrou appartient à ce processus, on peut le supprimer
+          // Lock belongs to this process, we can remove it
           fs.unlinkSync(LOCK_FILE);
           if (VERBOSE) {
-            log(`Verrou libéré par le processus ${process.pid}`);
+            log(`Lock released by process ${process.pid}`);
           }
         } else {
-          // Le verrou appartient à un autre processus, ne pas le supprimer
-          log(`Tentative de libération d'un verrou appartenant au processus ${lockInfo.pid} par le processus ${process.pid}`, true);
+          // Lock belongs to another process, don't remove it
+          log(`Attempt to release lock owned by process ${lockInfo.pid} by process ${process.pid}`, true);
         }
       } catch (readErr) {
-        // Si on ne peut pas lire le verrou, on suppose qu'il est corrompu et on le supprime
-        log(`Verrou corrompu détecté lors de la libération, suppression...`);
+        // If we can't read the lock, assume it's corrupted and remove it
+        log(`Corrupted lock detected during release, removing...`);
         try {
           fs.unlinkSync(LOCK_FILE);
         } catch (unlinkErr) {
-          // Ignorer les erreurs lors de la suppression
+          // Ignore errors during removal
         }
       }
     }
   } catch (err) {
-    log(`Erreur lors de la libération du verrou: ${err.message}`, true);
+    log(`Error releasing lock: ${err.message}`, true);
   }
 }
 
-// Initialiser le fichier de ports s'il n'existe pas
+// Initialize port file if it doesn't exist
 async function initPortFile() {
   try {
     await acquireLock();
     
     if (!fs.existsSync(PORT_FILE)) {
-      log('Création du fichier de ports...');
+      log('Creating port file...');
       fs.writeFileSync(PORT_FILE, JSON.stringify({
         activePorts: {},
         usedPorts: [],
@@ -204,7 +204,7 @@ async function initPortFile() {
       }, null, 2));
     }
   } catch (err) {
-    log(`Erreur lors de l'initialisation du fichier de ports: ${err.message}`, true);
+    log(`Error initializing port file: ${err.message}`, true);
   } finally {
     releaseLock();
   }

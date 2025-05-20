@@ -20,11 +20,11 @@ console.warn = (...args) => {
   originalConsoleWarn.apply(console, args);
 };
 
-// Supprimer les logs de debug pendant les tests sauf si VERBOSE_LOGS est activé
+// Remove debug logs during tests unless VERBOSE_LOGS is enabled
 if (!process.env.VERBOSE_LOGS || process.env.VERBOSE_LOGS !== 'true') {
   const originalConsoleLog = console.log;
   console.log = function(message) {
-    // Garder uniquement les logs importants
+    // Keep only important logs
     if (typeof message === 'string' && 
         (message.includes('ERROR') || 
          message.includes('FATAL') || 
