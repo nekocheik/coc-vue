@@ -9,7 +9,8 @@ import { NeovimTestClient as RealNeovimTestClient } from './neovim-test-client';
 
 // Fonction pour obtenir le client réel
 function getRealNeovimTestClient() {
-  return RealNeovimTestClient.getInstance();
+  // Créer une nouvelle instance du client réel
+  return new RealNeovimTestClient();
 }
 
 /**

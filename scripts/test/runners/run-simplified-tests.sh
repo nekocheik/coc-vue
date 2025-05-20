@@ -6,6 +6,10 @@
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
+# Afficher le répertoire de travail pour le débogage
+echo "Répertoire de travail: $(pwd)"
+echo "PROJECT_ROOT: $PROJECT_ROOT"
+
 # Couleurs pour l'affichage
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -56,7 +60,7 @@ run_unit_tests() {
   print_info "Exécution des tests unitaires..."
   
   # Exécuter les tests unitaires avec Jest et la configuration simplifiée
-  MOCK_NEOVIM=true npx jest --config ./test/simplified-jest.config.js --testPathPattern="__tests__/(?!integration)" --passWithNoTests
+  MOCK_NEOVIM=true npx jest --config "$PROJECT_ROOT/test/simplified-jest.config.js" --testPathPattern="__tests__/(?!integration)" --passWithNoTests
   local result=$?
   
   if [ $result -eq 0 ]; then
@@ -73,7 +77,7 @@ run_component_tests() {
   print_info "Exécution des tests de composants avec mocks..."
   
   # Exécuter les tests de composants avec Jest et la configuration simplifiée
-  MOCK_NEOVIM=true npx jest --config ./test/simplified-jest.config.js --testPathPattern="__tests__/components" --passWithNoTests
+  MOCK_NEOVIM=true npx jest --config "$PROJECT_ROOT/test/simplified-jest.config.js" --testPathPattern="__tests__/components" --passWithNoTests
   local result=$?
   
   if [ $result -eq 0 ]; then
@@ -90,7 +94,7 @@ run_integration_tests() {
   print_info "Exécution des tests d'intégration simplifiés..."
   
   # Exécuter les tests d'intégration avec Jest et la configuration simplifiée
-  MOCK_NEOVIM=true npx jest --config ./test/simplified-jest.config.js --testPathPattern="__tests__/integration" --passWithNoTests
+  MOCK_NEOVIM=true npx jest --config "$PROJECT_ROOT/test/simplified-jest.config.js" --testPathPattern="__tests__/integration" --passWithNoTests
   local result=$?
   
   if [ $result -eq 0 ]; then
