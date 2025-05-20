@@ -1,145 +1,89 @@
-# Structure de Tests Améliorée pour COC-Vue
+# Improved Testing Framework for COC-Vue
 
-Cette structure de tests a été conçue pour résoudre les problèmes de la structure précédente, notamment :
-- Trop de logs qui nuisent à la lisibilité
-- Tests lents et peu fiables
-- Difficultés à maintenir les mocks
-- Problèmes de connexion avec Neovim
+This testing framework has been designed to address issues with the previous testing structure and provide a more robust, maintainable, and efficient testing environment for the COC-Vue project.
 
-## Organisation des Dossiers
+## Key Improvements
+
+- **Reduced Log Noise**: Filtered logs for better readability
+- **Faster Tests**: Optimized test execution and better mock management
+- **Improved Stability**: More reliable test execution with proper error handling
+- **Simplified Mocks**: Easier to maintain mock implementations
+- **Better External Dependency Management**: Improved handling of Neovim dependencies
+
+## Directory Structure
 
 ```
 test-improved/
-├── integration/       # Tests d'intégration
-├── jest.config.js     # Configuration Jest améliorée
-├── mocks/             # Mocks améliorés
-├── reports/           # Rapports de tests générés
-├── scripts/           # Scripts d'exécution des tests
-├── unit/              # Tests unitaires
-└── utils/             # Utilitaires pour les tests
+├── integration/       # Integration tests
+├── jest.config.js     # Improved Jest configuration
+├── mocks/             # Improved mocks
+├── reports/           # Generated test reports
+├── scripts/           # Test execution scripts
+├── unit/              # Unit tests
+└── utils/             # Test utilities
 ```
 
-## Caractéristiques Principales
+## Running Tests
 
-1. **Réduction des Logs**
-   - Les logs sont filtrés pour n'afficher que les informations importantes
-   - Option pour activer les logs verbeux si nécessaire
+### Unit Tests
 
-2. **Mocks Améliorés**
-   - Implémentations plus propres et plus faciles à maintenir
-   - Meilleure gestion des erreurs
-   - Réinitialisation automatique entre les tests
-
-3. **Client Neovim Robuste**
-   - Gestion améliorée des connexions
-   - Reconnexion automatique en cas d'échec
-   - Timeout pour éviter les blocages
-
-4. **Utilitaires de Test**
-   - Fonctions d'aide pour réduire la duplication de code
-   - Assertions simplifiées
-   - Gestion automatique des ressources
-
-5. **Scripts d'Exécution**
-   - Scripts dédiés pour différents types de tests
-   - Mode watch pour le développement
-   - Rapports de couverture de code
-
-## Comment Utiliser
-
-### Exécuter les Tests Unitaires
+Unit tests are fast and don't require a Neovim server:
 
 ```bash
 ./test-improved/scripts/run-unit-tests.sh
 ```
 
-### Exécuter les Tests d'Intégration
+### Integration Tests
+
+Integration tests require a Neovim server, which is automatically started and stopped:
 
 ```bash
 ./test-improved/scripts/run-integration-tests.sh
 ```
 
-Pour voir les logs détaillés :
+For detailed logs (in case of issues):
 
 ```bash
 VERBOSE_LOGS=true ./test-improved/scripts/run-integration-tests.sh
 ```
 
-### Exécuter Tous les Tests
+### All Tests
+
+To run all tests and generate a coverage report:
 
 ```bash
 ./test-improved/scripts/run-all-tests.sh
 ```
 
-### Mode Watch (Développement)
+### Watch Mode (Development)
+
+To run tests in watch mode (useful during development):
 
 ```bash
-./test-improved/scripts/watch-tests.sh unit     # Pour les tests unitaires
-./test-improved/scripts/watch-tests.sh integration  # Pour les tests d'intégration
+./test-improved/scripts/watch-tests.sh unit     # For unit tests
+./test-improved/scripts/watch-tests.sh integration  # For integration tests
 ```
 
-## Écrire de Nouveaux Tests
+## Writing Tests
 
-### Tests Unitaires
+For more detailed information about writing tests with this framework, please refer to the [Improved Testing Documentation](../docs/IMPROVED_TESTING.md).
 
-```typescript
-// test-improved/unit/mon-composant.test.ts
-import { MonComposant } from '../mocks/mon-composant';
-import { mockNvim, resetAllMocks } from '../mocks/coc';
+## Troubleshooting
 
-describe('MonComposant', () => {
-  beforeEach(() => {
-    resetAllMocks();
-  });
-  
-  it('devrait faire quelque chose', async () => {
-    const composant = new MonComposant({ id: 'test' });
-    await composant.mount();
-    
-    // Assertions...
-    expect(mockNvim.call).toHaveBeenCalledWith(/* ... */);
-  });
-});
-```
+If you encounter issues with the tests:
 
-### Tests d'Intégration
+1. Check the logs in the `reports` directory
+2. Try running with `VERBOSE_LOGS=true` for more detailed output
+3. Verify that Neovim is properly installed and configured
+4. Check that all dependencies are installed with `npm install`
+5. Ensure that the test scripts have executable permissions (`chmod +x test-improved/scripts/*.sh`)
 
-```typescript
-// test-improved/integration/mon-composant.test.ts
-import { withComponent, expectState } from '../utils/test-helpers';
+## Contributing
 
-describe('MonComposant Integration', () => {
-  it('devrait faire quelque chose', async () => {
-    await withComponent('monComposant', async (helper) => {
-      // Actions...
-      await helper.callMethod('maMethode');
-      
-      // Assertions...
-      const state = await helper.getState();
-      expectState(state, { propriete: 'valeur' });
-    });
-  });
-});
-```
+When adding new tests, please follow these guidelines:
 
-## Conseils pour des Tests Efficaces
-
-1. **Réduire la Duplication**
-   - Utilisez les utilitaires fournis pour éviter de répéter du code
-   - Créez des fonctions d'aide pour les opérations communes
-
-2. **Tests Isolés**
-   - Chaque test doit être indépendant des autres
-   - Réinitialisez les mocks avant chaque test
-
-3. **Tests Lisibles**
-   - Utilisez des noms descriptifs pour les tests
-   - Structurez les tests en phases: arrangement, action, assertion
-
-4. **Éviter les Logs Inutiles**
-   - N'ajoutez des logs que lorsque c'est nécessaire pour le débogage
-   - Utilisez VERBOSE_LOGS pour les logs détaillés
-
-5. **Gestion des Erreurs**
-   - Testez les cas d'erreur, pas seulement les cas de succès
-   - Utilisez try/catch pour capturer les erreurs attendues
+1. Keep tests isolated and independent
+2. Use the provided utilities to reduce code duplication
+3. Minimize log output unless necessary for debugging
+4. Include both success and error cases
+5. Follow the existing test structure and naming conventions
