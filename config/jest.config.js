@@ -28,7 +28,7 @@ module.exports = {
   // Si un test échoue de manière répétée pour des raisons connues, nous pouvons l'ajouter ici
   bail: false,
   verbose: true,
-  setupFilesAfterEnv: ['<rootDir>/src/jest-setup.js'],
+  setupFilesAfterEnv: ['../src/jest-setup.js'],
   watchPathIgnorePatterns: ['<rootDir>/lib/'],
   globals: {
     'vue-jest': {
