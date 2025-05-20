@@ -1,0 +1,61 @@
+stages:
+  - build
+  - test
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+# Cache des dépendances npm
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+
+# Job de construction
+build:
+  stage: build
+  image: node:18-slim
+  script:
+    - npm install --legacy-peer-deps
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 week
+
+# Job de test simplifié (avec mocks)
+test:simplified:
+  stage: test
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  script:
+    - docker build -t coc-vue-test .
+    - docker run --rm coc-vue-test ./scripts/test/runners/run-simplified-tests.sh
+
+# Job de test complet (optionnel, peut échouer)
+test:full:
+  stage: test
+  image: docker:20.10.16
+  services:
+    - docker:20.10.16-dind
+  script:
+    - docker build -t coc-vue-test .
+    - docker run --rm coc-vue-test ./scripts/run-tests-with-timeout.sh
+  allow_failure: true  # Ce job peut échouer sans faire échouer le pipeline
+
+# Job de déploiement (exemple)
+deploy:
+  stage: deploy
+  image: node:18-slim
+  script:
+    - echo "Déploiement de l'extension coc-vue"
+    - npm pack
+  artifacts:
+    paths:
+      - "*.tgz"
+  only:
+    - tags
+    - master

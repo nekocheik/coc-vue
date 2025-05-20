@@ -423,6 +423,48 @@ The project uses several tools to maintain high code quality:
 - **Jest** for testing
 - **Webpack** for bundling
 
+## 📦 Docker et Intégration Continue
+
+Le projet inclut une configuration Docker pour faciliter les tests et l'intégration continue.
+
+### Tests avec Docker
+
+Pour exécuter les tests dans un environnement Docker isolé :
+
+```bash
+# Exécuter les tests simplifiés avec Docker
+./docker-test.sh
+
+# Ou utiliser Docker Compose
+docker-compose up test
+
+# Pour exécuter les tests complets (peut échouer)
+docker-compose up test-full
+```
+
+### Intégration GitLab CI
+
+Le projet inclut un fichier `.gitlab-ci.yml` prêt à l'emploi pour l'intégration continue avec GitLab :
+
+- **Build** : Compile le projet et génère les artefacts
+- **Test Simplifié** : Exécute les tests avec mocks (doit toujours réussir)
+- **Test Complet** : Exécute les tests complets (optionnel, peut échouer)
+- **Déploiement** : Crée un package pour le déploiement (sur les tags et la branche master)
+
+Pour utiliser cette configuration :
+
+1. Assurez-vous que votre instance GitLab dispose de runners avec support Docker
+2. Poussez votre code vers GitLab
+3. Le pipeline CI s'exécutera automatiquement
+
+### Personnalisation de l'environnement Docker
+
+Vous pouvez personnaliser l'environnement Docker en modifiant les fichiers suivants :
+
+- `Dockerfile` : Configuration de l'image Docker
+- `docker-compose.yml` : Configuration des services Docker
+- `.gitlab-ci.yml` : Configuration du pipeline CI
+
 ## 🔍 Debugging Guide
 
 ### In-Editor Debugging

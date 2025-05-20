@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./test-results:/app/test-results
+    command: ./scripts/docker-run-tests.sh
+    environment:
+      - MOCK_NEOVIM=true
+      - NODE_ENV=test
+      - CI=true
+
+  # Service pour exécuter les tests complets (peut échouer)
+  test-full:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./test-results:/app/test-results
+    command: ./scripts/run-tests-with-timeout.sh
+    environment:
+      - NODE_ENV=test
+      - CI=true
