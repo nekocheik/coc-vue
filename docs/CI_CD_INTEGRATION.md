@@ -9,6 +9,9 @@ Ce document décrit la configuration et l'utilisation des systèmes d'intégrati
 - [GitHub Actions CI](#github-actions-ci)
 - [GitLab CI](#gitlab-ci)
 - [Exécution des tests](#exécution-des-tests)
+  - [Tests Jest](#tests-jest)
+  - [Tests Vader des composants](#tests-vader-des-composants)
+  - [Rapports de tests](#rapports-de-tests)
 - [Gestion des secrets](#gestion-des-secrets)
 - [Dépannage](#dépannage)
 
@@ -170,6 +173,89 @@ gh run view [RUN_ID]
 # Suivre la progression d'une exécution
 gh run watch [RUN_ID]
 ```
+
+## Exécution des tests
+
+Le projet coc-vue utilise plusieurs types de tests pour assurer la qualité du code. Ces tests sont exécutés automatiquement dans l'environnement CI.
+
+### Tests Jest
+
+Les tests Jest sont utilisés pour les tests unitaires, les tests de composants et les tests d'intégration.
+
+```bash
+# Exécution des tests unitaires
+npx jest --config /app/test/simplified-jest.config.js --testPathPattern="__tests__/(?!integration)" --passWithNoTests
+
+# Exécution des tests de composants
+npx jest --config /app/test/simplified-jest.config.js --testPathPattern="__tests__/components" --passWithNoTests
+
+# Exécution des tests d'intégration
+npx jest --config /app/test/simplified-jest.config.js --testPathPattern="__tests__/integration" --passWithNoTests
+```
+
+### Tests Vader des composants
+
+Les tests Vader sont utilisés pour tester les composants Vim/Neovim. Ces tests vérifient le comportement des composants UI dans un environnement Vim.
+
+#### Structure des tests Vader
+
+Les tests Vader sont organisés dans le répertoire `test/vader/` et comprennent les fichiers suivants :
+
+- `button.vader` : Tests pour le composant Button
+- `core_validation.vader` : Tests pour les fonctions de validation
+- `modal.vader` : Tests pour le composant Modal
+- `select.vader` : Tests pour le composant Select
+- `select_old.vader` : Tests pour la version précédente du composant Select
+- `simple.vader` : Tests simples pour vérifier l'environnement
+
+#### Exécution des tests Vader
+
+Les tests Vader sont exécutés à l'aide du script `scripts/run-vader-tests.sh` qui lance Neovim en mode headless :
+
+```bash
+# Exécuter tous les tests Vader
+./scripts/run-vader-tests.sh
+
+# Exécuter un test Vader spécifique
+nvim -u NORC -N --headless -c "set rtp+=./test,vader.vim" -c "Vader! test/vader/button.vader" -c "qall!"
+```
+
+Le script génère des rapports détaillés pour chaque fichier de test dans le répertoire `.ci-artifacts/vader-reports/`.
+
+#### Analyse des résultats des tests Vader
+
+Les tests Vader peuvent échouer pour plusieurs raisons :
+
+1. **Modules Lua manquants** : Les modules requis ne sont pas trouvés dans le chemin de recherche Lua
+2. **Variables non définies** : Les tests tentent d'accéder à des variables qui n'existent pas
+3. **Erreurs de syntaxe** : Erreurs de syntaxe dans le code Lua
+4. **Échecs d'assertion** : Les assertions dans les tests échouent
+
+Le rapport généré par le script fournit des détails sur les tests qui ont échoué, y compris les messages d'erreur spécifiques.
+
+### Rapports de tests
+
+Les résultats des tests sont collectés et présentés de plusieurs façons :
+
+1. **Sortie de console** : Affiche un résumé des résultats des tests en temps réel
+2. **Rapports HTML** : Générés pour les tests Vader dans `.ci-artifacts/vader-reports/vader_test_report.html`
+3. **Résumé GitHub Actions** : Affiche un résumé des résultats dans l'interface GitHub Actions
+4. **Artefacts CI** : Les rapports de test sont téléchargeables en tant qu'artefacts CI
+
+#### Visualisation des rapports dans GitHub Actions
+
+Les résultats des tests Vader sont affichés dans l'interface GitHub Actions sous forme de tableau :
+
+| Fichier | Statut | Tests réussis | Temps d'exécution |
+| ------- | ------ | ------------- | ---------------- |
+| button.vader | ❌ | 0/8 | 0.06 sec |
+| core_validation.vader | ✅ | 14/15 | 0.13 sec |
+| modal.vader | ❌ | 0/10 | 0.09 sec |
+| select.vader | ✅ | 90/90 | 0.63 sec |
+| select_old.vader | ✅ | 90/90 | 0.58 sec |
+| simple.vader | ✅ | 1/1 | 0.01 sec |
+
+Les rapports détaillés sont disponibles en téléchargement sous forme d'artefacts CI.
 
 ## GitLab CI
 
