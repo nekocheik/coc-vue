@@ -11,8 +11,10 @@ RUN apt-get update && apt-get install -y \
 # Définir le répertoire de travail
 WORKDIR /app
 
-# Copier les fichiers de dépendances
-COPY package.json package-lock.json bun.lock ./
+# Copier les fichiers de dépendances (package.json est obligatoire)
+COPY package.json ./
+# Copier les fichiers de verrou s'ils existent
+COPY package-lock.json* bun.lock* ./
 
 # Installer les dépendances
 RUN npm install --legacy-peer-deps
