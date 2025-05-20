@@ -3,7 +3,7 @@
 # Script to start a headless Neovim instance with the command server
 
 # Set the path to the project root
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # Colors for output
@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 echo -e "${YELLOW}Starting Neovim command server...${NC}"
 
 # Start Neovim in headless mode with our command server init script
-nvim --headless -u "$PROJECT_ROOT/scripts/command_server_init.vim" &
+nvim --headless -u "$PROJECT_ROOT/scripts/vim/command_server_init.vim" &
 NVIM_PID=$!
 
 # Wait for the server to start

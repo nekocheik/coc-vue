@@ -5,7 +5,7 @@ filetype plugin indent on
 syntax enable
 
 " Add the project root to the runtime path
-let s:project_root = expand('<sfile>:p:h:h')
+let s:project_root = expand('<sfile>:p:h:h:h')
 let &runtimepath.=','.s:project_root
 
 " Embed the ping-pong server directly

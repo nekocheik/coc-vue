@@ -67,7 +67,7 @@ run_command_tests() {
 # Fonction pour exécuter les tests de ping
 run_ping_tests() {
   echo -e "${YELLOW}Exécution des tests de ping...${NC}"
-  "$PROJECT_ROOT/scripts/test/run_ping_test.sh"
+  "$PROJECT_ROOT/scripts/test/run_node_ping_test.sh"
 }
 
 # Fonction pour démarrer le serveur de composants

@@ -3,7 +3,7 @@
 # Script to start a headless Neovim instance for testing
 
 # Set the path to the project root
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # Colors for output
@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 echo -e "${YELLOW}Starting Neovim test server...${NC}"
 
 # Start Neovim in headless mode with our test init.vim
-nvim --headless -u "$PROJECT_ROOT/scripts/test_init.vim" &
+nvim --headless -u "$PROJECT_ROOT/scripts/vim/test_init.vim" &
 NVIM_PID=$!
 
 # Wait for the server to start
@@ -37,7 +37,7 @@ trap cleanup EXIT
 
 # Test the connection
 echo -e "${GREEN}Testing connection to Neovim server...${NC}"
-node "$PROJECT_ROOT/scripts/test_server_connection.js"
+node "$PROJECT_ROOT/scripts/js/test_server_connection.js"
 CONNECTION_RESULT=$?
 
 if [ $CONNECTION_RESULT -eq 0 ]; then
