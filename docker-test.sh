@@ -1,65 +1,65 @@
 #!/bin/bash
-# Script pour exécuter les tests dans un conteneur Docker
+# Script to run tests in a Docker container
 
-# Couleurs pour l'affichage
+# Colors for display
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Fonction pour afficher l'en-tête
+# Function to display header
 print_header() {
   echo -e "\n${BLUE}=========================================${NC}"
-  echo -e "${BLUE}   Tests Docker pour coc-vue   ${NC}"
+  echo -e "${BLUE}   Docker Tests for coc-vue   ${NC}"
   echo -e "${BLUE}=========================================${NC}\n"
 }
 
-# Fonction pour afficher les messages d'information
+# Function to display information messages
 print_info() {
   echo -e "${YELLOW}$1${NC}"
 }
 
-# Fonction pour afficher les messages de succès
+# Function to display success messages
 print_success() {
   echo -e "${GREEN}$1${NC}"
 }
 
-# Fonction pour afficher les messages d'erreur
+# Function to display error messages
 print_error() {
   echo -e "${RED}$1${NC}"
 }
 
-# Fonction principale
+# Main function
 main() {
   print_header
   
-  # Vérifier si Docker est installé
+  # Check if Docker is installed
   if ! command -v docker &> /dev/null; then
-    print_error "Docker n'est pas installé. Veuillez l'installer avant de continuer."
+    print_error "Docker is not installed. Please install it before continuing."
     exit 1
   fi
   
-  print_info "Construction de l'image Docker..."
+  print_info "Building Docker image..."
   docker build -t coc-vue-test .
   
   if [ $? -ne 0 ]; then
-    print_error "Échec de la construction de l'image Docker."
+    print_error "Failed to build Docker image."
     exit 1
   fi
   
-  print_success "Image Docker construite avec succès."
+  print_success "Docker image built successfully."
   
-  print_info "Exécution des tests simplifiés dans Docker..."
+  print_info "Running simplified tests in Docker..."
   docker run --rm coc-vue-test ./scripts/test/runners/run-simplified-tests.sh
   
   if [ $? -ne 0 ]; then
-    print_error "Échec des tests dans Docker."
+    print_error "Tests failed in Docker."
     exit 1
   fi
   
-  print_success "Tests exécutés avec succès dans Docker!"
+  print_success "Tests executed successfully in Docker!"
 }
 
-# Exécuter la fonction principale
+# Run main function
 main "$@"

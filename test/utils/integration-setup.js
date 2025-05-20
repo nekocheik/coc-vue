@@ -1,32 +1,32 @@
 /**
- * Configuration spécifique pour les tests d'intégration
- * Ce fichier est exécuté avant chaque test d'intégration
+ * Specific configuration for integration tests
+ * This file is executed before each integration test
  */
 
-// Augmenter le timeout pour les tests d'intégration
+// Increase timeout for integration tests
 jest.setTimeout(60000);
 
-// Fonction pour nettoyer l'environnement après chaque test
+// Function to clean up environment after each test
 afterEach(async () => {
-  // Réinitialiser les mocks
+  // Reset mocks
   jest.clearAllMocks();
   
-  // Réinitialiser l'instance du client Neovim
+  // Reset Neovim client instance
   try {
     const { NeovimClient } = require('./neovim-client');
     NeovimClient.resetInstance();
   } catch (err) {
-    console.error('Erreur lors de la réinitialisation du client Neovim:', err);
+    console.error('Error while resetting Neovim client:', err);
   }
 });
 
-// Fonction pour nettoyer l'environnement après tous les tests
+// Function to clean up environment after all tests
 afterAll(async () => {
-  // Assurez-vous que toutes les connexions sont fermées
+  // Make sure all connections are closed
   try {
     const { NeovimClient } = require('./neovim-client');
     NeovimClient.resetInstance();
   } catch (err) {
-    console.error('Erreur lors de la réinitialisation du client Neovim:', err);
+    console.error('Error while resetting Neovim client:', err);
   }
 });

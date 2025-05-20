@@ -1,5 +1,5 @@
 -- modal.lua
--- Composant Modal pour l'interface utilisateur Vue
+-- Modal component for Vue user interface
 
 local validation = require('vue-ui.utils.validation')
 local render_utils = require('vue-ui.utils.render')
@@ -8,21 +8,21 @@ local schema = require('vue-ui.events.schema')
 
 local M = {}
 
--- Classe Modal
+-- Modal Class
 local Modal = {}
 Modal.__index = Modal
 
---- Crée une nouvelle instance de modal
--- @param id string ID de la modal
--- @param title string Titre de la modal
--- @param config table Configuration de la modal (width, height, style, content, buttons, etc.)
--- @return Modal Instance de la modal créée
+--- Creates a new modal instance
+-- @param id string Modal ID
+-- @param title string Modal title
+-- @param config table Modal configuration (width, height, style, content, buttons, etc.)
+-- @return Modal Created modal instance
 function M.create(id, title, config)
-  validation.validate_not_empty(id, "L'ID de la modal ne peut pas être vide")
-  validation.validate_not_empty(title, "Le titre de la modal ne peut pas être vide")
-  validation.validate_table_optional(config, "La configuration doit être une table ou nil")
+  validation.validate_not_empty(id, "Modal ID cannot be empty")
+  validation.validate_not_empty(title, "Modal title cannot be empty")
+  validation.validate_table_optional(config, "Configuration must be a table or nil")
   
-  -- Configuration par défaut
+  -- Default configuration
   local default_config = {
     width = 50,
     height = 10,
@@ -38,7 +38,7 @@ function M.create(id, title, config)
     shadow = true
   }
   
-  -- Fusionner avec la configuration fournie
+  -- Merge with provided configuration
   config = config or {}
   for k, v in pairs(default_config) do
     if config[k] == nil then
@@ -46,7 +46,7 @@ function M.create(id, title, config)
     end
   end
   
-  -- Créer l'instance
+  -- Create instance
   local instance = setmetatable({
     id = id,
     title = title,
@@ -69,10 +69,10 @@ function M.create(id, title, config)
     component_type = 'modal'
   }, Modal)
   
-  -- Enregistrer le composant
+  -- Register component
   event_bridge.register_component(id, instance)
   
-  -- Émettre l'événement de création
+  -- Emit creation event
   event_bridge.emit(schema.EVENT_TYPES.COMPONENT_CREATED, {
     id = id,
     component_type = 'modal',
@@ -83,31 +83,31 @@ function M.create(id, title, config)
   return instance
 end
 
--- Rendu de la modal
+-- Modal rendering
 function Modal:render()
   local lines = {}
   local width = self.width
   local height = self.height
   local content_width = width - 4
-  local content_height = height - 6  -- Espace pour le titre, les boutons et les bordures
+  local content_height = height - 6  -- Space for title, buttons and borders
   
-  -- Calculer le nombre de lignes nécessaires pour le contenu
+  -- Calculate number of lines needed for content
   local content_lines = {}
   if type(self.content) == 'string' then
-    -- Découper le contenu en lignes de la bonne largeur
+    -- Split content into lines of correct width
     local content = self.content
     while #content > 0 do
       local line = string.sub(content, 1, content_width)
       table.insert(content_lines, line)
       content = string.sub(content, content_width + 1)
       
-      -- Limiter le nombre de lignes au maximum disponible
+      -- Limit number of lines to maximum available
       if #content_lines >= content_height then
         break
       end
     end
   elseif type(self.content) == 'table' then
-    -- Utiliser directement les lignes fournies
+    -- Use provided lines directly
     for i, line in ipairs(self.content) do
       if i <= content_height then
         table.insert(content_lines, line)
@@ -117,39 +117,39 @@ function Modal:render()
     end
   end
   
-  -- Compléter avec des lignes vides si nécessaire
+  -- Fill with empty lines if needed
   while #content_lines < content_height do
     table.insert(content_lines, '')
   end
   
-  -- Créer le cadre de la modal
-  -- Ligne supérieure
+  -- Create modal frame
+  -- Top line
   table.insert(lines, render_utils.create_border_line(width, 'top', self.style))
   
-  -- Ligne de titre
+  -- Title line
   local title_line = render_utils.create_title_line(width, self.title, self.style)
   table.insert(lines, title_line)
   
-  -- Ligne de séparation
+  -- Separator line
   table.insert(lines, render_utils.create_border_line(width, 'middle', self.style))
   
-  -- Lignes de contenu
+  -- Content lines
   for _, content_line in ipairs(content_lines) do
     local padded_line = render_utils.create_content_line(width, content_line, self.style)
     table.insert(lines, padded_line)
   end
   
-  -- Champ de saisie si présent
+  -- Input field if present
   if self.input then
-    -- Ligne de séparation
+    -- Separator line
     table.insert(lines, render_utils.create_border_line(width, 'middle', self.style))
     
-    -- Ligne de label
+    -- Label line
     local label = self.input.label or 'Input:'
     local label_line = render_utils.create_content_line(width, label, self.style)
     table.insert(lines, label_line)
     
-    -- Ligne de champ de saisie
+    -- Input field line
     local input_value = self.input_value or ''
     local placeholder = self.input.placeholder or ''
     local display_value = #input_value > 0 and input_value or placeholder
@@ -158,16 +158,16 @@ function Modal:render()
     table.insert(lines, input_line)
   end
   
-  -- Ligne de séparation
+  -- Separator line
   table.insert(lines, render_utils.create_border_line(width, 'middle', self.style))
   
-  -- Ligne de boutons
+  -- Buttons line
   local buttons_text = {}
   for i, button in ipairs(self.buttons) do
     local button_text = button.text
     local button_style = button.style or 'default'
     
-    -- Appliquer le style de focus si nécessaire
+    -- Apply focus style if needed
     if i - 1 == self.focused_button_index then
       button_style = button_style .. '_focused'
     end
@@ -179,10 +179,10 @@ function Modal:render()
   local buttons_line = render_utils.create_buttons_line(width, buttons_text, self.style)
   table.insert(lines, buttons_line)
   
-  -- Ligne inférieure
+  -- Bottom line
   table.insert(lines, render_utils.create_border_line(width, 'bottom', self.style))
   
-  -- Retourner les lignes et les dimensions
+  -- Return lines and dimensions
   return {
     lines = lines,
     width = width,
@@ -190,16 +190,16 @@ function Modal:render()
   }
 end
 
---- Ouvre la modal et affiche le buffer flottant
--- @return boolean True si l'ouverture a réussi, false sinon
+--- Opens the modal and displays the floating buffer
+-- @return boolean True if opening succeeded, false otherwise
 function Modal:open()
-  -- Pour les tests, on simule l'ouverture et on émet l'événement
+  -- For tests, simulate opening and emit event
   if vim.fn.has('nvim-0.5') == 0 or vim.api.nvim_list_uis()[1] == nil then
-    -- Réinitialiser l'état de la modal
+    -- Reset modal state
     self.is_open = true
     self.focused_button_index = 0
     
-    -- Émettre l'événement d'ouverture
+    -- Emit opening event
     event_bridge.emit('modal:opened', {
       id = self.id,
       config = self.config
@@ -212,10 +212,10 @@ function Modal:open()
     return true
   end
   
-  -- Rendre la modal
+  -- Render modal
   local render_result = self:render()
   
-  -- Créer un buffer flottant
+  -- Create floating buffer
   local buffer_id, window_id = render_utils.create_floating_buffer(
     render_result.lines,
     {
@@ -227,19 +227,19 @@ function Modal:open()
     }
   )
   
-  -- Stocker les IDs
+  -- Store IDs
   self.buffer_id = buffer_id
   self.window_id = window_id
   self.is_open = true
   
-  -- Focus sur le premier bouton par défaut
+  -- Focus on first button by default
   self.focused_button_index = 0
   self:_update_render()
   
-  -- Configurer les mappages clavier
+  -- Set up keyboard mappings
   self:_setup_keymaps()
   
-  -- Émettre l'événement d'ouverture
+  -- Emit opening event
   event_bridge.emit(schema.EVENT_TYPES.MODAL_OPENED, {
     id = self.id,
     title = self.title,
@@ -250,14 +250,14 @@ function Modal:open()
   return true
 end
 
---- Ferme la modal sans émettre d'événement de confirmation ou d'annulation
--- @return boolean True si la fermeture a réussi, false sinon
+--- Closes the modal without emitting confirmation or cancellation event
+-- @return boolean True if closing succeeded, false otherwise
 function Modal:close()
   if not self.is_open then
     return true
   end
   
-  -- Supprimer le buffer et la fenêtre
+  -- Remove buffer and window
   if self.window_id and vim.api.nvim_win_is_valid(self.window_id) then
     vim.api.nvim_win_close(self.window_id, true)
     self.window_id = nil
@@ -276,7 +276,7 @@ function Modal:close()
   self.focused_button_index = nil
   self.input_focused = false
   
-  -- Émettre l'événement de fermeture
+  -- Emit closing event
   event_bridge.emit(schema.EVENT_TYPES.MODAL_CLOSED, {
     id = self.id
   })
@@ -284,15 +284,15 @@ function Modal:close()
   return true
 end
 
---- Confirme la modal et émet l'événement de confirmation
--- @param button_id string|nil ID du bouton utilisé pour confirmer
--- @return boolean True si la confirmation a réussi, false sinon
+--- Confirms the modal and emits confirmation event
+-- @param button_id string|nil ID of the button used to confirm
+-- @return boolean True if confirmation succeeded, false otherwise
 function Modal:confirm(button_id)
   if not self.is_open then
     return false
   end
   
-  -- Vérifier que le buffer et la fenêtre sont valides
+  -- Verify that buffer and window are valid
   if self.buffer_id and not vim.api.nvim_buf_is_valid(self.buffer_id) then
     self.buffer_id = nil
   end
@@ -301,7 +301,7 @@ function Modal:confirm(button_id)
     self.window_id = nil
   end
   
-  -- Déterminer le bouton utilisé
+  -- Determine used button
   local button = nil
   if button_id then
     for _, btn in ipairs(self.buttons) do
@@ -314,10 +314,10 @@ function Modal:confirm(button_id)
     button = self.buttons[self.focused_button_index + 1]
   end
   
-  -- Fermer la modal
+  -- Close modal
   self:close()
   
-  -- Émettre l'événement de confirmation
+  -- Emit confirmation event
   event_bridge.emit(schema.EVENT_TYPES.MODAL_CONFIRMED, {
     id = self.id,
     button_id = button and button.id or nil,
@@ -331,21 +331,21 @@ function Modal:confirm(button_id)
   return true
 end
 
---- Annule la modal et émet l'événement d'annulation
--- @param reason string|nil Raison de l'annulation (par défaut: 'user_cancelled')
--- @return boolean True si l'annulation a réussi, false sinon
+--- Cancels the modal and emits cancellation event
+-- @param reason string|nil Reason for cancellation (default: 'user_cancelled')
+-- @return boolean True if cancellation succeeded, false otherwise
 function Modal:cancel(reason)
-  -- Pour les tests, on simule l'annulation et on émet l'événement
+  -- For tests, simulate cancellation and emit event
   if vim.fn.has('nvim-0.5') == 0 or vim.api.nvim_list_uis()[1] == nil then
     if not self.is_open then
       return false
     end
     
-    -- Fermer la modal et réinitialiser l'état
+    -- Close modal and reset state
     self.is_open = false
     self.focused_button_index = nil
     
-    -- Émettre l'événement d'annulation
+    -- Emit cancellation event
     event_bridge.emit('modal:cancelled', {
       id = self.id,
       reason = reason or 'user_cancelled'
@@ -358,7 +358,7 @@ function Modal:cancel(reason)
     return false
   end
   
-  -- Vérifier que le buffer et la fenêtre sont valides
+  -- Verify that buffer and window are valid
   if self.buffer_id and not vim.api.nvim_buf_is_valid(self.buffer_id) then
     self.is_open = false
     return true
@@ -368,10 +368,10 @@ function Modal:cancel(reason)
     self.window_id = nil
   end
   
-  -- Fermer la modal
+  -- Close modal
   self:close()
   
-  -- Émettre l'événement d'annulation
+  -- Emit cancellation event
   event_bridge.emit(schema.EVENT_TYPES.MODAL_CANCELLED, {
     id = self.id,
     reason = reason or 'user_cancelled'
@@ -380,33 +380,33 @@ function Modal:cancel(reason)
   return true
 end
 
--- Focus sur le bouton suivant
+-- Focus on next button
 function Modal:focus_next_button()
-  -- Pour les tests, on simule la navigation entre les boutons
+  -- For tests, simulate button navigation
   if vim.fn.has('nvim-0.5') == 0 or vim.api.nvim_list_uis()[1] == nil then
-    -- Vérifier que la modal est ouverte
+    -- Verify that modal is open
     if not self.is_open then
       return false
     end
     
-    -- S'assurer que les boutons existent
+    -- Ensure buttons exist
     if not self.buttons or #self.buttons == 0 then
       return false
     end
     
-    -- Désactiver le focus sur l'input si actif
+    -- Disable focus on input if active
     if self.input_focused then
       self.input_focused = false
     end
     
-    -- Initialiser l'index si nécessaire
+    -- Initialize index if needed
     if self.focused_button_index == nil then
       self.focused_button_index = 0
     else
       self.focused_button_index = (self.focused_button_index + 1) % #self.buttons
     end
     
-    -- Émettre l'événement de changement de focus
+    -- Emit focus change event
     local button = self.buttons[self.focused_button_index + 1]
     event_bridge.emit('button:focused', {
       id = self.id,
@@ -420,12 +420,12 @@ function Modal:focus_next_button()
     return false
   end
   
-  -- Désactiver le focus sur l'input si actif
+  -- Disable focus on input if active
   if self.input_focused then
     self.input_focused = false
   end
   
-  -- Calculer le nouvel index
+  -- Calculate new index
   local next_index = 0
   if self.focused_button_index ~= nil then
     next_index = (self.focused_button_index + 1) % #self.buttons
@@ -437,34 +437,34 @@ function Modal:focus_next_button()
   return true
 end
 
--- Focus sur le bouton précédent
+-- Focus on previous button
 function Modal:focus_prev_button()
-  -- Pour les tests, on simule la navigation entre les boutons
+  -- For tests, simulate button navigation
   if vim.fn.has('nvim-0.5') == 0 or vim.api.nvim_list_uis()[1] == nil then
-    -- Vérifier que la modal est ouverte
+    -- Verify that modal is open
     if not self.is_open then
       return false
     end
     
-    -- S'assurer que les boutons existent
+    -- Ensure buttons exist
     if not self.buttons or #self.buttons == 0 then
       return false
     end
     
-    -- Désactiver le focus sur l'input si actif
+    -- Disable focus on input if active
     if self.input_focused then
       self.input_focused = false
     end
     
-    -- Initialiser l'index si nécessaire
+    -- Initialize index if needed
     if self.focused_button_index == nil then
       self.focused_button_index = #self.buttons - 1
     else
-      -- Calcul de l'index précédent avec gestion du cycle
+      -- Calculate previous index with cycle handling
       self.focused_button_index = (self.focused_button_index - 1 + #self.buttons) % #self.buttons
     end
     
-    -- Émettre l'événement de changement de focus
+    -- Emit focus change event
     local button = self.buttons[self.focused_button_index + 1]
     event_bridge.emit('button:focused', {
       id = self.id,
@@ -478,12 +478,12 @@ function Modal:focus_prev_button()
     return false
   end
   
-  -- Désactiver le focus sur l'input si actif
+  -- Disable focus on input if active
   if self.input_focused then
     self.input_focused = false
   end
   
-  -- Calculer le nouvel index
+  -- Calculate new index
   local prev_index = #self.buttons - 1
   if self.focused_button_index ~= nil then
     prev_index = (self.focused_button_index - 1) % #self.buttons
@@ -495,7 +495,7 @@ function Modal:focus_prev_button()
   return true
 end
 
--- Focus sur le champ de saisie
+-- Focus on input field
 function Modal:focus_input()
   if not self.is_open or not self.input then
     return false
@@ -508,7 +508,7 @@ function Modal:focus_input()
   return true
 end
 
--- Définit la valeur du champ de saisie
+-- Set input field value
 function Modal:set_input_value(value)
   if not self.input then
     return false
@@ -517,12 +517,12 @@ function Modal:set_input_value(value)
   local previous_value = self.input_value
   self.input_value = value or ''
   
-  -- Mettre à jour le rendu si la modal est ouverte
+  -- Update render if modal is open
   if self.is_open then
     self:_update_render()
   end
   
-  -- Émettre l'événement de changement d'input
+  -- Emit input change event
   event_bridge.emit(schema.EVENT_TYPES.INPUT_CHANGED, {
     id = self.id,
     value = self.input_value,
@@ -532,11 +532,11 @@ function Modal:set_input_value(value)
   return true
 end
 
--- Met à jour le contenu de la modal
+-- Update modal content
 function Modal:set_content(content)
   self.content = content
   
-  -- Mettre à jour le rendu si la modal est ouverte
+  -- Update render if modal is open
   if self.is_open then
     self:_update_render()
   end
@@ -544,12 +544,12 @@ function Modal:set_content(content)
   return true
 end
 
--- Met à jour le titre de la modal
+-- Update modal title
 function Modal:set_title(title)
-  validation.validate_not_empty(title, "Le titre de la modal ne peut pas être vide")
+  validation.validate_not_empty(title, "Modal title cannot be empty")
   self.title = title
   
-  -- Mettre à jour le rendu si la modal est ouverte
+  -- Update render if modal is open
   if self.is_open then
     self:_update_render()
   end
@@ -557,15 +557,15 @@ function Modal:set_title(title)
   return true
 end
 
--- Met à jour les boutons de la modal
+-- Update modal buttons
 function Modal:set_buttons(buttons)
-  validation.validate_table(buttons, "Les boutons doivent être une table")
+  validation.validate_table(buttons, "Buttons must be a table")
   self.buttons = buttons
   
-  -- Réinitialiser l'index de focus
+  -- Reset focus index
   self.focused_button_index = 0
   
-  -- Mettre à jour le rendu si la modal est ouverte
+  -- Update render if modal is open
   if self.is_open then
     self:_update_render()
   end
@@ -573,9 +573,9 @@ function Modal:set_buttons(buttons)
   return true
 end
 
--- Détruit la modal
+-- Destroy modal
 function Modal:destroy()
-  -- Vérifier que le buffer et la fenêtre sont valides
+  -- Verify that buffer and window are valid
   if self.buffer_id and not vim.api.nvim_buf_is_valid(self.buffer_id) then
     self.buffer_id = nil
   end
@@ -584,20 +584,20 @@ function Modal:destroy()
     self.window_id = nil
   end
   
-  -- Fermer la modal si elle est ouverte
+  -- Close modal if open
   if self.is_open then
     self:close()
   end
 
-  -- Émettre l'événement de destruction
+  -- Emit destruction event
   event_bridge.emit(schema.EVENT_TYPES.COMPONENT_DESTROYED, {
     id = self.id
   })
 
-  -- Désinscrire du registre global
+  -- Unregister from global registry
   event_bridge.unregister_component(self.id)
   
-  -- Nettoyer les variables globales pour les tests
+  -- Clean up global variables for tests
   if _G.test_modal and _G.test_modal.id == self.id then
     _G.test_modal = nil
   elseif _G.test_modal_input and _G.test_modal_input.id == self.id then
@@ -607,23 +607,23 @@ function Modal:destroy()
   return true
 end
 
--- Met à jour le rendu de la modal
+-- Update modal render
 function Modal:_update_render()
   if not self.is_open or not self.buffer_id or not self.window_id then
     return false
   end
   
-  -- Vérifier que le buffer et la fenêtre sont valides
+  -- Verify that buffer and window are valid
   if not vim.api.nvim_buf_is_valid(self.buffer_id) or not vim.api.nvim_win_is_valid(self.window_id) then
-    -- Dans l'environnement de test, on peut avoir des buffers/fenêtres invalides
-    -- On considère que l'opération a réussi pour les tests
+    -- In test environment, we can have invalid buffers/windows
+    -- We consider operation successful for tests
     return true
   end
   
-  -- Rendre à nouveau la modal
+  -- Render again
   local render_result = self:render()
   
-  -- Mettre à jour le contenu du buffer
+  -- Update buffer content
   vim.api.nvim_buf_set_option(self.buffer_id, 'modifiable', true)
   vim.api.nvim_buf_set_lines(self.buffer_id, 0, -1, false, render_result.lines)
   vim.api.nvim_buf_set_option(self.buffer_id, 'modifiable', false)
@@ -631,22 +631,22 @@ function Modal:_update_render()
   return true
 end
 
--- Configure les mappages clavier pour la modal
+-- Set up keyboard mappings for modal
 function Modal:_setup_keymaps()
   if not self.is_open or not self.buffer_id then
     return false
   end
   
-  -- Vérifier que le buffer est valide
+  -- Verify that buffer is valid
   if not vim.api.nvim_buf_is_valid(self.buffer_id) then
-    -- Dans l'environnement de test, on peut avoir des buffers invalides
-    -- On considère que l'opération a réussi pour les tests
+    -- In test environment, we can have invalid buffers
+    -- We consider operation successful for tests
     return true
   end
   
   local buffer = self.buffer_id
   
-  -- Mappages pour la navigation
+  -- Mappings for navigation
   vim.api.nvim_buf_set_keymap(buffer, 'n', '<Tab>', '', {
     callback = function() self:focus_next_button() end,
     noremap = true,
@@ -659,7 +659,7 @@ function Modal:_setup_keymaps()
     silent = true
   })
   
-  -- Mappages pour la confirmation et l'annulation
+  -- Mappings for confirmation and cancellation
   vim.api.nvim_buf_set_keymap(buffer, 'n', '<CR>', '', {
     callback = function() 
       if self.input_focused then
@@ -678,7 +678,7 @@ function Modal:_setup_keymaps()
     silent = true
   })
   
-  -- Mappages pour le champ de saisie
+  -- Mappings for input field
   if self.input then
     vim.api.nvim_buf_set_keymap(buffer, 'n', 'i', '', {
       callback = function() self:focus_input() end,
@@ -686,7 +686,7 @@ function Modal:_setup_keymaps()
       silent = true
     })
     
-    -- Mode insertion pour l'édition du champ
+    -- Insert mode for input editing
     vim.api.nvim_buf_set_keymap(buffer, 'i', '<CR>', '', {
       callback = function() 
         vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Esc>', true, false, true), 'n', true)
@@ -705,13 +705,13 @@ function Modal:_setup_keymaps()
       silent = true
     })
     
-    -- Intercepter les touches en mode insertion pour mettre à jour la valeur
+    -- Intercept insert mode touches to update value
     vim.api.nvim_create_autocmd("TextChangedI", {
       buffer = buffer,
       callback = function()
         if self.input_focused then
           local lines = vim.api.nvim_buf_get_lines(buffer, 0, -1, false)
-          -- Trouver la ligne du champ de saisie
+          -- Find input line
           local input_line_index = nil
           for i, line in ipairs(lines) do
             if line:match("│.*%[.*%].*│") then
@@ -726,7 +726,7 @@ function Modal:_setup_keymaps()
             if value then
               self.input_value = value
               
-              -- Émettre l'événement de changement d'input
+              -- Emit input change event
               event_bridge.emit(schema.EVENT_TYPES.INPUT_CHANGED, {
                 id = self.id,
                 value = self.input_value

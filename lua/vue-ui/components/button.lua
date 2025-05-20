@@ -1,5 +1,5 @@
 -- button.lua
--- Composant bouton pour l'interface utilisateur Vue
+-- Button component for Vue user interface
 
 local M = {}
 local event_bridge = require('vue-ui.utils.event_bridge')
@@ -7,7 +7,7 @@ local render_utils = require('vue-ui.utils.render')
 local validation = require('vue-ui.utils.validation')
 local schema = require('vue-ui.events.schema')
 
--- Configuration par défaut
+-- Default configuration
 local default_config = {
   style = "default", -- default, primary, success, warning, danger
   width = 20,
@@ -17,19 +17,19 @@ local default_config = {
   enabled = true
 }
 
--- Classe Button
+-- Button Class
 local Button = {}
 Button.__index = Button
 
--- Crée un nouveau bouton
+-- Create a new button
 function M.create(id, text, config, callback)
-  -- Valider l'ID
+  -- Validate ID
   if not validation.is_valid_id(id) then
-    vim.api.nvim_echo({{"[VueUI] ID de bouton invalide: " .. id, "ErrorMsg"}}, false, {})
+    vim.api.nvim_echo({{"[VueUI] Invalid button ID: " .. id, "ErrorMsg"}}, false, {})
     return nil
   end
   
-  -- Créer l'instance du bouton
+  -- Create button instance
   local button = setmetatable({
     id = id,
     text = text or "Button",
@@ -39,10 +39,10 @@ function M.create(id, text, config, callback)
     is_disabled = not (config and config.enabled ~= false)
   }, Button)
   
-  -- Enregistrer le bouton dans le registre global
+  -- Register button in global registry
   event_bridge.register_component(id, button)
   
-  -- Émettre un événement de création
+  -- Emit creation event
   event_bridge.emit(schema.EVENT_TYPES.COMPONENT_CREATED, {
     id = id,
     component_type = "button",
@@ -53,17 +53,17 @@ function M.create(id, text, config, callback)
   return button
 end
 
--- Crée un bouton à partir des données d'événement
+-- Create a button from event data
 function M.create_from_data(data)
   return M.create(data.id, data.text, data.config)
 end
 
--- Méthode de rendu du bouton
+-- Button render method
 function Button:render()
   local width = self.config.width
   local text = self.text
   
-  -- Déterminer le style
+  -- Determine style
   local style_name = self.config.style
   if self.is_focused then
     style_name = "focused"
@@ -71,7 +71,7 @@ function Button:render()
     style_name = "disabled"
   end
   
-  -- Formater le texte selon l'alignement
+  -- Format text according to alignment
   local formatted_text = text
   if self.config.text_align == "center" then
     formatted_text = render_utils.center_text(text, width)
@@ -81,12 +81,12 @@ function Button:render()
     formatted_text = render_utils.right_align(text, width)
   end
   
-  -- Créer le rendu
+  -- Create render
   local lines = {}
   local highlights = {}
   
   if self.config.border then
-    -- Avec bordure
+    -- With border
     local top = "┌" .. string.rep("─", width) .. "┐"
     local bottom = "└" .. string.rep("─", width) .. "┘"
     local middle = "│" .. formatted_text .. "│"
@@ -95,7 +95,7 @@ function Button:render()
     table.insert(lines, middle)
     table.insert(lines, bottom)
     
-    -- Ajouter les highlights
+    -- Add highlights
     table.insert(highlights, {
       group = style_name,
       line = 0,
@@ -115,14 +115,14 @@ function Button:render()
       col_end = -1
     })
   else
-    -- Sans bordure
+    -- Without border
     local prefix = self.is_disabled and "[ " or "[ "
     local suffix = self.is_disabled and " ]" or " ]"
     local button_text = prefix .. formatted_text .. suffix
     
     table.insert(lines, button_text)
     
-    -- Ajouter les highlights
+    -- Add highlights
     table.insert(highlights, {
       group = style_name,
       line = 0,
@@ -134,24 +134,24 @@ function Button:render()
   return {
     lines = lines,
     highlights = highlights,
-    width = width + (self.config.border and 2 or 4), -- +2 pour les bordures ou +4 pour [ ]
+    width = width + (self.config.border and 2 or 4), -- +2 for borders or +4 for [ ]
     height = self.config.border and 3 or 1
   }
 end
 
--- Méthode de clic sur le bouton
+-- Button click method
 function Button:click()
   if self.is_disabled then
     return false
   end
   
-  -- Émettre un événement de clic
+  -- Emit click event
   event_bridge.emit(schema.EVENT_TYPES.BUTTON_CLICKED, {
     id = self.id,
     text = self.text
   })
   
-  -- Exécuter le callback si défini
+  -- Execute callback if defined
   if self.callback then
     self.callback()
   end
@@ -159,7 +159,7 @@ function Button:click()
   return true
 end
 
--- Méthode pour donner le focus au bouton
+-- Method to focus the button
 function Button:focus()
   if self.is_focused or self.is_disabled then
     return false
@@ -167,7 +167,7 @@ function Button:focus()
   
   self.is_focused = true
   
-  -- Émettre un événement de focus
+  -- Emit focus event
   event_bridge.emit(schema.EVENT_TYPES.COMPONENT_FOCUSED, {
     id = self.id
   })
@@ -175,7 +175,7 @@ function Button:focus()
   return true
 end
 
--- Méthode pour retirer le focus du bouton
+-- Method to remove focus from button
 function Button:blur()
   if not self.is_focused then
     return false
@@ -183,7 +183,7 @@ function Button:blur()
   
   self.is_focused = false
   
-  -- Émettre un événement de perte de focus
+  -- Emit blur event
   event_bridge.emit(schema.EVENT_TYPES.COMPONENT_BLURRED, {
     id = self.id
   })
@@ -191,7 +191,7 @@ function Button:blur()
   return true
 end
 
--- Méthode pour activer/désactiver le bouton
+-- Method to enable/disable button
 function Button:set_enabled(enabled)
   if self.is_disabled == (not enabled) then
     return false
@@ -199,7 +199,7 @@ function Button:set_enabled(enabled)
   
   self.is_disabled = not enabled
   
-  -- Émettre un événement de mise à jour
+  -- Emit update event
   event_bridge.emit(schema.EVENT_TYPES.COMPONENT_UPDATED, {
     id = self.id,
     changes = {
@@ -210,7 +210,7 @@ function Button:set_enabled(enabled)
   return true
 end
 
--- Méthode pour mettre à jour le texte du bouton
+-- Method to update button text
 function Button:set_text(text)
   if self.text == text then
     return false
@@ -218,7 +218,7 @@ function Button:set_text(text)
   
   self.text = text
   
-  -- Émettre un événement de mise à jour
+  -- Emit update event
   event_bridge.emit(schema.EVENT_TYPES.COMPONENT_UPDATED, {
     id = self.id,
     changes = {
@@ -229,13 +229,13 @@ function Button:set_text(text)
   return true
 end
 
--- Méthode pour mettre à jour la configuration du bouton
+-- Method to update button configuration
 function Button:update(changes)
   if not changes then
     return false
   end
   
-  -- Mettre à jour les propriétés
+  -- Update properties
   if changes.text then
     self:set_text(changes.text)
   end
@@ -244,11 +244,11 @@ function Button:update(changes)
     self:set_enabled(changes.enabled)
   end
   
-  -- Mettre à jour la configuration
+  -- Update configuration
   if changes.config then
     self.config = vim.tbl_deep_extend("force", self.config, changes.config)
     
-    -- Émettre un événement de mise à jour
+    -- Emit update event
     event_bridge.emit(schema.EVENT_TYPES.COMPONENT_UPDATED, {
       id = self.id,
       changes = {
@@ -260,14 +260,14 @@ function Button:update(changes)
   return true
 end
 
--- Méthode pour détruire le bouton
+-- Method to destroy button
 function Button:destroy()
-  -- Émettre un événement de destruction
+  -- Emit destruction event
   event_bridge.emit(schema.EVENT_TYPES.COMPONENT_DESTROYED, {
     id = self.id
   })
   
-  -- Supprimer du registre global
+  -- Remove from global registry
   event_bridge.unregister_component(self.id)
   
   return true

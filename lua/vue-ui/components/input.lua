@@ -1,5 +1,5 @@
 -- input.lua
--- Composant champ de saisie pour l'interface utilisateur Vue
+-- Input component for Vue user interface
 
 local M = {}
 local event_bridge = require('vue-ui.utils.event_bridge')
@@ -7,7 +7,7 @@ local render_utils = require('vue-ui.utils.render')
 local validation = require('vue-ui.utils.validation')
 local schema = require('vue-ui.events.schema')
 
--- Configuration par défaut
+-- Default configuration
 local default_config = {
   style = "default", -- default, primary, success, warning, danger
   width = 30,
@@ -20,19 +20,19 @@ local default_config = {
   validator = nil
 }
 
--- Classe Input
+-- Input Class
 local Input = {}
 Input.__index = Input
 
--- Crée un nouveau champ de saisie
+-- Create a new input field
 function M.create(id, label, value, config, on_change, on_submit)
-  -- Valider l'ID
+  -- Validate ID
   if not validation.is_valid_id(id) then
-    vim.api.nvim_echo({{"[VueUI] ID de champ de saisie invalide: " .. id, "ErrorMsg"}}, false, {})
+    vim.api.nvim_echo({{"[VueUI] Invalid input field ID: " .. id, "ErrorMsg"}}, false, {})
     return nil
   end
   
-  -- Créer l'instance du champ de saisie
+  -- Create input field instance
   local input = setmetatable({
     id = id,
     label = label or "",
@@ -47,10 +47,10 @@ function M.create(id, label, value, config, on_change, on_submit)
     is_editing = false
   }, Input)
   
-  -- Enregistrer le champ de saisie dans le registre global
+  -- Register input field in global registry
   event_bridge.register_component(id, input)
   
-  -- Émettre un événement de création
+  -- Emit creation event
   event_bridge.emit(schema.EVENT_TYPES.COMPONENT_CREATED, {
     id = id,
     component_type = "input",
@@ -62,27 +62,27 @@ function M.create(id, label, value, config, on_change, on_submit)
   return input
 end
 
--- Crée un champ de saisie à partir des données d'événement
+-- Create an input field from event data
 function M.create_from_data(data)
   return M.create(data.id, data.label, data.value, data.config)
 end
 
--- Méthode de rendu du champ de saisie
+-- Input field render method
 function Input:render()
   local width = self.config.width
   local value = self.value
   
-  -- Si c'est un champ de mot de passe, masquer la valeur
+  -- If it's a password field, mask the value
   if self.config.password then
     value = string.rep("*", #value)
   end
   
-  -- Si la valeur est vide et qu'il y a un placeholder, l'utiliser
+  -- If value is empty and there's a placeholder, use it
   if value == "" and self.config.placeholder ~= "" and not self.is_focused then
     value = self.config.placeholder
   end
   
-  -- Déterminer le style
+  -- Determine style
   local style_name = self.config.style
   if self.is_focused then
     style_name = "focused"
@@ -90,11 +90,11 @@ function Input:render()
     style_name = "disabled"
   end
   
-  -- Créer le rendu
+  -- Create render
   local lines = {}
   local highlights = {}
   
-  -- Ajouter le label s'il existe
+  -- Add label if it exists
   if self.label and self.label ~= "" then
     table.insert(lines, self.label .. ":")
     table.insert(highlights, {
@@ -106,21 +106,21 @@ function Input:render()
   end
   
   if self.config.border then
-    -- Avec bordure
+    -- With border
     local top = "┌" .. string.rep("─", width) .. "┐"
     local bottom = "└" .. string.rep("─", width) .. "┘"
     
-    -- Préparer le contenu avec le curseur si nécessaire
+    -- Prepare content with cursor if needed
     local content = value
     if self.is_focused and self.is_editing then
-      -- Insérer le curseur à la position actuelle
+      -- Insert cursor at current position
       content = string.sub(value, 1, self.cursor_pos) .. "|" .. string.sub(value, self.cursor_pos + 1)
     end
     
-    -- Tronquer si nécessaire
+    -- Truncate if necessary
     content = render_utils.truncate(content, width)
     
-    -- Compléter avec des espaces
+    -- Fill with spaces
     content = content .. string.rep(" ", width - vim.fn.strdisplaywidth(content))
     
     local middle = "│" .. content .. "│"
@@ -129,7 +129,7 @@ function Input:render()
     table.insert(lines, middle)
     table.insert(lines, bottom)
     
-    -- Ajouter les highlights
+    -- Add highlights
     table.insert(highlights, {
       group = style_name,
       line = #lines - 3,
@@ -149,25 +149,25 @@ function Input:render()
       col_end = -1
     })
   else
-    -- Sans bordure
-    -- Préparer le contenu avec le curseur si nécessaire
+    -- Without border
+    -- Prepare content with cursor if needed
     local content = value
     if self.is_focused and self.is_editing then
-      -- Insérer le curseur à la position actuelle
+      -- Insert cursor at current position
       content = string.sub(value, 1, self.cursor_pos) .. "|" .. string.sub(value, self.cursor_pos + 1)
     end
     
-    -- Tronquer si nécessaire
+    -- Truncate if necessary
     content = render_utils.truncate(content, width)
     
-    -- Compléter avec des espaces
+    -- Fill with spaces
     content = content .. string.rep(" ", width - vim.fn.strdisplaywidth(content))
     
     local input_line = "[ " .. content .. " ]"
     
     table.insert(lines, input_line)
     
-    -- Ajouter les highlights
+    -- Add highlights
     table.insert(highlights, {
       group = style_name,
       line = #lines - 1,
@@ -179,19 +179,19 @@ function Input:render()
   return {
     lines = lines,
     highlights = highlights,
-    width = width + (self.config.border and 2 or 4), -- +2 pour les bordures ou +4 pour [ ]
+    width = width + (self.config.border and 2 or 4), -- +2 for borders or +4 for [ ]
     height = #lines
   }
 end
 
--- Méthode pour définir la valeur du champ
+-- Method to set input field value
 function Input:set_value(value, silent)
-  -- Vérifier les contraintes
+  -- Check constraints
   if self.config.max_length and #value > self.config.max_length then
     value = string.sub(value, 1, self.config.max_length)
   end
   
-  -- Vérifier si la valeur a changé
+  -- Check if value has changed
   if self.value == value then
     return false
   end
@@ -199,18 +199,18 @@ function Input:set_value(value, silent)
   local previous_value = self.value
   self.value = value
   
-  -- Ajuster la position du curseur si nécessaire
+  -- Adjust cursor position if needed
   if self.cursor_pos > #value then
     self.cursor_pos = #value
   end
   
-  -- Valider la valeur si un validateur est défini
+  -- Validate value if validator is defined
   local is_valid = true
   if self.config.validator then
     is_valid = self.config.validator(value)
   end
   
-  -- Émettre un événement de changement si non silencieux
+  -- Emit change event if not silent
   if not silent then
     event_bridge.emit(schema.EVENT_TYPES.INPUT_CHANGED, {
       id = self.id,
@@ -219,7 +219,7 @@ function Input:set_value(value, silent)
       is_valid = is_valid
     })
     
-    -- Appeler le callback de changement si défini
+    -- Call change callback if defined
     if self.on_change then
       self.on_change(value, previous_value, is_valid)
     end
@@ -228,7 +228,7 @@ function Input:set_value(value, silent)
   return true
 end
 
--- Méthode pour démarrer l'édition
+-- Method to start editing
 function Input:start_editing()
   if self.is_disabled or self.is_editing then
     return false
@@ -240,7 +240,7 @@ function Input:start_editing()
   return true
 end
 
--- Méthode pour terminer l'édition
+-- Method to stop editing
 function Input:stop_editing(submit)
   if not self.is_editing then
     return false
@@ -249,21 +249,21 @@ function Input:stop_editing(submit)
   self.is_editing = false
   
   if submit then
-    -- Émettre un événement de soumission
+    -- Emit submission event
     event_bridge.emit(schema.EVENT_TYPES.INPUT_SUBMITTED, {
       id = self.id,
       value = self.value
     })
     
-    -- Appeler le callback de soumission si défini
+    -- Call submission callback if defined
     if self.on_submit then
       self.on_submit(self.value)
     end
   else
-    -- Annuler les modifications
+    -- Cancel changes
     self:set_value(self.original_value, true)
     
-    -- Émettre un événement d'annulation
+    -- Emit cancellation event
     event_bridge.emit(schema.EVENT_TYPES.INPUT_CANCELLED, {
       id = self.id
     })
@@ -272,13 +272,13 @@ function Input:stop_editing(submit)
   return true
 end
 
--- Méthode pour déplacer le curseur
+-- Method to move cursor
 function Input:move_cursor(position)
   if not self.is_editing then
     return false
   end
   
-  -- Limiter la position aux bornes de la valeur
+  -- Limit position to value bounds
   position = math.max(0, math.min(position, #self.value))
   
   if self.cursor_pos == position then
@@ -289,19 +289,19 @@ function Input:move_cursor(position)
   return true
 end
 
--- Méthode pour insérer du texte à la position du curseur
+-- Method to insert text at cursor position
 function Input:insert_text(text)
   if not self.is_editing or self.is_disabled then
     return false
   end
   
-  -- Insérer le texte à la position du curseur
+  -- Insert text at cursor position
   local new_value = string.sub(self.value, 1, self.cursor_pos) .. text .. string.sub(self.value, self.cursor_pos + 1)
   
-  -- Mettre à jour la valeur
+  -- Update value
   local success = self:set_value(new_value)
   
-  -- Déplacer le curseur
+  -- Move cursor
   if success then
     self.cursor_pos = self.cursor_pos + #text
   end
@@ -309,7 +309,7 @@ function Input:insert_text(text)
   return success
 end
 
--- Méthode pour supprimer du texte à la position du curseur
+-- Method to delete text at cursor position
 function Input:delete_text(count, before_cursor)
   if not self.is_editing or self.is_disabled then
     return false
@@ -318,7 +318,7 @@ function Input:delete_text(count, before_cursor)
   count = count or 1
   
   if before_cursor then
-    -- Supprimer avant le curseur (backspace)
+    -- Delete before cursor (backspace)
     if self.cursor_pos == 0 then
       return false
     end
@@ -326,17 +326,17 @@ function Input:delete_text(count, before_cursor)
     local delete_count = math.min(count, self.cursor_pos)
     local new_value = string.sub(self.value, 1, self.cursor_pos - delete_count) .. string.sub(self.value, self.cursor_pos + 1)
     
-    -- Mettre à jour la valeur
+    -- Update value
     local success = self:set_value(new_value)
     
-    -- Déplacer le curseur
+    -- Move cursor
     if success then
       self.cursor_pos = self.cursor_pos - delete_count
     end
     
     return success
   else
-    -- Supprimer après le curseur (delete)
+    -- Delete after cursor (delete)
     if self.cursor_pos == #self.value then
       return false
     end
@@ -344,12 +344,12 @@ function Input:delete_text(count, before_cursor)
     local delete_count = math.min(count, #self.value - self.cursor_pos)
     local new_value = string.sub(self.value, 1, self.cursor_pos) .. string.sub(self.value, self.cursor_pos + delete_count + 1)
     
-    -- Mettre à jour la valeur
+    -- Update value
     return self:set_value(new_value)
   end
 end
 
--- Méthode pour donner le focus au champ
+-- Method to give focus to the field
 function Input:focus()
   if self.is_focused or self.is_disabled then
     return false
@@ -357,7 +357,7 @@ function Input:focus()
   
   self.is_focused = true
   
-  -- Émettre un événement de focus
+  -- Emit focus event
   event_bridge.emit(schema.EVENT_TYPES.COMPONENT_FOCUSED, {
     id = self.id
   })
@@ -365,20 +365,20 @@ function Input:focus()
   return true
 end
 
--- Méthode pour retirer le focus du champ
+-- Method to remove focus from the field
 function Input:blur()
   if not self.is_focused then
     return false
   end
   
-  -- Si en mode édition, terminer l'édition
+  -- If in edit mode, stop editing
   if self.is_editing then
     self:stop_editing(true)
   end
   
   self.is_focused = false
   
-  -- Émettre un événement de perte de focus
+  -- Emit focus loss event
   event_bridge.emit(schema.EVENT_TYPES.COMPONENT_BLURRED, {
     id = self.id
   })
@@ -386,7 +386,7 @@ function Input:blur()
   return true
 end
 
--- Méthode pour activer/désactiver le champ
+-- Method to activate/deactivate the field
 function Input:set_enabled(enabled)
   if self.is_disabled == (not enabled) then
     return false
@@ -394,12 +394,12 @@ function Input:set_enabled(enabled)
   
   self.is_disabled = not enabled
   
-  -- Si désactivé et en mode édition, terminer l'édition
+  -- If deactivated and in edit mode, stop editing
   if self.is_disabled and self.is_editing then
     self:stop_editing(false)
   end
   
-  -- Émettre un événement de mise à jour
+  -- Emit update event
   event_bridge.emit(schema.EVENT_TYPES.COMPONENT_UPDATED, {
     id = self.id,
     changes = {
@@ -410,13 +410,13 @@ function Input:set_enabled(enabled)
   return true
 end
 
--- Méthode pour mettre à jour la configuration du champ
+-- Method to update field configuration
 function Input:update(changes)
   if not changes then
     return false
   end
   
-  -- Mettre à jour les propriétés
+  -- Update properties
   if changes.value ~= nil then
     self:set_value(changes.value)
   end
@@ -429,11 +429,11 @@ function Input:update(changes)
     self:set_enabled(changes.enabled)
   end
   
-  -- Mettre à jour la configuration
+  -- Update configuration
   if changes.config then
     self.config = vim.tbl_deep_extend("force", self.config, changes.config)
     
-    -- Émettre un événement de mise à jour
+    -- Emit update event
     event_bridge.emit(schema.EVENT_TYPES.COMPONENT_UPDATED, {
       id = self.id,
       changes = {
@@ -445,24 +445,24 @@ function Input:update(changes)
   return true
 end
 
--- Méthode pour soumettre la valeur
+-- Method to submit value
 function Input:submit()
   if self.is_disabled then
     return false
   end
   
-  -- Si en mode édition, terminer l'édition avec soumission
+  -- If in edit mode, stop editing with submission
   if self.is_editing then
     return self:stop_editing(true)
   end
   
-  -- Sinon, émettre directement un événement de soumission
+  -- Otherwise, emit direct submission event
   event_bridge.emit(schema.EVENT_TYPES.INPUT_SUBMITTED, {
     id = self.id,
     value = self.value
   })
   
-  -- Appeler le callback de soumission si défini
+  -- Call submission callback if defined
   if self.on_submit then
     self.on_submit(self.value)
   end
@@ -470,7 +470,7 @@ function Input:submit()
   return true
 end
 
--- Méthode pour annuler l'édition
+-- Method to cancel editing
 function Input:cancel()
   if not self.is_editing then
     return false
@@ -479,14 +479,14 @@ function Input:cancel()
   return self:stop_editing(false)
 end
 
--- Méthode pour détruire le champ
+-- Method to destroy field
 function Input:destroy()
-  -- Émettre un événement de destruction
+  -- Emit destruction event
   event_bridge.emit(schema.EVENT_TYPES.COMPONENT_DESTROYED, {
     id = self.id
   })
   
-  -- Supprimer du registre global
+  -- Remove from global registry
   event_bridge.unregister_component(self.id)
   
   return true

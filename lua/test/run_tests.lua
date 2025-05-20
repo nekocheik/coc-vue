@@ -1,19 +1,19 @@
--- Script pour exécuter les tests Vader avec le bon environnement Lua
+-- Script to run Vader tests with the correct Lua environment
 local function setup_lua_path()
-  -- Ajouter le répertoire courant au chemin de recherche Lua
+  -- Add current directory to Lua search path
   package.path = package.path .. ";./lua/?.lua;./lua/?/init.lua"
   
-  -- Vérifier que les modules sont bien accessibles
+  -- Check that modules are accessible
   local validation = require('vue-ui.utils.validation')
   local event_bridge = require('vue-ui.utils.event_bridge')
   local test_helpers = require('vue-ui.utils.test_helpers')
   local schema = require('vue-ui.events.schema')
   
-  print("Modules chargés avec succès !")
+  print("Modules loaded successfully!")
 end
 
--- Configurer l'environnement
+-- Configure environment
 setup_lua_path()
 
--- Exécuter les tests
+-- Run tests
 vim.cmd("Vader! test/vader/select.vader")

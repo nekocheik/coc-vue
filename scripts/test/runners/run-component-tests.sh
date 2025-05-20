@@ -1,22 +1,22 @@
 #!/bin/bash
-# run-component-tests.sh
-# Script pour exécuter les tests de composants
-#
+# Script to run component tests
+
 # Usage:
-#   ./scripts/test/runners/run-component-tests.sh                  # Exécuter tous les tests
-#   ./scripts/test/runners/run-component-tests.sh --section <nom>  # Exécuter une section spécifique
-#   ./scripts/test/runners/run-component-tests.sh --progressive    # Exécuter les tests progressivement
-#
-# Sections disponibles:
-#   component-loading   - Tests de chargement des composants
-#   component-state     - Tests d'état des composants
-#   dropdown-control    - Tests de contrôle du dropdown
-#   option-selection    - Tests de sélection d'options
-#   props-update        - Tests de mise à jour des propriétés
-#   multi-select        - Tests du mode multi-sélection
-#   navigation          - Tests de navigation
-#   error-handling      - Tests de gestion des erreurs
-#   cleanup             - Tests de nettoyage des composants
+#   ./scripts/test/runners/run-component-tests.sh                  # Run all tests
+#   ./scripts/test/runners/run-component-tests.sh --section <name> # Run a specific section
+#   ./scripts/test/runners/run-component-tests.sh --progressive    # Run tests progressively
+
+# Test sections:
+#   button            - Button component tests
+#   input             - Input component tests
+#   select            - Select component tests
+#   modal            - Modal component tests
+#   error-handling    - Error handling tests
+#   events           - Event system tests
+#   validation       - Input validation tests
+#   accessibility    - Accessibility tests
+#   performance      - Performance tests
+#   integration      - Integration tests
 
 # Importer les utilitaires communs
 source "$(dirname "${BASH_SOURCE[0]}")/../core/test-utils.sh"
@@ -73,15 +73,16 @@ run_progressive_tests() {
   
   local all_passed=true
   local sections=(
-    "component-loading:Tests de chargement des composants"
-    "component-state:Tests d'état des composants"
-    "dropdown-control:Tests de contrôle du dropdown"
-    "option-selection:Tests de sélection d'options"
-    "props-update:Tests de mise à jour des propriétés"
-    "multi-select:Tests du mode multi-sélection"
-    "navigation:Tests de navigation"
-    "error-handling:Tests de gestion des erreurs"
-    "cleanup:Tests de nettoyage des composants"
+    "button:Button component tests"
+    "input:Input component tests"
+    "select:Select component tests"
+    "modal:Modal component tests"
+    "error-handling:Error handling tests"
+    "events:Event system tests"
+    "validation:Input validation tests"
+    "accessibility:Accessibility tests"
+    "performance:Performance tests"
+    "integration:Integration tests"
   )
   
   for section_info in "${sections[@]}"; do

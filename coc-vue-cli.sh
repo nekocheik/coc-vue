@@ -176,5 +176,5 @@ main() {
   esac
 }
 
-# Exécuter la fonction principale avec les arguments
+# Run main function with arguments
 main "$@"

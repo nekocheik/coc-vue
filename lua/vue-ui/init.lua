@@ -1,5 +1,5 @@
 -- init.lua
--- Point d'entrée principal pour la librairie de composants UI natifs Lua/Vim pour CoC-Vue
+-- Main entry point for the native Lua/Vim UI component library for CoC-Vue
 
 -- Helper function to safely get Vim options in both Vim and Neovim
 local function get_vim_option(option_name, default_value)
@@ -30,7 +30,7 @@ local function get_data_path()
   end
 end
 
--- Vérification et initialisation du chemin d'exécution
+-- Check and initialize runtime path
 local function ensure_runtime_path()
   local current_path = vim.fn and vim.fn.expand('<sfile>:p:h:h:h') or '.'
   local rtp = get_vim_option('runtimepath', '')
@@ -39,12 +39,12 @@ local function ensure_runtime_path()
     -- Use a safer way to display messages that works in both Vim and Neovim
     if vim and vim.api and vim.api.nvim_echo then
       vim.api.nvim_echo({{
-        "[VueUI] Attention: Le chemin d'exécution ne contient pas le répertoire de l'extension. "
-        .. "Certaines fonctionnalités pourraient ne pas fonctionner correctement.",
+        "[VueUI] Warning: Runtime path does not contain the extension directory. "
+        .. "Some features might not work correctly.",
         "WarningMsg"
       }}, false, {})
     else
-      print("[VueUI] Attention: Le chemin d'exécution ne contient pas le répertoire de l'extension.")
+      print("[VueUI] Warning: Runtime path does not contain the extension directory.")
     end
     return false
   end
@@ -52,16 +52,16 @@ local function ensure_runtime_path()
   return true
 end
 
--- Vérifier le chemin d'exécution au chargement du module
+-- Check runtime path on module load
 ensure_runtime_path()
 
 local M = {}
 
--- Charger les dépendances
+-- Load dependencies
 local event_bridge = require('vue-ui.utils.event_bridge')
 local schema = require('vue-ui.events.schema')
 
--- Configuration par défaut
+-- Default configuration
 local default_config = {
   debug = false,
   log_events = true,
@@ -77,7 +77,7 @@ local default_config = {
   }
 }
 
--- Définit les groupes de surbrillance
+-- Define highlight groups
 function M.define_highlight_groups(groups)
   for name, colors in pairs(groups) do
     local cmd = "highlight default VueUI" .. name:gsub("^%l", string.upper)
@@ -94,15 +94,15 @@ function M.define_highlight_groups(groups)
   end
 end
 
--- Définit les commandes utilisateur
+-- Define user commands
 function M.define_commands()
-  print('[VUE-UI] Début de l\'enregistrement des commandes utilisateur')
+  print('[VUE-UI] Starting user command registration')
   
-  -- Commande pour créer un bouton
+  -- Command to create a button
   vim.api.nvim_create_user_command('VueUIButton', function(opts)
     local args = opts.args
     if not args or args == "" then
-      vim.api.nvim_echo({{"[VueUI] Arguments manquants pour la commande VueUIButton", "ErrorMsg"}}, false, {})
+      vim.api.nvim_echo({{"[VueUI] Missing arguments for VueUIButton command", "ErrorMsg"}}, false, {})
       return
     end
     
@@ -131,11 +131,11 @@ function M.define_commands()
     end
   end, { nargs = '+' })
   
-  -- Commande pour créer un input
+  -- Command to create an input
   vim.api.nvim_create_user_command('VueUIInput', function(opts)
     local args = opts.args
     if not args or args == "" then
-      vim.api.nvim_echo({{"[VueUI] Arguments manquants pour la commande VueUIInput", "ErrorMsg"}}, false, {})
+      vim.api.nvim_echo({{"[VueUI] Missing arguments for VueUIInput command", "ErrorMsg"}}, false, {})
       return
     end
     
@@ -164,11 +164,11 @@ function M.define_commands()
     end
   end, { nargs = '+' })
   
-  -- Commande pour créer une modal
+  -- Command to create a modal
   vim.api.nvim_create_user_command('VueUIModal', function(opts)
     local args = opts.args
     if not args or args == "" then
-      vim.api.nvim_echo({{"[VueUI] Arguments manquants pour la commande VueUIModal", "ErrorMsg"}}, false, {})
+      vim.api.nvim_echo({{"[VueUI] Missing arguments for VueUIModal command", "ErrorMsg"}}, false, {})
       return
     end
     
@@ -198,11 +198,11 @@ function M.define_commands()
   end, { nargs = '+' })
   
   -- Command to create a Select component
-  print('[VUE-UI] Enregistrement de la commande VueUISelect')
+  print('[VUE-UI] Registering VueUISelect command')
   vim.api.nvim_create_user_command('VueUISelect', function(opts)
     local args = opts.args
     if not args or args == "" then
-      vim.api.nvim_echo({{"[VueUI] Arguments manquants pour la commande VueUISelect", "ErrorMsg"}}, false, {})
+      vim.api.nvim_echo({{"[VueUI] Missing arguments for VueUISelect command", "ErrorMsg"}}, false, {})
       return
     end
     
@@ -269,92 +269,92 @@ function M.define_commands()
     vim.api.nvim_echo({{"[VueUI] Event log cleared", "Normal"}}, false, {})
   end, {})
   
-  print('[VUE-UI] Toutes les commandes utilisateur ont été enregistrées avec succès')
+  print('[VUE-UI] All user commands registered successfully')
 end
 
--- Initialise la librairie
+-- Initialize the library
 function M.setup(opts)
-  -- Fusionner les options avec la configuration par défaut
+  -- Merge options with default configuration
   local config = vim.tbl_deep_extend("force", default_config, opts or {})
   
-  -- Configurer le pont d'événements
+  -- Configure event bridge
   event_bridge.setup(config)
   
-  -- Définir les groupes de surbrillance
+  -- Define highlight groups
   M.define_highlight_groups(config.highlight_groups)
   
-  -- Exposer les composants
+  -- Expose components
   M.button = require('vue-ui.components.button')
   M.input = require('vue-ui.components.input')
   M.modal = require('vue-ui.components.modal')
   M.select = require('vue-ui.components.select')
   
-  -- Exposer les utilitaires
+  -- Expose utilities
   M.render = require('vue-ui.utils.render')
   M.validation = require('vue-ui.utils.validation')
   
-  -- Exposer les événements
+  -- Expose events
   M.events = schema.EVENT_TYPES
   
-  -- Exposer les méthodes du pont d'événements
+  -- Expose event bridge methods
   M.emit = event_bridge.emit
   M.receive = event_bridge.receive
   M.save_event_log = event_bridge.save_event_log
   M.clear_event_log = event_bridge.clear_event_log
   
-  -- Définir la fonction de réception des événements TypeScript
+  -- Define TypeScript event reception function
   vim.api.nvim_create_user_command('VueUIReceiveEvent', function(opts)
     local args = opts.args
     if not args or args == "" then
-      vim.api.nvim_echo({{"[VueUI] Arguments manquants pour la commande VueUIReceiveEvent", "ErrorMsg"}}, false, {})
+      vim.api.nvim_echo({{"[VueUI] Missing arguments for VueUIReceiveEvent command", "ErrorMsg"}}, false, {})
       return
     end
     
-    -- Analyser les arguments (format: event_name data_json)
+    -- Parse arguments (format: event_name data_json)
     local event_name, data_json = args:match("^(%S+)%s+(.+)$")
     if not event_name or not data_json then
-      vim.api.nvim_echo({{"[VueUI] Format d'arguments invalide pour la commande VueUIReceiveEvent", "ErrorMsg"}}, false, {})
+      vim.api.nvim_echo({{"[VueUI] Invalid argument format for VueUIReceiveEvent command", "ErrorMsg"}}, false, {})
       return
     end
     
-    -- Décoder les données JSON
+    -- Decode JSON data
     local ok, data = pcall(vim.fn.json_decode, data_json)
     if not ok or not data then
-      vim.api.nvim_echo({{"[VueUI] Données JSON invalides pour la commande VueUIReceiveEvent", "ErrorMsg"}}, false, {})
+      vim.api.nvim_echo({{"[VueUI] Invalid JSON data for VueUIReceiveEvent command", "ErrorMsg"}}, false, {})
       return
     end
     
-    -- Recevoir l'événement
+    -- Receive event
     event_bridge.receive(event_name, data)
   end, { nargs = '+' })
   
   return M
 end
 
--- Fonction pour créer un test de composant
+-- Function to create a component test
 function M.create_test(component_type, component_id, options)
-  -- Créer un fichier de test Vader
+  -- Create a Vader test file
   local test_file = vim.fn.tempname() .. '.vader'
   local file = io.open(test_file, 'w')
   
   if not file then
-    vim.api.nvim_echo({{"[VueUI] Impossible de créer le fichier de test", "ErrorMsg"}}, false, {})
+    vim.api.nvim_echo({{"[VueUI] Unable to create test file", "ErrorMsg"}}, false, {})
     return nil
   end
   
-  -- Écrire l'en-tête du test
-  file:write("# Test automatisé pour le composant " .. component_type .. " avec ID " .. component_id .. "\n\n")
+  -- Write test header
+  file:write("# Automated test for " .. component_type .. " component with ID " .. component_id .. "\n\n")
   
-  -- Écrire les étapes de configuration
+  -- Write setup steps
   file:write("Given:\n")
   file:write("  " .. component_type .. " component setup\n\n")
   
-  -- Écrire les étapes d'exécution
+  -- Write execution steps
   file:write("Execute:\n")
   file:write("  let g:test_component_id = '" .. component_id .. "'\n")
   file:write("  let g:test_component_type = '" .. component_type .. "'\n")
   
-  -- Sérialiser les options en JSON
+  -- Serialize options to JSON
   if options then
     local ok, options_json = pcall(vim.fn.json_encode, options)
     if ok then
@@ -362,7 +362,7 @@ function M.create_test(component_type, component_id, options)
     end
   end
   
-  -- Ajouter les commandes de test spécifiques au type de composant
+  -- Add component-specific test commands
   if component_type == "button" then
     file:write("  " .. "call vue#test#create_button(g:test_component_id, 'Test Button', g:test_component_options)\n")
     file:write("  " .. "call vue#test#click_button(g:test_component_id)\n")
@@ -375,19 +375,19 @@ function M.create_test(component_type, component_id, options)
     file:write("  " .. "call vue#test#select_option(g:test_component_id, 0)\n")
   end
   
-  -- Fermer le fichier
+  -- Close file
   file:close()
   
-  -- Ouvrir le fichier de test dans Neovim
+  -- Open test file in Neovim
   vim.cmd("edit " .. test_file)
   
   return test_file
 end
 
 -- Register all commands at module level
-print('[VUE-UI] Enregistrement des commandes au niveau du module...')
+print('[VUE-UI] Registering commands at module level...')
 M.define_commands()
-print('[VUE-UI] Commandes enregistrées au niveau du module')
+print('[VUE-UI] Commands registered at module level')
 
 -- Load components
 M.button = require('vue-ui.components.button')
