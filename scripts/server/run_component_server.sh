@@ -3,7 +3,7 @@
 # Script to start a headless Neovim instance with the component server
 
 # Set the path to the project root
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # Colors for output
@@ -22,7 +22,7 @@ if lsof -i :9999 > /dev/null 2>&1; then
 fi
 
 # Start Neovim in headless mode with our component server init script
-nvim --headless -u "$PROJECT_ROOT/scripts/component_server_init.vim" &
+nvim --headless -u "$PROJECT_ROOT/scripts/vim/component_server_init.vim" &
 NVIM_PID=$!
 
 # Wait for the server to start

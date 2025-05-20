@@ -45,12 +45,12 @@
     }
   },
   "scripts": {
-    "build": "webpack",
-    "watch": "webpack --watch",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:integration": "./scripts/run_integration_tests.sh",
-    "test:bridge": "jest __tests__/integration/select-bridge-integration.test.ts"
+    "build": "webpack --config config/webpack.config.js",
+    "watch": "webpack --config config/webpack.config.js --watch",
+    "test": "jest --config config/jest.config.js",
+    "test:watch": "jest --config config/jest.config.js --watch",
+    "test:integration": "./coc-vue-cli.sh test:component",
+    "test:bridge": "jest --config config/jest.config.js __tests__/integration/select-bridge-integration.test.ts"
   },
   "dependencies": {
     "@babel/core": "^7.27.1",

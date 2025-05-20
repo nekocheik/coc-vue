@@ -3,7 +3,7 @@
 # Script pour vérifier les logs de Neovim et Coc.nvim entre les étapes des tests
 
 # Set the path to the project root
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # Colors for output

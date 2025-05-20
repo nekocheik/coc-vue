@@ -138,7 +138,7 @@ main() {
   else
     # Si aucun fichier n'est fourni, exécuter les tests
     echo -e "${BLUE}Exécution des tests d'intégration...${NC}\n"
-    ./scripts/run_component_tests.sh > $TEST_OUTPUT_FILE 2>&1
+    ./scripts/test/run_component_tests.sh > $TEST_OUTPUT_FILE 2>&1
     echo -e "\n${BLUE}Tests terminés. Analyse des résultats...${NC}\n"
   fi
   
