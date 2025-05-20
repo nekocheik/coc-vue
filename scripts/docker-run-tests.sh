@@ -24,6 +24,9 @@ echo -e "${YELLOW}Répertoire de travail: $(pwd)${NC}"
 export MOCK_NEOVIM=true
 export NODE_ENV=test
 
+# Créer le répertoire pour les artefacts CI s'il n'existe pas
+mkdir -p .ci-artifacts/vader-reports
+
 # Exécuter les tests avec Jest directement
 echo -e "\n${YELLOW}Exécution des tests unitaires...${NC}"
 npx jest --config /app/test/simplified-jest.config.js --testPathPattern="__tests__/(?!integration)" --passWithNoTests
@@ -37,14 +40,25 @@ echo -e "\n${YELLOW}Exécution des tests d'intégration...${NC}"
 npx jest --config /app/test/simplified-jest.config.js --testPathPattern="__tests__/integration" --passWithNoTests
 INTEGRATION_RESULT=$?
 
+# Exécuter les tests Vader pour les composants
+echo -e "\n${YELLOW}Exécution des tests Vader pour les composants...${NC}"
+./scripts/run-vader-tests.sh
+VADER_RESULT=$?
+
 # Afficher le résumé
 echo -e "\n${BLUE}=== Résumé des tests ====${NC}"
 [ $UNIT_RESULT -eq 0 ] && echo -e "${GREEN}✓ Tests unitaires: SUCCÈS${NC}" || echo -e "${RED}✗ Tests unitaires: ÉCHEC (code $UNIT_RESULT)${NC}"
 [ $COMPONENT_RESULT -eq 0 ] && echo -e "${GREEN}✓ Tests de composants: SUCCÈS${NC}" || echo -e "${RED}✗ Tests de composants: ÉCHEC (code $COMPONENT_RESULT)${NC}"
 [ $INTEGRATION_RESULT -eq 0 ] && echo -e "${GREEN}✓ Tests d'intégration: SUCCÈS${NC}" || echo -e "${RED}✗ Tests d'intégration: ÉCHEC (code $INTEGRATION_RESULT)${NC}"
+[ $VADER_RESULT -eq 0 ] && echo -e "${GREEN}✓ Tests Vader des composants: SUCCÈS${NC}" || echo -e "${RED}✗ Tests Vader des composants: ÉCHEC (code $VADER_RESULT)${NC}"
+
+# Vérifier si un rapport HTML des tests Vader existe et l'afficher
+if [ -f ".ci-artifacts/vader-reports/vader_test_report.html" ]; then
+  echo -e "${BLUE}Rapport détaillé des tests Vader disponible dans .ci-artifacts/vader-reports/vader_test_report.html${NC}"
+fi
 
 # Calculer le résultat global
-if [ $UNIT_RESULT -eq 0 ] && [ $COMPONENT_RESULT -eq 0 ] && [ $INTEGRATION_RESULT -eq 0 ]; then
+if [ $UNIT_RESULT -eq 0 ] && [ $COMPONENT_RESULT -eq 0 ] && [ $INTEGRATION_RESULT -eq 0 ] && [ $VADER_RESULT -eq 0 ]; then
   echo -e "${GREEN}Tous les tests ont réussi!${NC}"
   exit 0
 else

@@ -23,7 +23,10 @@ jobs:
       - name: Run tests in Docker
         run: |
           mkdir -p test-results
-          docker run --rm coc-vue-test ./scripts/docker-run-tests.sh | tee test-output.log
+          # Créer un volume pour les artefacts CI
+          mkdir -p .ci-artifacts
+          # Exécuter les tests et copier les artefacts CI depuis le conteneur
+          docker run --rm -v $(pwd)/.ci-artifacts:/app/.ci-artifacts coc-vue-test ./scripts/docker-run-tests.sh | tee test-output.log
           echo "Test execution completed with exit code ${PIPESTATUS[0]}"
         env:
           MOCK_NEOVIM: true
@@ -48,3 +51,74 @@ jobs:
           else
             echo "❌ No test output log found." >> $GITHUB_STEP_SUMMARY
           fi
+          
+      # Add Vader test results to summary
+      - name: Add Vader test results to summary
+        if: always()
+        run: |
+          if [ -d ".ci-artifacts/vader-reports" ]; then
+            echo "\n## Vader Tests Results" >> $GITHUB_STEP_SUMMARY
+            
+            # Compter les tests réussis et échoués
+            total_success=0
+            total_tests=0
+            
+            for json_file in .ci-artifacts/vader-reports/*_results.json; do
+              if [ -f "$json_file" ]; then
+                test_name=$(grep -o '"test_name": "[^"]*"' "$json_file" | cut -d'"' -f4)
+                success_count=$(grep -o '"success_count": [0-9]*' "$json_file" | grep -o '[0-9]*')
+                total_count=$(grep -o '"total_count": [0-9]*' "$json_file" | grep -o '[0-9]*')
+                status=$(grep -o '"status": "[^"]*"' "$json_file" | cut -d'"' -f4)
+                
+                total_success=$((total_success + success_count))
+                total_tests=$((total_tests + total_count))
+              fi
+            done
+            
+            # Afficher le résumé
+            echo "### Résumé" >> $GITHUB_STEP_SUMMARY
+            echo "- Total des tests: **$total_tests**" >> $GITHUB_STEP_SUMMARY
+            echo "- Tests réussis: **$total_success**" >> $GITHUB_STEP_SUMMARY
+            echo "- Tests échoués: **$((total_tests - total_success))**" >> $GITHUB_STEP_SUMMARY
+            
+            if [ $total_tests -gt 0 ]; then
+              success_rate=$((total_success * 100 / total_tests))
+              echo "- Taux de réussite: **${success_rate}%**" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            # Afficher les détails par fichier de test
+            echo "\n### Détails par fichier de test" >> $GITHUB_STEP_SUMMARY
+            echo "| Fichier | Statut | Tests réussis | Temps d'exécution |" >> $GITHUB_STEP_SUMMARY
+            echo "| ------- | ------ | ------------- | ---------------- |" >> $GITHUB_STEP_SUMMARY
+            
+            for json_file in .ci-artifacts/vader-reports/*_results.json; do
+              if [ -f "$json_file" ]; then
+                test_name=$(grep -o '"test_name": "[^"]*"' "$json_file" | cut -d'"' -f4)
+                success_count=$(grep -o '"success_count": [0-9]*' "$json_file" | grep -o '[0-9]*')
+                total_count=$(grep -o '"total_count": [0-9]*' "$json_file" | grep -o '[0-9]*')
+                status=$(grep -o '"status": "[^"]*"' "$json_file" | cut -d'"' -f4)
+                execution_time=$(grep -o '"execution_time": "[^"]*"' "$json_file" | cut -d'"' -f4)
+                
+                status_icon="❌"
+                if [ "$status" = "success" ]; then
+                  status_icon="✅"
+                fi
+                
+                echo "| $test_name | $status_icon | $success_count/$total_count | $execution_time |" >> $GITHUB_STEP_SUMMARY
+              fi
+            done
+          else
+            echo "\n## Vader Tests Results" >> $GITHUB_STEP_SUMMARY
+            echo "❌ No Vader test results found." >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      # Upload test artifacts
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-artifacts
+          path: |
+            test-output.log
+            .ci-artifacts/vader-reports/
+          retention-days: 7
