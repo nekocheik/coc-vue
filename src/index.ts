@@ -1,548 +1,157 @@
-// Point d'entrée de l'extension COC.nvim
-import { workspace, ExtensionContext, commands, window, Disposable } from 'coc.nvim';
-import { VueRenderer } from './renderer/vue-renderer';
-import { NeovimBridge } from './bridge/neovim-bridge';
-import { GlobalBufferManager } from './vim/global-buffer-manager';
-import { createDirectDemo, DirectBufferDemo } from './vim/direct-buffer-demo';
-import { 
-  createEnhancedInputDemo, 
-  incrementCounterById, 
-  nextInputById, 
-  prevInputById, 
-  editCurrentInputById, 
-  confirmInputById, 
-  cancelInputById,
-  textChangedById,
-  cursorMovedById 
-} from './vim/enhanced-input-demo';
+// COC-VUE Implementation with Vue-like Reactive Bridge
+import { workspace, ExtensionContext, commands, window } from 'coc.nvim';
+import { BridgeCore, BridgeMessage, MessageType, bridgeCore } from './bridge/core';
+import { Select } from './components/select';
 
-// Importation de la nouvelle architecture
-import { logger, LogLevel } from './core/utils/logger';
-import { neovimAdapter } from './core/adapters/neovim-adapter';
-import { globalEventBus } from './core/utils/event-bus';
+// Registry to keep track of active components
+const componentRegistry = new Map<string, any>();
 
-// Importation de la démo de formulaire simple
-import {
-  createSimpleFormDemo,
-  nextFieldById,
-  prevFieldById,
-  editCurrentFieldById,
-  confirmInputById as simpleFormConfirmInputById,
-  cancelInputById as simpleFormCancelInputById,
-  textChangedById as simpleFormTextChangedById,
-  cursorMovedById as simpleFormCursorMovedById
-} from './demos/simple-form-demo';
-
-// Importation de la démo de formulaire basique (version ultra-simplifiée)
-import {
-  createBasicFormDemo,
-  nextFieldById as basicNextFieldById,
-  prevFieldById as basicPrevFieldById,
-  editFieldById as basicEditFieldById,
-  confirmInputById as basicConfirmInputById,
-  cancelInputById as basicCancelInputById
-} from './demos/basic-form-demo';
-
-// Note: Les anciennes démos ont été déplacées dans le dossier 'legacy' pour référence future.
-
-/**
- * Classe principale d'intégration Vue-Neovim
- */
-export class VueNeovimIntegration {
-  private context: ExtensionContext;
-  private renderer: VueRenderer;
-  private bridge: NeovimBridge;
-  private subscriptions: Disposable[] = [];
-  private isInitialized = false;
-  private bufferManager: GlobalBufferManager;
+// Main activation function for the extension
+export async function activate(context: ExtensionContext): Promise<void> {
+  console.log('[COC-VUE] Starting activation of Select component integration');
   
-  constructor(context: ExtensionContext) {
-    this.context = context;
-    this.bridge = new NeovimBridge();
-    // Nous utilisons maintenant workspace.nvim directement
-    this.renderer = new VueRenderer(workspace.nvim);
-    
-    // Initialiser le gestionnaire global de buffers
-    this.bufferManager = GlobalBufferManager.getInstance();
-    this.subscriptions.push(this.bufferManager);
-    
-    console.log('[COC-VUE] Gestionnaire global de buffers initialisé');
-  }
-  
-  /**
-   * Configurer le renderer Vue
-   */
-  async setupRenderer() {
-    try {
-      console.log('[COC-VUE] Configuration du renderer Vue...');
-      // Initialisation du renderer - peut être étendu dans le futur
-      return true;
-    } catch (error) {
-      console.error('[COC-VUE] Erreur lors de la configuration du renderer:', error);
-      return false;
-    }
-  }
-  
-  // Note: Les méthodes de démo réactive ont été déplacées dans legacy
-  
-  /**
-   * Initialiser l'extension
-   */
-  async initialize() {
-    try {
-      if (this.isInitialized) {
-        return true;
-      }
-      
-      console.log('[COC-VUE] Initialisation...');
-      
-      // Initialisation du système d'événements
-      // L'EventSystem s'attend à avoir un NeovimBridge en paramètre, pas directement nvim
-      // Il est déjà initialisé dans le constructeur
-      console.log('[BRIDGE] Le système d\'événements est déjà initialisé');
-      
-      // Configurer le renderer
-      await this.setupRenderer();
-      
-      // On n'a pas besoin des hooks pour notre démo simplifiée
-      // Supprimer registerHooks() qui n'existe pas
-      
-      // Enregistrer les commandes
-      this.registerCommands();
-      
-      // Configurer les écouteurs d'événements
-      await this.setupEventListeners();
-      
-      this.isInitialized = true;
-      return true;
-    } catch (error) {
-      console.error('[COC-VUE] Erreur lors de l\'initialisation:', error);
-      window.showErrorMessage(`Erreur d'initialisation: ${error.message}`);
-      return false;
-    }
-  }
-  
-  /**
-   * Enregistrer les commandes
-   */
-  registerCommands() {
-    try {
-      console.log('[COC-VUE] Enregistrement des commandes');
-      
-      // Commande pour ouvrir l'application Vue
-      this.subscriptions.push(
-        commands.registerCommand('vue.openApp', async () => {
-          try {
-            return await this.openVueApp();
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors de l\'ouverture de l\'app:', error);
-            window.showErrorMessage(`Erreur lors de l'ouverture de l'app: ${error.message}`);
-          }
-        })
-      );
-      
-      // Commande pour fermer l'application Vue
-      this.subscriptions.push(
-        commands.registerCommand('vue.closeApp', async () => {
-          try {
-            return await this.closeVueApp();
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors de la fermeture de l\'app:', error);
-            window.showErrorMessage(`Erreur lors de la fermeture de l'app: ${error.message}`);
-          }
-        })
-      );
-      
-      // Note: Les anciennes commandes de démo ont été supprimées
-      
-      // Commande pour la démo directe (simplifiée)
-      this.subscriptions.push(
-        commands.registerCommand('vue.directBufferDemo', async () => {
-          try {
-            await createDirectDemo();
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors du lancement de la démo directe:', error);
-            window.showErrorMessage(`Erreur lors du lancement de la démo directe: ${error.message}`);
-          }
-        })
-      );
-      
-      // Commande pour incrémenter le compteur de la démo directe
-      this.subscriptions.push(
-        commands.registerCommand('vue.directIncrementCounter', async (instanceId: string) => {
-          try {
-            DirectBufferDemo.incrementCounterById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors de l\'incrémentation du compteur:', error);
-          }
-        })
-      );
-      
-      // Commandes pour la démo améliorée avec champs de saisie
-      this.subscriptions.push(
-        commands.registerCommand('vue.enhancedInputDemo', async () => {
-          try {
-            await createEnhancedInputDemo();
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors du lancement de la démo améliorée:', error);
-            window.showErrorMessage(`Erreur lors du lancement de la démo améliorée: ${error.message}`);
-          }
-        })
-      );
-      
-      // Commandes pour la navigation et l'édition des champs de saisie
-      this.subscriptions.push(
-        commands.registerCommand('vue.enhancedIncrementCounter', async (instanceId: string) => {
-          try {
-            incrementCounterById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors de l\'incrémentation du compteur amélioré:', error);
-          }
-        })
-      );
-      
-      this.subscriptions.push(
-        commands.registerCommand('vue.enhancedNextInput', async (instanceId: string) => {
-          try {
-            nextInputById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors du passage au champ suivant:', error);
-          }
-        })
-      );
-      
-      this.subscriptions.push(
-        commands.registerCommand('vue.enhancedPrevInput', async (instanceId: string) => {
-          try {
-            prevInputById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors du passage au champ précédent:', error);
-          }
-        })
-      );
-      
-      this.subscriptions.push(
-        commands.registerCommand('vue.enhancedEditCurrentInput', async (instanceId: string) => {
-          try {
-            editCurrentInputById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors de l\'activation du mode édition:', error);
-          }
-        })
-      );
-      
-      this.subscriptions.push(
-        commands.registerCommand('vue.enhancedConfirmInput', async (instanceId: string) => {
-          try {
-            confirmInputById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors de la confirmation de l\'entrée:', error);
-          }
-        })
-      );
-      
-      this.subscriptions.push(
-        commands.registerCommand('vue.enhancedCancelInput', async (instanceId: string) => {
-          try {
-            cancelInputById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors de l\'annulation de l\'entrée:', error);
-          }
-        })
-      );
-      
-      // Commandes pour la gestion des événements en temps réel
-      this.subscriptions.push(
-        commands.registerCommand('vue.enhancedTextChanged', async (instanceId: string) => {
-          try {
-            textChangedById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors du traitement du changement de texte:', error);
-          }
-        })
-      );
-      
-      this.subscriptions.push(
-        commands.registerCommand('vue.enhancedCursorMoved', async (instanceId: string) => {
-          try {
-            cursorMovedById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors du traitement du mouvement du curseur:', error);
-          }
-        })
-      );
-      
-      // Commandes pour la nouvelle démo de formulaire simple
-      this.subscriptions.push(
-        commands.registerCommand('vue.simpleFormDemo', async () => {
-          try {
-            // Activer la journalisation détaillée pour le développement
-            logger.setLogLevel(LogLevel.DEBUG);
-            await createSimpleFormDemo();
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors du lancement de la démo de formulaire simple:', error);
-            window.showErrorMessage(`Erreur lors du lancement de la démo de formulaire simple: ${error.message}`);
-          }
-        })
-      );
-      
-      // Commande pour la démo de formulaire basique (version ultra-simplifiée)
-      this.subscriptions.push(
-        commands.registerCommand('vue.basicFormDemo', async () => {
-          try {
-            await createBasicFormDemo();
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors du lancement de la démo de formulaire basique:', error);
-            window.showErrorMessage(`Erreur lors du lancement de la démo de formulaire basique: ${error.message}`);
-          }
-        })
-      );
-      
-      // Commandes pour la navigation et l'édition du formulaire simple
-      this.subscriptions.push(
-        commands.registerCommand('vue.simpleFormNextField', async (instanceId: string) => {
-          try {
-            nextFieldById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors du passage au champ suivant:', error);
-          }
-        })
-      );
-      
-      this.subscriptions.push(
-        commands.registerCommand('vue.simpleFormPrevField', async (instanceId: string) => {
-          try {
-            prevFieldById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors du passage au champ précédent:', error);
-          }
-        })
-      );
-      
-      this.subscriptions.push(
-        commands.registerCommand('vue.simpleFormEditField', async (instanceId: string) => {
-          try {
-            editCurrentFieldById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors de l\'activation du mode édition:', error);
-          }
-        })
-      );
-      
-      this.subscriptions.push(
-        commands.registerCommand('vue.simpleFormConfirm', async (instanceId: string) => {
-          try {
-            simpleFormConfirmInputById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors de la confirmation de l\'entrée:', error);
-          }
-        })
-      );
-      
-      this.subscriptions.push(
-        commands.registerCommand('vue.simpleFormCancel', async (instanceId: string) => {
-          try {
-            simpleFormCancelInputById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors de l\'annulation de l\'entrée:', error);
-          }
-        })
-      );
-      
-      this.subscriptions.push(
-        commands.registerCommand('vue.simpleFormTextChanged', async (instanceId: string) => {
-          try {
-            simpleFormTextChangedById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors du traitement du changement de texte:', error);
-          }
-        })
-      );
-      
-      this.subscriptions.push(
-        commands.registerCommand('vue.simpleFormCursorMoved', async (instanceId: string) => {
-          try {
-            simpleFormCursorMovedById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors du traitement du mouvement du curseur:', error);
-          }
-        })
-      );
-      
-      // Commandes pour la navigation et l'édition du formulaire basique
-      this.subscriptions.push(
-        commands.registerCommand('vue.basicFormNextField', async (instanceId: string) => {
-          try {
-            basicNextFieldById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors du passage au champ suivant:', error);
-          }
-        })
-      );
-      
-      this.subscriptions.push(
-        commands.registerCommand('vue.basicFormPrevField', async (instanceId: string) => {
-          try {
-            basicPrevFieldById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors du passage au champ précédent:', error);
-          }
-        })
-      );
-      
-      this.subscriptions.push(
-        commands.registerCommand('vue.basicFormEditField', async (instanceId: string) => {
-          try {
-            basicEditFieldById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors de l\'activation du mode édition:', error);
-          }
-        })
-      );
-      
-      this.subscriptions.push(
-        commands.registerCommand('vue.basicFormConfirm', async (instanceId: string) => {
-          try {
-            basicConfirmInputById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors de la confirmation de l\'entrée:', error);
-          }
-        })
-      );
-      
-      this.subscriptions.push(
-        commands.registerCommand('vue.basicFormCancel', async (instanceId: string) => {
-          try {
-            basicCancelInputById(instanceId);
-          } catch (error) {
-            console.error('[COC-VUE] Erreur lors de l\'annulation de l\'entrée:', error);
-          }
-        })
-      );
-      
-      // Toutes les commandes sont maintenant directement dans this.subscriptions
-      console.log('[COC-VUE] Commandes enregistrées');
-    } catch (error) {
-      console.error('[COC-VUE] Erreur lors de l\'enregistrement des commandes:', error);
-      window.showErrorMessage(`Erreur lors de l'enregistrement des commandes: ${error.message}`);
-    }
-  }
-  
-  /**
-   * Configurer les écouteurs d'événements
-   */
-  async setupEventListeners() {
-    try {
-      console.log('[COC-VUE] Configuration des écouteurs d\'événements...');
-      
-      // Écouter les changements de buffer
-      this.subscriptions.push(
-        workspace.onDidChangeTextDocument((e: any) => {
-          this.bridge.triggerEvent('buffer:change', {
-            bufnr: e.bufnr,
-            changes: e.changes,
-            uri: e.uri
-          });
-        })
-      );
-      
-      // Note: coc.nvim n'a pas d'API onDidChangeTextEditorSelection, donc nous utilisons
-      // une autre approche pour le moment
-      console.log('[COC-VUE] Configuration des écouteurs de curseur non disponible dans cette version de coc.nvim');
-      
-      console.log('[COC-VUE] Écouteurs d\'événements configurés');
-      return true;
-    } catch (error) {
-      console.error('[COC-VUE] Erreur lors de la configuration des écouteurs:', error);
-      window.showErrorMessage(`Erreur lors de la configuration des écouteurs: ${error.message}`);
-      return false;
-    }
-  }
-  
-  /**
-   * Ouvrir l'application Vue
-   */
-  async openVueApp() {
-    try {
-      console.log('[COC-VUE] Ouverture de l\'application Vue...');
-      // Pour notre nouvelle implémentation, nous utilisons directement la démo de test réactive
-      return await this.renderReactiveTestDemo();
-    } catch (error) {
-      console.error('[COC-VUE] Erreur lors de l\'ouverture de l\'application:', error);
-      window.showErrorMessage(`Erreur lors de l'ouverture de l'application: ${error.message}`);
-      throw error;
-    }
-  }
-  
-  /**
-   * Fermer l'application Vue
-   */
-  async closeVueApp() {
-    // Nous n'avons pas besoin de nettoyer spécifiquement car cela se fera automatiquement
-    return 'app-closed';
-  }
-  
-  /**
-   * Activer l'extension
-   */
-  async activate() {
-    try {
-      console.log('[COC-VUE] Début de l\'activation...');
-      
-      // Initialiser tous les composants
-      const initialized = await this.initialize();
-      if (!initialized) {
-        return null;
-      }
-      
-      console.log('[COC-VUE] Extension activée avec succès');
-      
-      // API publique de l'extension
-      return {
-        renderer: this.renderer,
-        openApp: () => this.openVueApp(),
-        closeApp: () => this.closeVueApp()
-      };
-    } catch (error) {
-      console.error('[COC-VUE] Erreur lors de l\'activation:', error);
-      window.showErrorMessage(`Erreur d'activation: ${error.message}`);
-      return null;
-    }
-  }
-  
-  /**
-   * Désactiver l'extension
-   */
-  deactivate() {
-    // Nettoyer les ressources
-    this.renderer.unmountApp();
-    
-    return true;
-  }
-}
-
-/**
- * Point d'entrée pour COC.nvim - fonction d'activation principale
- */
-export async function activate(context: ExtensionContext): Promise<any> {
   try {
-    console.log('[COC-VUE] Démarrage de l\'activation...');
-    const integration = new VueNeovimIntegration(context);
-    console.log('[COC-VUE] Intégration créée, activation...');
-    // Utilisation de await pour s'assurer que l'activation est complète
-    const result = await integration.activate();
+    // Force-load the Lua module to ensure commands are registered
+    const nvim = workspace.nvim;
+    console.log('[COC-VUE] Loading vue-ui Lua module...');
     
-    return result;
+    // Ensure the Lua module is loaded and commands are registered
+    await nvim.command('lua print("[VUE-UI] Loading module from TypeScript activation")');
+    await nvim.command('lua if not package.loaded["vue-ui"] then require("vue-ui") end');
+    await nvim.command('lua if not package.loaded["vue-ui.init"] then require("vue-ui.init") end');
+    
+    // Verify that the module is loaded and commands are registered
+    await nvim.command('lua print("[VUE-UI] Module loaded: " .. tostring(package.loaded["vue-ui"] ~= nil))');
+    
+    // Log available commands for debugging
+    console.log('[COC-VUE] Checking available Neovim commands...');
+    await nvim.command('lua print("[VUE-UI] VueUISelect command registered: " .. tostring(vim.api.nvim_get_commands({})[\'VueUISelect\'] ~= nil))');
+    
+    console.log('[COC-VUE] Lua module loaded successfully');
   } catch (error) {
-    console.error('[COC-VUE] Erreur pendant l\'activation:', error);
-    window.showErrorMessage(`Erreur d'activation de coc-vue: ${error.message}`);
-    return null;
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[COC-VUE] Error loading Lua module:', errorMessage);
+    window.showErrorMessage(`Error loading Lua module: ${errorMessage}`);
   }
+  
+  // Register bridge message receiver command
+  context.subscriptions.push(
+    commands.registerCommand('vue.bridge.receiveMessage', async (serializedMessage: string) => {
+      await bridgeCore.receiveMessage(serializedMessage);
+    })
+  );
+  
+  // Register bridge test command
+  context.subscriptions.push(
+    commands.registerCommand('vue.bridge.test', async () => {
+      try {
+        console.log('[COC-VUE] Testing generic bridge...');
+        window.showInformationMessage('Testing generic bridge communication...');
+        
+        // Create a test message
+        const testMessage: BridgeMessage = {
+          id: 'test_component_' + Date.now(),
+          type: MessageType.REQUEST,
+          action: 'ping',
+          payload: {
+            message: 'Hello from TypeScript!',
+            timestamp: Date.now()
+          }
+        };
+        
+        // Register a one-time handler for the response
+        const responseHandler = async (message: BridgeMessage) => {
+          if (message.type === MessageType.RESPONSE && message.action === 'pong') {
+            window.showInformationMessage(`Bridge test successful! Response: ${JSON.stringify(message.payload)}`);
+            bridgeCore.unregisterHandler('pong', responseHandler);
+          }
+        };
+        
+        bridgeCore.registerHandler('pong', responseHandler);
+        
+        // Send the test message
+        console.log('[COC-VUE] Sending test message:', testMessage);
+        const result = await bridgeCore.sendMessage(testMessage);
+        console.log('[COC-VUE] Initial result:', result);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('[COC-VUE] Error testing bridge:', errorMessage);
+        window.showErrorMessage(`Error testing bridge: ${errorMessage}`);
+      }
+    })
+  );
+  
+  // Register the vue.selectDemo command
+  context.subscriptions.push(
+    commands.registerCommand('vue.selectDemo', async () => {
+      try {
+        console.log('[COC-VUE] Executing vue.selectDemo command');
+        const nvim = workspace.nvim;
+        
+        // Ensure the Lua module is loaded before executing the command
+        await nvim.command('lua if not package.loaded["vue-ui"] then require("vue-ui") end');
+        
+        // Create a unique ID for the Select component
+        const selectId = 'select_demo_' + Date.now();
+        const selectTitle = 'Select Component Demo';
+        
+        // Configure demo options for the Select component
+        const selectOptions = {
+          multi: false,
+          width: 40,
+          placeholder: 'Choose an option...',
+          options: [
+            { id: 'option1', text: 'Option 1', value: 'value1' },
+            { id: 'option2', text: 'Option 2', value: 'value2' },
+            { id: 'option3', text: 'Option 3', value: 'value3' },
+            { id: 'option4', text: 'Option 4', value: 'value4' },
+            { id: 'option5', text: 'Option 5', value: 'value5' }
+          ]
+        };
+        
+        // Convert options to JSON for the Lua command
+        const optionsJson = JSON.stringify(selectOptions);
+        
+        console.log(`[COC-VUE] Preparing to launch Select component with ID: ${selectId}`);
+        
+        // Verify the command is registered before executing it
+        await nvim.command('lua print("[VUE-UI] Checking VueUISelect command before execution: " .. tostring(vim.api.nvim_get_commands({})[\'VueUISelect\'] ~= nil))');
+        
+        // Execute the VueUISelect command to create and open the Select component
+        const command = `VueUISelect ${selectId} "${selectTitle}" ${optionsJson}`;
+        console.log(`[COC-VUE] Executing Neovim command: ${command}`);
+        
+        await nvim.command(command);
+        
+        console.log('[COC-VUE] Select component launched successfully');
+        window.showInformationMessage('Select component launched successfully');
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('[COC-VUE] Error launching Select component:', errorMessage);
+        window.showErrorMessage(`Error launching Select component: ${errorMessage}`);
+      }
+    })
+  );
+  
+  console.log('[COC-VUE] Vue-like reactive bridge activated successfully');
 }
 
-/**
- * Nettoyage lors de la désactivation
- */
+// Cleanup function called when the extension is deactivated
 export function deactivate(): void {
-  // Code de nettoyage
+  console.log('[COC-VUE] Deactivating Vue-like reactive bridge');
+  
+  // Destroy all active components
+  for (const [id, component] of componentRegistry.entries()) {
+    try {
+      if (typeof component.destroy === 'function') {
+        component.destroy();
+        console.log(`[COC-VUE] Component ${id} destroyed during deactivation`);
+      }
+    } catch (error) {
+      console.error(`[COC-VUE] Error destroying component ${id}:`, error);
+    }
+  }
+  
+  // Clear the registry
+  componentRegistry.clear();
 }
