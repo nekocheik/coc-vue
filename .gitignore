@@ -10,6 +10,7 @@ coverage/
 coverage-bridge/
 coverage-renderer/
 test-results/
+/tickets
 
 # Node dependencies
 node_modules/
