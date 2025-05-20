@@ -116,7 +116,7 @@ run_test "should handle loading an invalid component|should handle loading with 
 check_continue "Open Dropdown" $?
 
 # Section 4: Component load + Get initial state + Open dropdown + Select options
-run_test "should handle loading an invalid component|should handle loading with invalid options format|should load a Select component with valid configuration|should get the initial state of the Select component|should open the Select component|should focus an option in the Select component|should select an option in the Select component|should select an option by value" "Select Options"
+run_test "should handle loading an invalid component|should handle loading with invalid options format|should load a Select component with valid configuration|should get the initial state of the Select component|should open the Select component|should focus an option in the Select component|should select an option in the Select component|should update the options of the Select component|should select an option by value" "Select Options"
 check_continue "Select Options" $?
 
 # Section 5: Component load + Get initial state + Open dropdown + Select options + Change props

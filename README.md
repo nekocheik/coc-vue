@@ -40,6 +40,37 @@ The integration between Node.js and the command server has been established usin
 
 All commands pass 100% automated tests. The protocol is ready for adding business logic commands (components, events, etc.).
 
+## Testing
+
+### Selective Test Execution
+
+The test suite supports selective test execution, allowing you to run specific test sections instead of the entire test suite. This is particularly useful during development to focus on specific functionality.
+
+#### Running Tests
+
+```bash
+# Run all tests
+./scripts/run_component_tests.sh
+
+# Run a specific test section
+./scripts/run_component_tests.sh component-loading
+
+# Run multiple test sections
+./scripts/run_component_tests.sh "component-loading,option-selection"
+```
+
+#### Available Test Sections
+
+- `component-loading` - Tests for loading components (valid and invalid)
+- `component-state` - Tests for getting component state
+- `dropdown-control` - Tests for opening/closing the dropdown
+- `option-selection` - Tests for selecting options
+- `props-update` - Tests for updating component properties
+- `multi-select` - Tests for multi-select mode
+- `navigation` - Tests for navigating through options
+- `error-handling` - Tests for error handling
+- `cleanup` - Tests for unloading components
+
 ## Select Component
 
 The Select component supports the following methods:
