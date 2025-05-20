@@ -15,17 +15,16 @@ jobs:
       - name: Set up Docker
         run: |
           docker --version
-          docker-compose --version
       
       - name: Build Docker image
         run: |
-          docker-compose build test
+          docker build -t coc-vue-test .
       
       - name: Run tests in Docker
         run: |
           mkdir -p test-results
-          docker-compose run --rm test | tee test-output.log
-          echo "Test execution completed with exit code $?"
+          docker run --rm coc-vue-test ./scripts/docker-run-tests.sh | tee test-output.log
+          echo "Test execution completed with exit code ${PIPESTATUS[0]}"
         env:
           MOCK_NEOVIM: true
           NODE_ENV: test
@@ -36,12 +35,16 @@ jobs:
         if: always()
         run: |
           echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
-          if grep -q "Tous les tests ont réussi" test-output.log || grep -q "All tests passed" test-output.log; then
-            echo "✅ All tests passed successfully!" >> $GITHUB_STEP_SUMMARY
+          if [ -f test-output.log ]; then
+            if grep -q "Tous les tests ont réussi" test-output.log || grep -q "All tests passed" test-output.log; then
+              echo "✅ All tests passed successfully!" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❌ Some tests failed. See logs for details." >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "\n### Test Output" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat test-output.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Some tests failed. See logs for details." >> $GITHUB_STEP_SUMMARY
+            echo "❌ No test output log found." >> $GITHUB_STEP_SUMMARY
           fi
-          echo "\n### Test Output" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          cat test-output.log >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
