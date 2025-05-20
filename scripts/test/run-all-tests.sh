@@ -1,70 +1,59 @@
 #!/bin/bash
+# Script principal pour exécuter tous les tests
 
-# Script pour exécuter tous les tests développés avec leurs configurations spécifiques
+# Couleurs pour une meilleure lisibilité
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
 
-echo "==================================="
-echo "1. Exécution des tests pour Bridge"
-echo "==================================="
-npx jest --config=jest.bridge.config.js test/bridge/neovim-bridge.test.ts
-BRIDGE_RESULT=$?
+# Chemin vers la racine du projet
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$PROJECT_ROOT"
 
-echo ""
-echo "==================================="
-echo "2. Exécution des tests pour Renderer (DOM Adapter)"
-echo "==================================="
-npx jest --config=jest.renderer.config.js test/renderer/dom-adapter-fixed.test.ts
-DOM_RESULT=$?
+echo -e "${BLUE}=== Exécution de tous les tests COC-Vue ===${NC}"
 
-echo ""
-echo "==================================="
-echo "3. Exécution des tests pour Renderer (Vue Renderer)"
-echo "==================================="
-npx jest --config=jest.renderer.config.js test/renderer/vue-renderer.test.ts
-VUE_RESULT=$?
+# Nettoyer les ports avant de commencer
+echo -e "${YELLOW}Nettoyage des ports de test...${NC}"
+"$PROJECT_ROOT/scripts/test/cleanup-test-ports.sh"
 
-echo ""
-echo "==================================="
-echo "4. Exécution des tests pour Renderer (Window Manager)"
-echo "==================================="
-npx jest --config=jest.renderer.config.js test/renderer/window-manager.test.ts
-WINDOW_RESULT=$?
+# Exécuter les tests unitaires
+echo -e "\n${BLUE}=== Exécution des tests unitaires ===${NC}"
+"$PROJECT_ROOT/scripts/test/run-unit-tests.sh" "$@"
+UNIT_EXIT_CODE=$?
 
-echo ""
-echo "==================================="
-echo "RÉSUMÉ DES TESTS"
-echo "==================================="
+# Exécuter les tests d'intégration
+echo -e "\n${BLUE}=== Exécution des tests d'intégration ===${NC}"
+"$PROJECT_ROOT/scripts/test/run-integration-tests.sh" "$@"
+INTEGRATION_EXIT_CODE=$?
 
-# Fonction pour afficher le résultat
-function print_result {
-    if [ $1 -eq 0 ]; then
-        echo "✅ $2: RÉUSSI"
-    else
-        echo "❌ $2: ÉCHOUÉ"
-    fi
-}
+# Nettoyer les ports après les tests
+echo -e "\n${YELLOW}Nettoyage final des ports de test...${NC}"
+"$PROJECT_ROOT/scripts/test/cleanup-test-ports.sh"
 
-print_result $BRIDGE_RESULT "Bridge Module"
-print_result $DOM_RESULT "DOM Adapter Module"
-print_result $VUE_RESULT "Vue Renderer Module"
-print_result $WINDOW_RESULT "Window Manager Module"
-
-# Calculer le résultat final
-TOTAL_TESTS=4
-PASSED_TESTS=0
-
-[ $BRIDGE_RESULT -eq 0 ] && PASSED_TESTS=$((PASSED_TESTS+1))
-[ $DOM_RESULT -eq 0 ] && PASSED_TESTS=$((PASSED_TESTS+1))
-[ $VUE_RESULT -eq 0 ] && PASSED_TESTS=$((PASSED_TESTS+1))
-[ $WINDOW_RESULT -eq 0 ] && PASSED_TESTS=$((PASSED_TESTS+1))
-
-PERCENTAGE=$((PASSED_TESTS*100/TOTAL_TESTS))
-
-echo ""
-echo "Modules testés avec succès: $PASSED_TESTS/$TOTAL_TESTS ($PERCENTAGE%)"
-
-# Retourner un code de sortie global
-if [ $PASSED_TESTS -eq $TOTAL_TESTS ]; then
-    exit 0
+# Afficher le résumé des tests
+echo -e "\n${BLUE}=== Résumé des tests ===${NC}"
+if [ $UNIT_EXIT_CODE -eq 0 ]; then
+  echo -e "${GREEN}✓ Tests unitaires : Réussis${NC}"
 else
-    exit 1
+  echo -e "${RED}✗ Tests unitaires : Échoués${NC}"
+fi
+
+if [ $INTEGRATION_EXIT_CODE -eq 0 ]; then
+  echo -e "${GREEN}✓ Tests d'intégration : Réussis${NC}"
+else
+  echo -e "${RED}✗ Tests d'intégration : Échoués${NC}"
+fi
+
+# Déterminer le code de sortie global
+if [ $UNIT_EXIT_CODE -eq 0 ] && [ $INTEGRATION_EXIT_CODE -eq 0 ]; then
+  echo -e "\n${GREEN}✓ Tous les tests ont réussi !${NC}"
+  exit 0
+else
+  echo -e "\n${RED}✗ Certains tests ont échoué.${NC}"
+  echo -e "${YELLOW}Pour plus de détails, exécutez les tests individuellement avec l'option VERBOSE_LOGS=true :${NC}"
+  echo -e "${YELLOW}VERBOSE_LOGS=true ./test/scripts/run-unit-tests.sh${NC}"
+  echo -e "${YELLOW}VERBOSE_LOGS=true ./test/scripts/run-integration-tests.sh${NC}"
+  exit 1
 fi

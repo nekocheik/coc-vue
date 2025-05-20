@@ -1,8 +1,34 @@
 /**
  * Client robuste pour communiquer avec Neovim
  * Ce client gère efficacement les connexions et les erreurs
+ * Utilise les informations du serveur dynamique
  */
 import * as net from 'net';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Fonction pour obtenir les informations du serveur
+function getServerInfo(): { host: string, port: number } {
+  try {
+    const serverInfoPath = path.join(__dirname, '../.server-info.json');
+    if (fs.existsSync(serverInfoPath)) {
+      const serverInfo = JSON.parse(fs.readFileSync(serverInfoPath, 'utf8'));
+      return {
+        host: serverInfo.host,
+        port: serverInfo.port
+      };
+    }
+  } catch (err) {
+    console.error('Erreur lors de la lecture des informations du serveur:', 
+      err instanceof Error ? err.message : String(err));
+  }
+  
+  // Valeurs par défaut si le fichier n'existe pas
+  return {
+    host: '127.0.0.1',
+    port: 9999
+  };
+}
 
 // Types pour améliorer la lisibilité et la maintenance
 export interface ComponentConfig {
@@ -78,8 +104,15 @@ export class NeovimClient {
 
   /**
    * Se connecter au serveur Neovim avec gestion améliorée des erreurs et des retries
+   * Utilise les informations du serveur dynamique si aucun port n'est spécifié
    */
-  async connect(port: number = 9999, host: string = '127.0.0.1', maxRetries: number = 5): Promise<void> {
+  async connect(port?: number, host?: string, maxRetries: number = 5): Promise<void> {
+    // Utiliser les informations du serveur dynamique si aucun port n'est spécifié
+    if (!port || !host) {
+      const serverInfo = getServerInfo();
+      port = port || serverInfo.port;
+      host = host || serverInfo.host;
+    }
     // Si déjà connecté, retourner immédiatement
     if (this.connected) {
       if (process.env.VERBOSE_LOGS === 'true') {
