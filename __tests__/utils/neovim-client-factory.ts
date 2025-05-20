@@ -1,24 +1,24 @@
 /**
- * Factory pour le client Neovim
- * Ce fichier détermine s'il faut utiliser un client réel ou un mock en fonction de l'environnement
+ * Neovim client factory
+ * This file determines whether to use a real client or a mock based on the environment
  */
 
-// Importer les deux types de clients
+// Import both client types
 import getNeovimTestClient from './neovim-test-client-mock';
 import { NeovimTestClient as RealNeovimTestClient } from './neovim-test-client';
 
-// Fonction pour obtenir le client réel
+// Function to get the real client
 function getRealNeovimTestClient() {
-  // Créer une nouvelle instance du client réel
+  // Create a new instance of the real client
   return new RealNeovimTestClient();
 }
 
 /**
- * Obtenir le client Neovim approprié en fonction de l'environnement
- * Si MOCK_NEOVIM=true, utilise le mock, sinon tente une connexion réelle
+ * Get the appropriate Neovim client based on the environment
+ * If MOCK_NEOVIM=true, uses the mock, otherwise attempts a real connection
  */
 export function getNeovimClient() {
-  // Vérifier si nous devons utiliser le mock
+  // Check if we should use the mock
   const useMock = process.env.MOCK_NEOVIM === 'true';
   
   if (useMock) {

@@ -1,11 +1,11 @@
 /**
- * Client de test Neovim avec mock
- * Ce fichier fournit un client de test qui utilise le mock Neovim au lieu d'une connexion réelle
+ * Neovim test client with mock
+ * This file provides a test client that uses the Neovim mock instead of a real connection
  */
 
 import { NeovimClientMock } from '../mocks/neovim-mock';
 
-// Classe client de test pour Neovim
+// Test client class for Neovim
 export class NeovimTestClient {
   private static instance: NeovimTestClient | null = null;
   private client: NeovimClientMock;
@@ -22,41 +22,41 @@ export class NeovimTestClient {
     return NeovimTestClient.instance;
   }
   
-  // Réinitialiser l'instance (utile pour les tests)
+  // Reset the instance (useful for tests)
   public static resetInstance(): void {
     NeovimClientMock.resetInstance();
     NeovimTestClient.instance = null;
   }
   
-  // Connecter au serveur Neovim (mock)
+  // Connect to Neovim server (mock)
   public async connect(): Promise<void> {
     console.log('Connecting to Neovim test server (mock)...');
     await this.client.connect();
     console.log('Successfully connected to Neovim test server (mock)');
   }
   
-  // Déconnecter du serveur Neovim (mock)
+  // Disconnect from Neovim server (mock)
   public async disconnect(): Promise<void> {
     console.log('Disconnecting from Neovim test server (mock)...');
     await this.client.disconnect();
     console.log('Disconnected from Neovim test server (mock)');
   }
   
-  // Appeler une fonction Lua (mock)
+  // Call a Lua function (mock)
   public async callFunction(functionName: string, args: any[]): Promise<any> {
     return this.client.callFunction(functionName, args);
   }
   
-  // Vérifier si le client est connecté
+  // Check if client is connected
   public isConnected(): boolean {
     return this.client.isConnected();
   }
 }
 
-// Fonction pour obtenir une instance du client de test
+// Function to get a test client instance
 export function getNeovimTestClient(): NeovimTestClient {
   return NeovimTestClient.getInstance();
 }
 
-// Exporter la fonction pour obtenir le client
+// Export the function to get the client
 export default getNeovimTestClient;

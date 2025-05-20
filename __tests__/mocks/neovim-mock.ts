@@ -1,9 +1,9 @@
 /**
- * Mock pour Neovim
- * Ce fichier fournit des mocks pour les fonctionnalités de Neovim utilisées dans les tests
+ * Mock for Neovim
+ * This file provides mocks for Neovim functionalities used in tests
  */
 
-// Mock pour le client Neovim
+// Mock for Neovim client
 export class NeovimClientMock {
   private static instance: NeovimClientMock | null = null;
   private connected: boolean = false;
@@ -17,35 +17,35 @@ export class NeovimClientMock {
     return NeovimClientMock.instance;
   }
   
-  // Réinitialiser l'instance (utile pour les tests)
+  // Reset the instance (useful for tests)
   public static resetInstance(): void {
     NeovimClientMock.instance = null;
   }
   
-  // Simuler la connexion au serveur Neovim
+  // Simulate connection to Neovim server
   public async connect(): Promise<void> {
     this.connected = true;
     console.log('Mock: Connected to Neovim server');
     return Promise.resolve();
   }
   
-  // Simuler la déconnexion du serveur Neovim
+  // Simulate disconnection from Neovim server
   public async disconnect(): Promise<void> {
     this.connected = false;
     console.log('Mock: Disconnected from Neovim server');
     return Promise.resolve();
   }
   
-  // Vérifier si le client est connecté
+  // Check if client is connected
   public isConnected(): boolean {
     return this.connected;
   }
   
-  // Simuler l'appel d'une fonction Lua
+  // Simulate a Lua function call
   public async callFunction(functionName: string, args: any[]): Promise<any> {
     console.log(`Mock: Calling function ${functionName} with args:`, args);
     
-    // Simuler différentes fonctions Lua
+    // Simulate different Lua functions
     switch (functionName) {
       case 'create_component':
         return this.mockCreateComponent(args[0], args[1]);
@@ -63,11 +63,11 @@ export class NeovimClientMock {
     }
   }
   
-  // Mock pour la création de composant
+  // Mock for component creation
   private mockCreateComponent(componentType: string, props: any): any {
     const componentId = `mock-${componentType}-${Date.now()}`;
     
-    // Créer un composant mock selon le type
+    // Create a mock component based on type
     let component: any;
     
     switch (componentType) {
@@ -96,13 +96,13 @@ export class NeovimClientMock {
         };
     }
     
-    // Stocker le composant
+    // Store the component
     this.components.set(componentId, component);
     
     return { success: true, componentId, error: null };
   }
   
-  // Mock pour obtenir l'état d'un composant
+  // Mock for getting component state
   private mockGetComponentState(componentId: string): any {
     const component = this.components.get(componentId);
     
@@ -113,7 +113,7 @@ export class NeovimClientMock {
     return { success: true, state: component.state, error: null };
   }
   
-  // Mock pour appeler une méthode sur un composant
+  // Mock for calling a method on a component
   private mockCallComponentMethod(componentId: string, method: string, args: any[]): any {
     const component = this.components.get(componentId);
     
@@ -121,7 +121,7 @@ export class NeovimClientMock {
       return { success: false, result: null, error: 'Component not found' };
     }
     
-    // Simuler différentes méthodes selon le type de composant
+    // Simulate different methods based on component type
     if (component.type === 'select') {
       switch (method) {
         case 'open':
@@ -142,20 +142,20 @@ export class NeovimClientMock {
           if (optionIndex >= 0 && optionIndex < component.state.options.length) {
             const option = component.state.options[optionIndex];
             if (component.state.multiSelect) {
-              // Mode multi-select
+              // Multi-select mode
               const existingIndex = component.state.selectedOptions.findIndex(
                 (o: any) => o.value === option.value
               );
               
               if (existingIndex >= 0) {
-                // Désélectionner si déjà sélectionné
+                // Deselect if already selected
                 component.state.selectedOptions.splice(existingIndex, 1);
               } else {
-                // Ajouter à la sélection
+                // Add to selection
                 component.state.selectedOptions.push(option);
               }
             } else {
-              // Mode sélection simple
+              // Single selection mode
               component.state.selectedOption = option;
             }
             return { success: true, result: option, error: null };
@@ -189,7 +189,7 @@ export class NeovimClientMock {
     return { success: false, result: null, error: `Component type ${component.type} not supported` };
   }
   
-  // Mock pour mettre à jour les propriétés d'un composant
+  // Mock for updating component properties
   private mockUpdateComponentProps(componentId: string, newProps: any): any {
     const component = this.components.get(componentId);
     
@@ -197,10 +197,10 @@ export class NeovimClientMock {
       return { success: false, error: 'Component not found' };
     }
     
-    // Mettre à jour les props
+    // Update props
     component.props = { ...component.props, ...newProps };
     
-    // Mettre à jour l'état en fonction des nouvelles props
+    // Update state based on new props
     if (newProps.options) {
       component.state.options = newProps.options;
     }
@@ -219,7 +219,7 @@ export class NeovimClientMock {
     return { success: true, error: null };
   }
   
-  // Mock pour détruire un composant
+  // Mock for destroying a component
   private mockDestroyComponent(componentId: string): any {
     if (!this.components.has(componentId)) {
       return { success: false, error: 'Component not found' };
@@ -230,5 +230,5 @@ export class NeovimClientMock {
   }
 }
 
-// Exporter le mock du client Neovim
+// Export the Neovim client mock
 export const NeovimClient = NeovimClientMock;
