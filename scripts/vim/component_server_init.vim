@@ -5,8 +5,14 @@ filetype plugin indent on
 syntax enable
 
 " Add the project root to the runtime path
-let s:project_root = expand('<sfile>:p:h:h')
+let s:project_root = expand('<sfile>:p:h:h:h')
 let &runtimepath.=','.s:project_root
+
+" Add the lua directory to package.path
+lua << EOF
+package.path = package.path .. ';' .. vim.fn.expand('<sfile>:p:h:h:h') .. '/lua/?.lua'
+package.path = package.path .. ';' .. vim.fn.expand('<sfile>:p:h:h:h') .. '/lua/?/init.lua'
+EOF
 
 " Load the component server
 lua << EOF

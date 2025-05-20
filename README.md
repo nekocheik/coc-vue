@@ -379,14 +379,40 @@ Alternatively, you can use the test scripts directly:
 VERBOSE_LOGS=true ./scripts/test/run-all-tests.sh
 ```
 
+### Simplified Testing
+
+If you encounter issues with the standard test suite (such as Neovim connection problems), you can use the simplified test runner that uses mocks instead of real Neovim connections:
+
+```bash
+# Run all tests with mocks (more reliable)
+./scripts/test/runners/run-simplified-tests.sh
+```
+
+The simplified test runner offers several advantages:
+
+- **No Neovim dependency**: Tests run without requiring a real Neovim instance
+- **Faster execution**: Mocked tests run significantly faster
+- **More reliable**: Eliminates connection and timing issues
+- **Consistent results**: Provides the same results across different environments
+
 ### Test Categories
 
-| Category | Description | Command |
-|----------|-------------|--------|
-| **Unit Tests** | Tests for individual functions and classes | `npm test` |
-| **Integration Tests** | Tests for component interactions | `npm run test:integration` |
-| **Bridge Tests** | Tests for TypeScript-Lua communication | `npm run test:bridge` |
-| **End-to-End Tests** | Tests for complete workflows | `./coc-vue-cli.sh test:e2e` |
+| Category | Description | Standard Command | Simplified Command |
+|----------|-------------|-----------------|--------------------|
+| **Unit Tests** | Tests for individual functions and classes | `npm test` | Included in simplified tests |
+| **Integration Tests** | Tests for component interactions | `npm run test:integration` | Included in simplified tests |
+| **Bridge Tests** | Tests for TypeScript-Lua communication | `npm run test:bridge` | Mocked in simplified tests |
+| **Component Tests** | Tests for Vue components | `./coc-vue-cli.sh test:component` | Included in simplified tests |
+| **End-to-End Tests** | Tests for complete workflows | `./coc-vue-cli.sh test:e2e` | Not available in simplified tests |
+
+### Troubleshooting Tests
+
+If you encounter issues with tests, try the following steps:
+
+1. **Clean up resources**: Run `make clean` to remove temporary files and free ports
+2. **Use simplified tests**: Run `./scripts/test/runners/run-simplified-tests.sh` to use mocked tests
+3. **Check logs**: Examine `/tmp/component-server.log` for server-related issues
+4. **Increase timeout**: Use `MAX_TIMEOUT=600 ./scripts/test/run-all-tests.sh` for longer tests
 
 ### Code Quality
 

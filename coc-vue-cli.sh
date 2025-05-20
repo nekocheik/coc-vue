@@ -52,22 +52,22 @@ run_component_tests() {
   
   if [ -n "$section" ]; then
     echo -e "${YELLOW}Section: ${section}${NC}"
-    "$PROJECT_ROOT/scripts/test/run_component_tests.sh" "$section"
+    "$PROJECT_ROOT/scripts/test/runners/run-component-tests.sh" "$section"
   else
-    "$PROJECT_ROOT/scripts/test/run_component_tests.sh"
+    "$PROJECT_ROOT/scripts/test/runners/run-component-tests.sh"
   fi
 }
 
 # Fonction pour exécuter les tests de commandes
 run_command_tests() {
   echo -e "${YELLOW}Exécution des tests de commandes...${NC}"
-  "$PROJECT_ROOT/scripts/test/run_node_command_tests.sh"
+  "$PROJECT_ROOT/scripts/test/runners/run-command-tests.sh"
 }
 
 # Fonction pour exécuter les tests de ping
 run_ping_tests() {
   echo -e "${YELLOW}Exécution des tests de ping...${NC}"
-  "$PROJECT_ROOT/scripts/test/run_node_ping_test.sh"
+  "$PROJECT_ROOT/scripts/test/runners/run-ping-tests.sh"
 }
 
 # Fonction pour démarrer le serveur de composants
