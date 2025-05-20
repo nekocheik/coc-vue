@@ -310,12 +310,14 @@ function Select:add_selected_option(index)
   
   -- Add the option to the list of selected options
   local option = self.options[index + 1]
+  print("Adding option to selected_options: " .. vim.inspect(option) .. " at index " .. index)
   table.insert(self.selected_options, {
     id = option.id,
     text = option.text,
     value = option.value,
     index = index
   })
+  print("Selected options after add: " .. vim.inspect(self.selected_options))
   
   -- No event emission here as this is an internal helper method
   -- The select_option method will handle event emission
@@ -561,7 +563,9 @@ function Select:select_option(index)
       core_event.emit_select_option_deselected(self, index, option)
     else
       -- Option is not selected, select it
-      table.insert(self.selected_options, option)
+      print("Selecting option at index " .. index .. " in multi-select mode")
+      self:add_selected_option(index)
+      print("Selected options after select_option: " .. vim.inspect(self.selected_options))
       
       -- Emit select event using core_event
       core_event.emit_select_option_selected(self, index)
@@ -574,6 +578,11 @@ function Select:select_option(index)
     
     -- Emit select event using core_event
     core_event.emit_select_option_selected(self, index)
+    
+    -- Close the select component in single-select mode (only for single-select mode)
+    if self._is_open and not self.multi then
+      self:close()
+    end
   end
   
   -- Update the render if necessary
@@ -671,7 +680,7 @@ function Select:select_by_value(value)
         core_event.emit_select_changed(self, previous_value)
         
         -- Update render if not in test mode and component is open
-        if not test_helpers.is_test_env() and self.is_open then
+        if not test_helpers.is_test_env() and self._is_open then
           self:_update_render()
         end
       else
