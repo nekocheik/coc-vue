@@ -3,7 +3,7 @@
 # Script to start a Node.js ping server and run the ping test
 
 # Set the path to the project root
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
 # Colors for output
@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 echo -e "${YELLOW}Starting Node.js ping server...${NC}"
 
 # Start the Node.js ping server in the background
-node "$PROJECT_ROOT/scripts/node_ping_server.js" > ping_server.log 2>&1 &
+node "$PROJECT_ROOT/scripts/js/node_ping_server.js" > ping_server.log 2>&1 &
 SERVER_PID=$!
 
 # Wait for the server to start
@@ -37,7 +37,7 @@ trap cleanup EXIT
 
 # Run the ping test
 echo -e "${GREEN}Running ping test...${NC}"
-node "$PROJECT_ROOT/scripts/ping_test.js"
+node "$PROJECT_ROOT/scripts/test/ping_test.js"
 PING_RESULT=$?
 
 # Show the server log
