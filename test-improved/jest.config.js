@@ -1,5 +1,5 @@
 /**
- * Configuration Jest principale pour le projet COC-Vue
+ * Main Jest configuration for COC-Vue project
  * This configuration is used for all tests
  */
 const baseConfig = {

@@ -1,10 +1,10 @@
 /**
- * Client amélioré pour communiquer avec Neovim
- * Ce client réduit les logs et améliore la gestion des connexions
+ * Enhanced client for Neovim communication
+ * This client reduces logs and improves connection handling
  */
 import * as net from 'net';
 
-// Types pour améliorer la lisibilité et la maintenance
+// Types to improve readability and maintenance
 export interface ComponentConfig {
   id: string;
   [key: string]: any;
@@ -29,7 +29,7 @@ export class NeovimClient {
   private connectionPromise: Promise<void> | null = null;
   private static instance: NeovimClient | null = null;
 
-  // Utiliser un singleton pour éviter les connexions multiples
+  // Use singleton to avoid multiple connections
   public static getInstance(): NeovimClient {
     if (!NeovimClient.instance) {
       NeovimClient.instance = new NeovimClient();
@@ -40,11 +40,11 @@ export class NeovimClient {
   private constructor() {
     this.socket = new net.Socket();
     
-    // Gérer la déconnexion proprement
+    // Handle disconnection properly
     this.socket.on('close', () => {
       if (this.connected) {
         this.connected = false;
-        // Rejeter toutes les promesses en attente
+        // Reject all pending promises
         this.responseCallbacks.forEach(callback => {
           callback({ success: false, error: 'Connection closed' });
         });
@@ -54,32 +54,32 @@ export class NeovimClient {
   }
 
   /**
-   * Se connecter au serveur Neovim avec gestion améliorée des erreurs et des retries
+   * Connect to Neovim server with improved error handling and retries
    */
   async connect(port: number = 9999, host: string = '127.0.0.1', maxRetries: number = 5): Promise<void> {
-    // Si déjà connecté, retourner immédiatement
+    // If already connected, return immediately
     if (this.connected) {
-      console.log('Déjà connecté au serveur Neovim');
+      console.log('Already connected to Neovim server');
       return Promise.resolve();
     }
     
-    // Si une connexion est en cours, attendre qu'elle se termine
+    // If a connection is in progress, wait for it to complete
     if (this.connectionPromise) {
-      console.log('Connexion en cours, attente...');
+      console.log('Connection in progress, waiting...');
       return this.connectionPromise;
     }
     
-    console.log(`Tentative de connexion au serveur Neovim (${host}:${port})...`);
+    console.log(`Attempting to connect to Neovim server (${host}:${port})...`);
     
-    // Créer un nouveau socket pour éviter les problèmes avec les anciennes connexions
+    // Create new socket to avoid issues with old connections
     this.socket = new net.Socket();
     
-    // Gérer la déconnexion proprement
+    // Handle disconnection properly
     this.socket.on('close', () => {
       if (this.connected) {
-        console.log('Connexion au serveur Neovim fermée');
+        console.log('Connection to Neovim server closed');
         this.connected = false;
-        // Rejeter toutes les promesses en attente
+        // Reject all pending promises
         this.responseCallbacks.forEach(callback => {
           callback({ success: false, error: 'Connection closed' });
         });
@@ -89,33 +89,33 @@ export class NeovimClient {
     
     this.connectionPromise = new Promise<void>((resolve, reject) => {
       const tryConnect = (attemptsLeft: number) => {
-        // Nettoyer les écouteurs précédents pour éviter les fuites de mémoire
+        // Clean up previous listeners to avoid memory leaks
         this.socket.removeAllListeners('connect');
         this.socket.removeAllListeners('error');
         this.socket.removeAllListeners('timeout');
         
-        // Définir un timeout pour la connexion
+        // Set connection timeout
         this.socket.setTimeout(5000);
         
         this.socket.once('timeout', () => {
-          console.log(`Timeout de connexion (tentative ${maxRetries - attemptsLeft + 1}/${maxRetries})`);
+          console.log(`Connection timeout (attempt ${maxRetries - attemptsLeft + 1}/${maxRetries})`);
           this.socket.destroy();
           if (attemptsLeft > 1) {
             const delay = Math.min(1000 * Math.pow(2, maxRetries - attemptsLeft), 5000);
-            console.log(`Nouvelle tentative dans ${delay}ms...`);
+            console.log(`Retrying in ${delay}ms...`);
             setTimeout(() => tryConnect(attemptsLeft - 1), delay);
           } else {
             this.connectionPromise = null;
-            reject(new Error(`Timeout lors de la connexion au serveur Neovim après ${maxRetries} tentatives`));
+            reject(new Error(`Timeout connecting to Neovim server after ${maxRetries} attempts`));
           }
         });
         
         this.socket.once('connect', () => {
-          console.log('Connecté au serveur Neovim avec succès');
+          console.log('Successfully connected to Neovim server');
           this.connected = true;
-          this.socket.setTimeout(0); // Désactiver le timeout après connexion
+          this.socket.setTimeout(0); // Disable timeout after connection
           
-          // Configurer le gestionnaire de données
+          // Configure data handler
           this.socket.on('data', (data) => {
             try {
               const response = JSON.parse(data.toString());
@@ -125,11 +125,11 @@ export class NeovimClient {
                 this.responseCallbacks.delete(response.id);
               }
             } catch (err) {
-              console.error('Erreur lors du traitement de la réponse:', err);
+              console.error('Error while processing response:', err);
             }
           });
           
-          // Traiter les messages en attente
+          // Process pending messages
           this.processQueue();
           
           this.connectionPromise = null;
@@ -138,26 +138,26 @@ export class NeovimClient {
         
         this.socket.once('error', (err: Error | unknown) => {
           const errorMsg = err instanceof Error ? err.message : String(err);
-          console.log(`Erreur de connexion: ${errorMsg} (tentative ${maxRetries - attemptsLeft + 1}/${maxRetries})`);
+          console.log(`Connection error: ${errorMsg} (attempt ${maxRetries - attemptsLeft + 1}/${maxRetries})`);
           this.socket.destroy();
           
           if (attemptsLeft > 1) {
-            // Réessayer avec un délai exponentiel
+            // Retry with exponential backoff
             const delay = Math.min(1000 * Math.pow(2, maxRetries - attemptsLeft), 5000);
-            console.log(`Nouvelle tentative dans ${delay}ms...`);
+            console.log(`Retrying in ${delay}ms...`);
             setTimeout(() => tryConnect(attemptsLeft - 1), delay);
           } else {
             this.connectionPromise = null;
-            reject(new Error(`Échec de connexion au serveur Neovim après ${maxRetries} tentatives: ${errorMsg}`));
+            reject(new Error(`Failed to connect to Neovim server after ${maxRetries} attempts: ${errorMsg}`));
           }
         });
         
-        // Tenter de se connecter
-        console.log(`Tentative de connexion ${maxRetries - attemptsLeft + 1}/${maxRetries}...`);
+        // Attempt to connect
+        console.log(`Connection attempt ${maxRetries - attemptsLeft + 1}/${maxRetries}...`);
         try {
           this.socket.connect(port, host);
         } catch (err) {
-          console.error(`Erreur lors de la tentative de connexion: ${err.message}`);
+          console.error(`Error during connection attempt: ${err.message}`);
           this.socket.emit('error', err);
         }
       };
@@ -169,7 +169,7 @@ export class NeovimClient {
   }
 
   /**
-   * Traiter la file d'attente des messages
+   * Process message queue
    */
   private async processQueue() {
     if (this.processingQueue || this.messageQueue.length === 0) {
@@ -193,40 +193,40 @@ export class NeovimClient {
   }
 
   /**
-   * Envoyer une commande au serveur Neovim
+   * Send command to Neovim server
    */
   private async sendCommandInternal(command: any): Promise<CommandResponse> {
     return new Promise((resolve, reject) => {
       if (!this.connected) {
-        console.log('Tentative d\'envoi de commande sans connexion active');
-        reject(new Error('Non connecté au serveur Neovim'));
+        console.log('Attempting to send command without active connection');
+        reject(new Error('Not connected to Neovim server'));
         return;
       }
 
-      // Générer un ID unique pour la commande
+      // Generate unique command ID
       const id = Date.now().toString() + Math.random().toString(36).substring(2, 9);
       command.id = id;
       
-      // Log de débogage pour la commande
+      // Debug log for command
       const commandType = command.type || 'unknown';
-      console.log(`Envoi de commande: ${commandType} (ID: ${id})`);
+      console.log(`Sending command: ${commandType} (ID: ${id})`);
       
-      // Définir un timeout pour éviter les attentes infinies (15 secondes)
+      // Set timeout to avoid infinite waits (15 seconds)
       const timeout = setTimeout(() => {
-        console.log(`TIMEOUT: Aucune réponse reçue pour la commande ${commandType} (ID: ${id}) après 15 secondes`);
+        console.log(`TIMEOUT: No response received for command ${commandType} (ID: ${id}) after 15 seconds`);
         this.responseCallbacks.delete(id);
-        reject(new Error(`Timeout lors de l'attente de la réponse à la commande: ${commandType}`));
+        reject(new Error(`Timeout while waiting for command response: ${commandType}`));
       }, 15000);
       
       this.responseCallbacks.set(id, (response) => {
         clearTimeout(timeout);
-        console.log(`Réponse reçue pour la commande ${commandType} (ID: ${id}): ${response.success ? 'succès' : 'échec'}`);
+        console.log(`Response received for command ${commandType} (ID: ${id}): ${response.success ? 'success' : 'failure'}`);
         
         if (response.success) {
           resolve(response);
         } else {
-          const errorMsg = response.error || 'Erreur inconnue';
-          console.log(`Erreur pour la commande ${commandType}: ${errorMsg}`);
+          const errorMsg = response.error || 'Unknown error';
+          console.log(`Error for command ${commandType}: ${errorMsg}`);
           reject(new Error(errorMsg));
         }
       });
@@ -235,14 +235,14 @@ export class NeovimClient {
         const jsonCommand = JSON.stringify(command);
         this.socket.write(jsonCommand, (err) => {
           if (err) {
-            console.log(`Erreur lors de l'envoi de la commande ${commandType}: ${err.message}`);
+            console.log(`Error sending command ${commandType}: ${err.message}`);
             clearTimeout(timeout);
             this.responseCallbacks.delete(id);
             reject(err);
           }
         });
       } catch (err) {
-        console.log(`Exception lors de l'envoi de la commande ${commandType}: ${err instanceof Error ? err.message : String(err)}`);
+        console.log(`Exception while sending command ${commandType}: ${err instanceof Error ? err.message : String(err)}`);
         clearTimeout(timeout);
         this.responseCallbacks.delete(id);
         reject(err);
@@ -251,10 +251,10 @@ export class NeovimClient {
   }
 
   /**
-   * Envoyer une commande au serveur Neovim avec mise en file d'attente
+   * Send command to Neovim server with queuing
    */
   async sendCommand(command: any): Promise<CommandResponse> {
-    // Si non connecté, tenter de se reconnecter automatiquement
+    // If not connected, try to reconnect automatically
     if (!this.connected) {
       try {
         await this.connect();
@@ -273,7 +273,7 @@ export class NeovimClient {
   }
 
   /**
-   * Vérifier si le serveur est en vie
+   * Check if server is alive
    */
   async ping(): Promise<boolean> {
     try {
@@ -285,7 +285,7 @@ export class NeovimClient {
   }
 
   /**
-   * Charger un composant dans l'instance Neovim
+   * Load a component into the Neovim instance
    */
   async loadComponent(config: ComponentConfig): Promise<string> {
     const response = await this.sendCommand({
@@ -297,7 +297,7 @@ export class NeovimClient {
   }
 
   /**
-   * Appeler une méthode sur un composant
+   * Call a method on a component
    */
   async callMethod(componentId: string, method: string, ...args: any[]): Promise<any> {
     const response = await this.sendCommand({
@@ -311,7 +311,7 @@ export class NeovimClient {
   }
 
   /**
-   * Obtenir l'état d'un composant
+   * Get component state
    */
   async getState(componentId: string): Promise<any> {
     const response = await this.sendCommand({
@@ -323,7 +323,7 @@ export class NeovimClient {
   }
 
   /**
-   * Obtenir les événements capturés
+   * Get captured events
    */
   async getEvents(): Promise<any[]> {
     const response = await this.sendCommand({
@@ -334,68 +334,68 @@ export class NeovimClient {
   }
 
   /**
-   * Se déconnecter du serveur Neovim
+   * Disconnect from Neovim server
    */
   disconnect(): void {
     if (this.connected) {
-      console.log('Déconnexion du serveur Neovim...');
+      console.log('Disconnecting from Neovim server...');
       
-      // Rejeter toutes les promesses en attente
+      // Reject all pending promises
       this.responseCallbacks.forEach(callback => {
         callback({ success: false, error: 'Connection closed by client' });
       });
       this.responseCallbacks.clear();
       
-      // Nettoyer la file d'attente des messages
+      // Clean up message queue
       this.messageQueue = [];
       this.processingQueue = false;
       
       try {
-        // Fermer proprement la connexion
+        // Close connection properly
         this.socket.end();
         this.socket.destroy();
       } catch (err) {
-        console.error(`Erreur lors de la fermeture de la connexion: ${err instanceof Error ? err.message : String(err)}`);
+        console.error(`Error while closing connection: ${err instanceof Error ? err.message : String(err)}`);
       }
       
       this.connected = false;
-      console.log('Déconnecté du serveur Neovim');
+      console.log('Disconnected from Neovim server');
     } else {
-      console.log('Déjà déconnecté du serveur Neovim');
+      console.log('Already disconnected from Neovim server');
     }
   }
   
   /**
-   * Réinitialiser l'instance (utile pour les tests)
+   * Reset instance (useful for tests)
    */
   static resetInstance(): void {
-    console.log('Réinitialisation de l\'instance NeovimClient...');
+    console.log('Resetting NeovimClient instance...');
     if (NeovimClient.instance) {
       try {
-        // Déconnecter proprement
+        // Disconnect properly
         NeovimClient.instance.disconnect();
         
-        // Réinitialiser tous les états internes
+        // Reset all internal states
         NeovimClient.instance.responseCallbacks.clear();
         NeovimClient.instance.messageQueue = [];
         NeovimClient.instance.processingQueue = false;
         NeovimClient.instance.connectionPromise = null;
         NeovimClient.instance.connected = false;
         
-        // Détruire le socket
+        // Destroy socket
         if (NeovimClient.instance.socket) {
           NeovimClient.instance.socket.removeAllListeners();
           NeovimClient.instance.socket.destroy();
         }
       } catch (err) {
-        console.error(`Erreur lors de la réinitialisation de l'instance: ${err instanceof Error ? err.message : String(err)}`);
+        console.error(`Error while resetting instance: ${err instanceof Error ? err.message : String(err)}`);
       } finally {
-        // Réinitialiser l'instance quoi qu'il arrive
+        // Reset instance regardless
         NeovimClient.instance = null;
-        console.log('Instance NeovimClient réinitialisée');
+        console.log('NeovimClient instance reset');
       }
     } else {
-      console.log('Aucune instance NeovimClient à réinitialiser');
+      console.log('No NeovimClient instance to reset');
     }
   }
 }

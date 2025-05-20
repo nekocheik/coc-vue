@@ -15,8 +15,8 @@ echo -e "${YELLOW}Tests will be automatically re-executed when files are modifie
 echo -e "${YELLOW}Press 'q' to quit, 'p' to filter by file name.${NC}"
 echo
 
-# Par défaut, on exécute les tests unitaires en mode watch
-# Les tests d'intégration ne sont pas exécutés en mode watch car ils nécessitent un serveur Neovim
+# By default, run unit tests in watch mode
+# Integration tests are not run in watch mode as they require a Neovim server
 TEST_TYPE=${1:-"unit"}
 
 if [ "$TEST_TYPE" = "unit" ]; then

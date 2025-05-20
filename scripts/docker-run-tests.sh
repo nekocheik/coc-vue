@@ -1,76 +1,62 @@
 #!/bin/bash
-# Script pour exécuter les tests dans un environnement Docker
-# Ce script s'assure que les tests sont exécutés depuis la racine du projet
+# Script to run tests in Docker environment
+# This script ensures tests are run from the project root
 
-# Définir la racine du projet comme répertoire de travail
-cd /app
-
-# Couleurs pour l'affichage
+# Colors for better readability
 GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
 RED='\033[0;31m'
-YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Afficher l'en-tête
-echo -e "\n${BLUE}=========================================${NC}"
-echo -e "${BLUE}   Tests Docker pour coc-vue   ${NC}"
-echo -e "${BLUE}=========================================${NC}\n"
+# Header
+echo -e "${BLUE}================================${NC}"
+echo -e "${BLUE}   Docker Tests for coc-vue    ${NC}"
+echo -e "${BLUE}================================${NC}"
 
-# Afficher le répertoire de travail
-echo -e "${YELLOW}Répertoire de travail: $(pwd)${NC}"
-
-# Configurer l'environnement pour les tests
-export MOCK_NEOVIM=true
+# Configure test environment
+echo -e "\n${YELLOW}Configuring test environment...${NC}"
 export NODE_ENV=test
+export JEST_TIMEOUT=30000
 
-# Créer le répertoire pour les artefacts CI s'il n'existe pas
-mkdir -p .ci-artifacts/vader-reports
-
-# Exécuter les tests avec Jest directement
-echo -e "\n${YELLOW}Exécution des tests unitaires...${NC}"
+# Run tests with Jest directly
+echo -e "\n${YELLOW}Running unit tests...${NC}"
 npx jest --config /app/test/simplified-jest.config.js --testPathPattern="__tests__/(?!integration)" --passWithNoTests
 UNIT_RESULT=$?
 
-echo -e "\n${YELLOW}Exécution des tests de composants...${NC}"
+echo -e "\n${YELLOW}Running component tests...${NC}"
 npx jest --config /app/test/simplified-jest.config.js --testPathPattern="__tests__/components" --passWithNoTests
 COMPONENT_RESULT=$?
 
-echo -e "\n${YELLOW}Exécution des tests d'intégration...${NC}"
+echo -e "\n${YELLOW}Running integration tests...${NC}"
 npx jest --config /app/test/simplified-jest.config.js --testPathPattern="__tests__/integration" --passWithNoTests
 INTEGRATION_RESULT=$?
 
-# Exécuter les tests Vader pour les composants
-echo -e "\n${YELLOW}Exécution des tests Vader pour les composants...${NC}"
+# Run Vader tests for components
+echo -e "\n${YELLOW}Running Vader component tests...${NC}"
 ./scripts/run-vader-tests.sh
-VADER_RESULT=$?
+VADER_ACTUAL_RESULT=$?
 
-# Capturer les résultats des tests Vader mais ne pas faire échouer la CI
-VADER_ACTUAL_RESULT=$VADER_RESULT
-VADER_RESULT=0  # Forcer le résultat à 0 pour que la CI ne s'arrête pas
+# Capture Vader test results but don't fail CI
+VADER_RESULT=0  # Force result to 0 to prevent CI from failing
 
-# Afficher le résumé
-echo -e "\n${BLUE}=== Résumé des tests ====${NC}"
-[ $UNIT_RESULT -eq 0 ] && echo -e "${GREEN}✓ Tests unitaires: SUCCÈS${NC}" || echo -e "${RED}✗ Tests unitaires: ÉCHEC (code $UNIT_RESULT)${NC}"
-[ $COMPONENT_RESULT -eq 0 ] && echo -e "${GREEN}✓ Tests de composants: SUCCÈS${NC}" || echo -e "${RED}✗ Tests de composants: ÉCHEC (code $COMPONENT_RESULT)${NC}"
-[ $INTEGRATION_RESULT -eq 0 ] && echo -e "${GREEN}✓ Tests d'intégration: SUCCÈS${NC}" || echo -e "${RED}✗ Tests d'intégration: ÉCHEC (code $INTEGRATION_RESULT)${NC}"
-[ $VADER_ACTUAL_RESULT -eq 0 ] && echo -e "${GREEN}✓ Tests Vader des composants: SUCCÈS${NC}" || echo -e "${RED}✗ Tests Vader des composants: ÉCHEC (code $VADER_ACTUAL_RESULT) - Ignoré pour la CI${NC}"
+echo -e "\n${BLUE}=== Test Summary ====${NC}"
+[ $UNIT_RESULT -eq 0 ] && echo -e "${GREEN}✓ Unit tests: PASSED${NC}" || echo -e "${RED}✗ Unit tests: FAILED (code $UNIT_RESULT)${NC}"
+[ $COMPONENT_RESULT -eq 0 ] && echo -e "${GREEN}✓ Component tests: PASSED${NC}" || echo -e "${RED}✗ Component tests: FAILED (code $COMPONENT_RESULT)${NC}"
+[ $INTEGRATION_RESULT -eq 0 ] && echo -e "${GREEN}✓ Integration tests: PASSED${NC}" || echo -e "${RED}✗ Integration tests: FAILED (code $INTEGRATION_RESULT)${NC}"
+[ $VADER_ACTUAL_RESULT -eq 0 ] && echo -e "${GREEN}✓ Vader component tests: PASSED${NC}" || echo -e "${RED}✗ Vader component tests: FAILED (code $VADER_ACTUAL_RESULT) - Ignored for CI${NC}"
 
-# Vérifier si un rapport HTML des tests Vader existe et l'afficher
+# Check if Vader HTML report exists and display it
 if [ -f ".ci-artifacts/vader-reports/vader_test_report.html" ]; then
-  echo -e "${BLUE}Rapport détaillé des tests Vader disponible dans .ci-artifacts/vader-reports/vader_test_report.html${NC}"
+  echo -e "${BLUE}Detailed Vader test report available in .ci-artifacts/vader-reports/vader_test_report.html${NC}"
 fi
 
-# Calculer le résultat global
+# Calculate overall result
 if [ $UNIT_RESULT -eq 0 ] && [ $COMPONENT_RESULT -eq 0 ] && [ $INTEGRATION_RESULT -eq 0 ]; then
-  if [ $VADER_ACTUAL_RESULT -eq 0 ]; then
-    echo -e "${GREEN}Tous les tests ont réussi!${NC}"
-  else
-    echo -e "${YELLOW}Tous les tests critiques ont réussi, mais certains tests Vader ont échoué.${NC}"
-    echo -e "${YELLOW}Ces échecs sont attendus dans l'environnement CI et n'empêchent pas la validation.${NC}"
-  fi
-  exit 0
+  echo -e "${GREEN}All tests passed!${NC}"
+  [ $VADER_ACTUAL_RESULT -ne 0 ] && echo -e "${YELLOW}All critical tests passed, but some Vader tests failed.${NC}"
+  exit $VADER_RESULT
 else
-  echo -e "${RED}Certains tests critiques ont échoué.${NC}"
+  echo -e "${RED}Some critical tests failed.${NC}"
   exit 1
 fi

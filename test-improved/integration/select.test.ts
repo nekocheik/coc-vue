@@ -47,7 +47,7 @@ describe('Select Component Integration', () => {
           selected_index: 1,
           selected_value: 'value2',
           selected_text: 'Option 2',
-          is_open: false // Le menu devrait se fermer après la sélection
+          is_open: false // Menu should close after selection
         });
       });
     });
@@ -155,16 +155,16 @@ describe('Select Component Integration', () => {
   });
 
   // Tests de gestion des événements
-  describe('Événements', () => {
-    it('devrait émettre des événements lors de l\'ouverture et de la fermeture', async () => {
+  describe('Events', () => {
+    it('should emit events on open and close', async () => {
       await withComponent('select', async (helper) => {
-        // Effacer les événements existants
+        // Clear existing events
         await helper.getEvents();
         
         // Ouvrir le menu
         await helper.callMethod('open');
         
-        // Vérifier l'événement d'ouverture
+        // Verify open event
         const events = await helper.getEvents();
         const openEvent = events.find(e => e.type === 'select:opened');
         expect(openEvent).toBeTruthy();
@@ -172,25 +172,25 @@ describe('Select Component Integration', () => {
         // Fermer le menu
         await helper.callMethod('close');
         
-        // Vérifier l'événement de fermeture
+        // Verify close event
         const newEvents = await helper.getEvents();
         const closeEvent = newEvents.find(e => e.type === 'select:closed');
         expect(closeEvent).toBeTruthy();
       });
     });
 
-    it('devrait émettre un événement lors de la sélection d\'une option', async () => {
+    it('should emit event when selecting an option', async () => {
       await withComponent('select', async (helper) => {
+        // Clear open events
+        await helper.getEvents();
+        
         // Ouvrir le menu
         await helper.callMethod('open');
         
-        // Effacer les événements d'ouverture
-        await helper.getEvents();
-        
-        // Sélectionner une option
+        // Select an option
         await helper.callMethod('select_option', 1);
         
-        // Vérifier l'événement de sélection
+        // Verify selection event
         const events = await helper.getEvents();
         const selectEvent = events.find(e => e.type === 'select:option_selected');
         expect(selectEvent).toBeTruthy();

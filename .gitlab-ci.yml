@@ -51,7 +51,7 @@ deploy:
   stage: deploy
   image: node:18-slim
   script:
-    - echo "Déploiement de l'extension coc-vue"
+    - echo "Deploying coc-vue extension"
     - npm pack
   artifacts:
     paths:

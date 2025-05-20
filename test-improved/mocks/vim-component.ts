@@ -1,12 +1,12 @@
 /**
- * Mock amélioré pour le composant VimComponent
- * Ce mock est plus propre, plus facile à maintenir et à tester
+ * Enhanced mock for VimComponent
+ * This mock is cleaner, easier to maintain and test
  */
 import { mockNvim, mockWorkspace } from './coc';
 import { bridgeCore, MessageType, BridgeMessage } from './bridge-core';
 
 /**
- * Interface pour les options du composant
+ * Interface for component options
  */
 export interface ComponentOptions {
   id: string;
@@ -20,7 +20,7 @@ export interface ComponentOptions {
   computed?: Record<string, Function>;
   render?: (state: Record<string, any>) => string[];
   
-  // Hooks peuvent être passés directement dans les options ou dans un objet hooks
+  // Hooks can be passed directly in options or in a hooks object
   beforeMount?: () => void | Promise<void>;
   onMounted?: () => void | Promise<void>;
   onUpdated?: () => void | Promise<void>;
@@ -37,7 +37,7 @@ export interface ComponentOptions {
 }
 
 /**
- * Implémentation mock du composant VimComponent
+ * Mock implementation of VimComponent
  */
 export class VimComponent {
   id: string;
@@ -93,7 +93,7 @@ export class VimComponent {
   }
   
   /**
-   * Initialiser les propriétés calculées
+   * Initialize computed properties
    */
   private initComputedProperties(): void {
     Object.entries(this.computed).forEach(([key, computeFn]) => {
@@ -107,7 +107,7 @@ export class VimComponent {
   }
   
   /**
-   * Enregistrer le composant auprès du bridge
+   * Register component with bridge
    */
   private registerWithBridge(): void {
     bridgeCore.registerHandler(this.id, async (message: BridgeMessage) => {
@@ -118,7 +118,7 @@ export class VimComponent {
             ...(message.payload.args || [])
           );
           
-          // Envoyer la réponse
+          // Send response
           await bridgeCore.sendMessage({
             id: message.id,
             type: MessageType.RESPONSE,
@@ -127,7 +127,7 @@ export class VimComponent {
             payload: { result }
           });
         } catch (error) {
-          // Envoyer l'erreur
+          // Send error
           await bridgeCore.sendMessage({
             id: message.id,
             type: MessageType.ERROR,
@@ -141,22 +141,22 @@ export class VimComponent {
   }
   
   /**
-   * Monter le composant
+   * Mount component
    */
   async mount(): Promise<void> {
     if (this.mounted) return;
     
     try {
-      // Appeler le hook beforeMount
+      // Call beforeMount hook
       if (this.hooks.beforeMount) {
         await this.hooks.beforeMount.call(this);
       }
       
-      // Créer le buffer - Simuler explicitement l'appel pour les tests
+      // Create buffer - Explicitly simulate call for tests
       mockNvim.call.mockImplementationOnce(() => Promise.resolve(1));
       this.buffer = await mockWorkspace.nvim.call('nvim_create_buf', [false, true]);
       
-      // Créer la fenêtre
+      // Create window
       mockNvim.call.mockImplementationOnce(() => Promise.resolve(2));
       this.window = await mockWorkspace.nvim.call('nvim_open_win', [
         this.buffer, 
@@ -172,33 +172,33 @@ export class VimComponent {
         }
       ]);
       
-      // Définir le nom du buffer
+      // Set buffer name
       await mockWorkspace.nvim.call('nvim_buf_set_name', [this.buffer, `${this.name}: ${this.id}`]);
       
-      // Rendre le contenu initial
+      // Render initial content
       await this.render();
       
       this.mounted = true;
       
-      // Appeler le hook onMounted
+      // Call onMounted hook
       if (this.hooks.onMounted) {
         await this.hooks.onMounted.call(this);
       }
       
-      // Envoyer l'événement monté
+      // Send mounted event
       await bridgeCore.sendMessage({
         id: this.id,
         type: MessageType.EVENT,
         action: 'component:mounted'
       });
     } catch (error) {
-      console.error(`Erreur lors du montage du composant ${this.name}:`, error);
+      console.error(`Error mounting component ${this.name}:`, error);
       throw error;
     }
   }
   
   /**
-   * Rendre le composant
+   * Render component
    */
   async render(): Promise<void> {
     if (!this.buffer) return;
@@ -206,54 +206,54 @@ export class VimComponent {
     try {
       let lines: string[] = [];
       
-      // Utiliser la fonction de rendu si fournie
+      // Use render function if provided
       if (this.renderFn) {
         lines = this.renderFn(this.state);
       } else if (this.template) {
-        // Fallback au template
+        // Fallback to template
         lines = this.template.split('\n');
       }
       
-      // Mettre à jour le contenu du buffer - simuler explicitement pour les tests
+      // Update buffer content - explicitly simulate for tests
       mockNvim.call.mockImplementationOnce(() => Promise.resolve());
       await mockWorkspace.nvim.call('nvim_buf_set_lines', [this.buffer, 0, -1, false, lines]);
       
-      // Appeler le hook onUpdated
+      // Call onUpdated hook
       if (this.hooks.onUpdated) {
         await this.hooks.onUpdated.call(this);
       }
     } catch (error) {
-      console.error(`Erreur lors du rendu du composant ${this.name}:`, error);
+      console.error(`Error rendering component ${this.name}:`, error);
       throw error;
     }
   }
   
   /**
-   * Mettre à jour l'état du composant
+   * Update component state
    */
   async updateState(newState: Record<string, any>): Promise<void> {
-    // Sauvegarder les anciennes valeurs pour les watchers
+    // Save old values for watchers
     const oldValues: Record<string, any> = {};
     Object.keys(newState).forEach(key => {
       oldValues[key] = this.state[key];
     });
     
-    // Mettre à jour l'état
+    // Update state
     Object.entries(newState).forEach(([key, value]) => {
       this.state[key] = value;
     });
     
-    // Appeler les watchers pour les propriétés modifiées
+    // Call watchers for modified properties
     for (const [key, watcher] of Object.entries(this.watchers)) {
       if (key in newState && typeof watcher === 'function') {
         await watcher.call(this, newState[key], oldValues[key]);
       }
     }
     
-    // Re-rendre le composant
+    // Re-render component
     await this.render();
     
-    // Envoyer l'événement d'état mis à jour
+    // Send state updated event
     await bridgeCore.sendMessage({
       id: this.id,
       type: MessageType.STATE,
@@ -263,35 +263,35 @@ export class VimComponent {
   }
   
   /**
-   * Appeler une méthode du composant
+   * Call component method
    */
   async callMethod(methodName: string, ...args: any[]): Promise<any> {
     const method = this.methods[methodName];
     if (!method || typeof method !== 'function') {
-      throw new Error(`Méthode '${methodName}' non trouvée sur le composant ${this.id}`);
+      throw new Error(`Method '${methodName}' not found on component ${this.id}`);
     }
     
     return method.apply(this, args);
   }
   
   /**
-   * Détruire le composant
+   * Destroy component
    */
   async destroy(): Promise<void> {
     if (this.destroyed) return;
     
     try {
-      // Appeler le hook onBeforeDestroy
+      // Call onBeforeDestroy hook
       if (this.hooks.onBeforeDestroy) {
         await this.hooks.onBeforeDestroy.call(this);
       }
       
-      // Fermer la fenêtre
+      // Close window
       if (this.window) {
         await mockWorkspace.nvim.call('nvim_win_close', [this.window, true]);
       }
       
-      // Supprimer le buffer
+      // Delete buffer
       if (this.buffer) {
         await mockWorkspace.nvim.command(`silent! bdelete! ${this.buffer}`);
       }
@@ -299,22 +299,22 @@ export class VimComponent {
       this.destroyed = true;
       this.mounted = false;
       
-      // Désenregistrer du bridge
+      // Unregister from bridge
       bridgeCore.unregisterHandler(this.id);
       
-      // Appeler le hook onDestroyed
+      // Call onDestroyed hook
       if (this.hooks.onDestroyed) {
         await this.hooks.onDestroyed.call(this);
       }
       
-      // Envoyer l'événement détruit
+      // Send destroyed event
       await bridgeCore.sendMessage({
         id: this.id,
         type: MessageType.EVENT,
         action: 'component:destroyed'
       });
     } catch (error) {
-      console.error(`Erreur lors de la destruction du composant ${this.name}:`, error);
+      console.error(`Error destroying component ${this.name}:`, error);
       throw error;
     }
   }
