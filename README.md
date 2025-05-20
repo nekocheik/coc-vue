@@ -82,14 +82,14 @@ The project includes a robust testing framework that ensures reliability and sta
 ### Selective Test Execution
 
 ```bash
-# Run all tests
-./scripts/run_component_tests.sh
+# Run all component tests
+make test-component
 
 # Run a specific test section
-./scripts/run_component_tests.sh component-loading
+./scripts/test/runners/run-component-tests.sh --section component-loading
 
-# Run multiple test sections
-./scripts/run_component_tests.sh "component-loading,option-selection"
+# Run tests progressively (section by section)
+./scripts/test/runners/run-component-tests.sh --progressive
 ```
 
 ### Available Test Sections
@@ -137,7 +137,7 @@ The extension uses a command server to handle communication between TypeScript a
 
 ```bash
 # Start the Node.js command server
-./scripts/run_command_server.sh
+./scripts/test/runners/run-command-tests.sh --node
 ```
 
 The server will start on `127.0.0.1:9999` and log all commands and responses for monitoring and debugging purposes.
@@ -148,7 +148,10 @@ To verify that the command server is functioning correctly, you can run the comm
 
 ```bash
 # Run the command tests against the server
-./scripts/run_node_command_tests.sh
+make test-command
+
+# Or directly using the script
+./scripts/test/runners/run-command-tests.sh
 ```
 
 This script performs the following operations:
@@ -304,12 +307,15 @@ coc-vue/
 │   ├─ DOCUMENTATION.md      # User guide
 │   └─ technical/            # Technical documentation
 ├─ logs/                     # Log file storage
-├─ scripts/                  # Automation scripts
+├─ scripts/                   # Shell scripts
 │   ├─ js/                   # JavaScript utilities
 │   ├─ lua/                  # Lua integration for Neovim
 │   ├─ server/               # Server management
 │   ├─ setup/                # Setup scripts
 │   ├─ test/                 # Test framework
+│   │   ├─ core/             # Core test utilities
+│   │   ├─ runners/          # Test runner scripts
+│   │   └─ utils/            # Test utilities
 │   ├─ utils/                # Various utilities
 │   └─ vim/                  # Vim/Neovim configuration
 ├─ src/                      # TypeScript source code
@@ -334,28 +340,79 @@ The project maintains a comprehensive test suite to ensure stability, reliabilit
 
 ### Running Tests
 
+You can run tests using the Makefile for a more streamlined experience:
+
 ```bash
-# Run all tests with Jest
-npm test
+# Run unit and integration tests
+make test
 
-# Run with watch mode for development
-npm run test:watch
+# Run all tests (unit, integration, component, command, ping)
+make test-all
 
-# Run integration tests
-npm run test:integration
+# Run specific test categories
+make test-unit
+make test-integration
+make test-component
+make test-command
+make test-ping
 
-# Run bridge communication tests
-npm run test:bridge
+# Run tests with verbose output
+make test VERBOSE=true
+
+# Run tests with custom timeout
+make test TIMEOUT=600
+
+# Clean up test resources
+make clean
 ```
+
+Alternatively, you can use the test scripts directly:
+
+```bash
+# Run all tests
+./scripts/test/run-all-tests.sh
+
+# Run unit tests only
+./scripts/test/run-all-tests.sh --unit-only
+
+# Run with verbose logging
+VERBOSE_LOGS=true ./scripts/test/run-all-tests.sh
+```
+
+### Simplified Testing
+
+If you encounter issues with the standard test suite (such as Neovim connection problems), you can use the simplified test runner that uses mocks instead of real Neovim connections:
+
+```bash
+# Run all tests with mocks (more reliable)
+./scripts/test/runners/run-simplified-tests.sh
+```
+
+The simplified test runner offers several advantages:
+
+- **No Neovim dependency**: Tests run without requiring a real Neovim instance
+- **Faster execution**: Mocked tests run significantly faster
+- **More reliable**: Eliminates connection and timing issues
+- **Consistent results**: Provides the same results across different environments
 
 ### Test Categories
 
-| Category | Description | Command |
-|----------|-------------|--------|
-| **Unit Tests** | Tests for individual functions and classes | `npm test` |
-| **Integration Tests** | Tests for component interactions | `npm run test:integration` |
-| **Bridge Tests** | Tests for TypeScript-Lua communication | `npm run test:bridge` |
-| **End-to-End Tests** | Tests for complete workflows | `./coc-vue-cli.sh test:e2e` |
+| Category | Description | Standard Command | Simplified Command |
+|----------|-------------|-----------------|--------------------|
+| **Unit Tests** | Tests for individual functions and classes | `npm test` | Included in simplified tests |
+| **Integration Tests** | Tests for component interactions | `npm run test:integration` | Included in simplified tests |
+| **Bridge Tests** | Tests for TypeScript-Lua communication | `npm run test:bridge` | Mocked in simplified tests |
+| **Component Tests** | Tests for Vue components | `./coc-vue-cli.sh test:component` | Included in simplified tests |
+| **End-to-End Tests** | Tests for complete workflows | `./coc-vue-cli.sh test:e2e` | Not available in simplified tests |
+
+### Troubleshooting Tests
+
+If you encounter issues with tests, try the following steps:
+
+1. **Clean up resources**: Run `make clean` to remove temporary files and free ports
+2. **Use simplified tests**: Run `./scripts/test/runners/run-simplified-tests.sh` to use mocked tests
+3. **Check logs**: Examine `/tmp/component-server.log` for server-related issues
+4. **Increase timeout**: Use `MAX_TIMEOUT=600 ./scripts/test/run-all-tests.sh` for longer tests
 
 ### Code Quality
 
@@ -365,6 +422,71 @@ The project uses several tools to maintain high code quality:
 - **ESLint** for code style and quality
 - **Jest** for testing
 - **Webpack** for bundling
+
+## 📦 Docker and Continuous Integration
+
+The project includes Docker configuration for testing and continuous integration with both GitLab and GitHub.
+
+### Docker Testing
+
+Run tests in an isolated Docker environment:
+
+```bash
+# Run simplified tests with Docker
+./scripts/run-docker-tests.sh
+
+# Or use Docker Compose directly
+docker-compose up test
+
+# Run full tests (may fail)
+docker-compose up test-full
+```
+
+### GitHub CI Integration
+
+The project includes GitHub Actions workflows for continuous integration:
+
+```bash
+# Set up GitHub CI integration
+./scripts/setup-github-ci.sh
+
+# Monitor workflow runs
+gh run list
+```
+
+The GitHub workflow:
+- Runs on pushes to main/master branches and pull requests
+- Builds and runs tests in Docker containers
+- Uploads test results as artifacts
+- Handles secrets securely
+
+### GitLab CI Integration
+
+The project also includes a `.gitlab-ci.yml` file for GitLab CI/CD:
+
+- **Build**: Compiles the project and generates artifacts
+- **Test Simplified**: Runs tests with mocks (should always succeed)
+- **Test Full**: Runs complete tests (optional, may fail)
+- **Deployment**: Creates a package for deployment (on tags and master branch)
+
+### Managing Secrets
+
+Sensitive information is handled securely:
+
+- Local secrets are stored in `.env` files (excluded from version control)
+- CI secrets are stored in GitHub/GitLab secret storage
+- See [TESTS.md](TESTS.md) for detailed instructions on managing secrets
+
+### Customizing the Docker Environment
+
+You can customize the Docker environment by modifying these files:
+
+- `Dockerfile`: Docker image configuration
+- `docker-compose.yml`: Docker services configuration
+- `.github/workflows/test.yml`: GitHub CI configuration
+- `.gitlab-ci.yml`: GitLab CI configuration
+
+For detailed documentation on testing with Docker and CI integration, see [TESTS.md](TESTS.md).
 
 ## 🔍 Debugging Guide
 
@@ -394,6 +516,9 @@ The extension provides comprehensive diagnostic tools:
 
 # Generate diagnostic report
 ./coc-vue-cli.sh diagnostics:report
+
+# Clean up test ports and processes
+make clean
 ```
 
 ### Troubleshooting Common Issues
