@@ -1,18 +1,18 @@
 /**
- * Configuration pour les tests d'intégration
- * Ce fichier configure l'environnement pour les tests d'intégration
+ * Configuration for integration tests
+ * This file contains setup specific to integration tests
  */
 
-// Désactiver les logs console par défaut sauf en cas d'erreur critique
+// Disable default console logs except for critical errors
 const originalConsoleLog = console.log;
 const originalConsoleInfo = console.info;
 const originalConsoleWarn = console.warn;
 const originalConsoleError = console.error;
 
-// Variable pour contrôler le niveau de verbosité
+// Variable to control verbosity level
 global.VERBOSE_LOGS = process.env.VERBOSE_LOGS === 'true';
 
-// Remplacer les fonctions de log pour réduire le bruit
+// Replace console functions to reduce noise
 console.log = function(...args) {
   if (global.VERBOSE_LOGS) {
     originalConsoleLog(...args);
@@ -31,9 +31,9 @@ console.warn = function(...args) {
   }
 };
 
-// Garder les erreurs toujours visibles
+// Keep errors visible
 console.error = function(...args) {
-  // Filtrer certains messages d'erreur connus qui ne sont pas critiques
+  // Filter out certain known messages that are not critical
   const message = args[0]?.toString() || '';
   if (message.includes('Connection attempt failed, retrying')) {
     if (global.VERBOSE_LOGS) {
@@ -44,10 +44,10 @@ console.error = function(...args) {
   }
 };
 
-// Augmenter les timeouts pour les tests d'intégration
+// Increase timeouts for integration tests
 jest.setTimeout(30000);
 
-// Fonction utilitaire pour attendre qu'une condition soit remplie
+// Utility function to wait for a condition to be met
 global.waitForCondition = async function(condition, timeout = 5000, interval = 100) {
   const startTime = Date.now();
   while (Date.now() - startTime < timeout) {
@@ -56,10 +56,10 @@ global.waitForCondition = async function(condition, timeout = 5000, interval = 1
     }
     await new Promise(resolve => setTimeout(resolve, interval));
   }
-  throw new Error(`Condition non remplie après ${timeout}ms`);
+  throw new Error(`Condition not met after ${timeout}ms`);
 };
 
-// Restaurer les fonctions de console originales après tous les tests
+// Restore original console functions after all tests
 afterAll(() => {
   console.log = originalConsoleLog;
   console.info = originalConsoleInfo;

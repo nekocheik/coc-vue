@@ -1,6 +1,6 @@
 /**
  * Configuration Jest principale pour le projet COC-Vue
- * Cette configuration est utilisée pour tous les tests
+ * This configuration is used for all tests
  */
 const baseConfig = {
   preset: 'ts-jest',
@@ -25,7 +25,7 @@ const baseConfig = {
   setupFilesAfterEnv: ['<rootDir>/utils/jest-setup.js']
 };
 
-// Configuration pour les tests unitaires
+// Configuration for unit tests
 const unitConfig = {
   ...baseConfig,
   displayName: 'UNIT',
@@ -40,7 +40,7 @@ const unitConfig = {
   }
 };
 
-// Configuration pour les tests d'intégration
+// Configuration for integration tests
 const integrationConfig = {
   ...baseConfig,
   displayName: 'INTEGRATION',
@@ -51,9 +51,9 @@ const integrationConfig = {
   ]
 };
 
-// Note: Les timeouts sont définis dans les fichiers de setup
+// Note: Timeouts are defined in setup files
 
-// Exporter les configurations
+// Export configurations
 module.exports = {
   projects: [
     unitConfig,

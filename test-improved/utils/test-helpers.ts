@@ -1,10 +1,10 @@
 /**
- * Utilitaires pour les tests
- * Ces fonctions aident à simplifier l'écriture des tests et à réduire la duplication de code
+ * Test utilities
+ * These functions help simplify test writing and reduce code duplication
  */
 import { NeovimClient, ComponentConfig } from './neovim-client';
 
-// Options par défaut pour les composants
+// Default options for components
 export const DEFAULT_OPTIONS: Record<string, Record<string, any>> = {
   SELECT: {
     title: 'Test Select',
@@ -22,7 +22,7 @@ export const DEFAULT_OPTIONS: Record<string, Record<string, any>> = {
   }
 };
 
-// Classe d'aide pour les tests de composants
+// Helper class for component testing
 export class ComponentTestHelper {
   private client: NeovimClient;
   private componentId: string | null = null;
@@ -34,24 +34,24 @@ export class ComponentTestHelper {
   }
   
   /**
-   * Se connecter au serveur Neovim
+   * Connect to Neovim server
    */
   async connect(): Promise<void> {
     await this.client.connect();
     const isAlive = await this.client.ping();
     if (!isAlive) {
-      throw new Error('Échec de connexion au serveur Neovim - ping échoué');
+      throw new Error('Failed to connect to Neovim server - ping failed');
     }
   }
   
   /**
-   * Créer un composant avec des options personnalisées
+   * Create a component with custom options
    */
   async createComponent(options: Partial<ComponentConfig> = {}): Promise<string> {
-    // Générer un ID unique pour éviter les conflits
+    // Generate unique ID to avoid conflicts
     const id = `test_${this.componentType}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     
-    // Fusionner les options par défaut avec les options personnalisées
+    // Merge default options with custom options
     const config = {
       id,
       ...DEFAULT_OPTIONS[this.componentType.toUpperCase()] || {},
@@ -63,34 +63,34 @@ export class ComponentTestHelper {
   }
   
   /**
-   * Appeler une méthode sur le composant actuel
+   * Call a method on the current component
    */
   async callMethod(method: string, ...args: any[]): Promise<any> {
     if (!this.componentId) {
-      throw new Error('Aucun composant créé. Appelez createComponent() d\'abord.');
+      throw new Error('No component created. Call createComponent() first.');
     }
     return this.client.callMethod(this.componentId, method, ...args);
   }
   
   /**
-   * Obtenir l'état du composant actuel
+   * Get current component state
    */
   async getState(): Promise<any> {
     if (!this.componentId) {
-      throw new Error('Aucun composant créé. Appelez createComponent() d\'abord.');
+      throw new Error('No component created. Call createComponent() first.');
     }
     return this.client.getState(this.componentId);
   }
   
   /**
-   * Obtenir les événements
+   * Get captured events
    */
   async getEvents(): Promise<any[]> {
     return this.client.getEvents();
   }
   
   /**
-   * Attendre qu'une condition soit remplie sur l'état du composant
+   * Wait for a condition to be met on component state
    */
   async waitForState(predicate: (state: any) => boolean, timeout = 5000): Promise<any> {
     const startTime = Date.now();
@@ -101,11 +101,11 @@ export class ComponentTestHelper {
       }
       await new Promise(resolve => setTimeout(resolve, 100));
     }
-    throw new Error(`Condition d'état non remplie après ${timeout}ms`);
+    throw new Error(`State condition not met after ${timeout}ms`);
   }
   
   /**
-   * Attendre qu'un événement spécifique soit émis
+   * Wait for a specific event to be emitted
    */
   async waitForEvent(eventType: string, timeout = 5000): Promise<any> {
     const startTime = Date.now();
@@ -117,18 +117,18 @@ export class ComponentTestHelper {
       }
       await new Promise(resolve => setTimeout(resolve, 100));
     }
-    throw new Error(`Événement ${eventType} non reçu après ${timeout}ms`);
+    throw new Error(`Event ${eventType} not received after ${timeout}ms`);
   }
   
   /**
-   * Se déconnecter du serveur Neovim
+   * Disconnect from Neovim server
    */
   disconnect(): void {
     this.client.disconnect();
   }
 }
 
-// Fonction utilitaire pour exécuter un test avec gestion automatique des connexions
+// Utility function to run a test with automatic connection management
 export async function withComponent(
   componentType: string,
   testFn: (helper: ComponentTestHelper) => Promise<void>,
@@ -145,7 +145,7 @@ export async function withComponent(
   }
 }
 
-// Fonction pour simplifier les assertions d'état
+// Function to simplify state assertions
 export function expectState(state: any, expected: Partial<any>): void {
   Object.entries(expected).forEach(([key, value]) => {
     expect(state[key]).toEqual(value);

@@ -1,99 +1,99 @@
 #!/bin/bash
 
-# Script pour exécuter les tests d'intégration avec une configuration optimisée
-# Ce script réduit les logs et améliore la lisibilité des résultats
-# Ajout d'un mécanisme de timeout pour éviter les blocages
+# Script to run integration tests with optimized configuration
+# This script reduces logs and improves result readability
+# Added timeout mechanism to avoid deadlocks
 
-# Couleurs pour une meilleure lisibilité
+# Colors for better readability
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Définir le timeout global (en secondes)
-MAX_TIMEOUT=${MAX_TIMEOUT:-300}  # 5 minutes par défaut
+# Define global timeout (in seconds)
+MAX_TIMEOUT=${MAX_TIMEOUT:-300}  # 5 minutes by default
 
-echo -e "${BLUE}=== Exécution des tests d'intégration COC-Vue ===${NC}"
-echo -e "${YELLOW}Démarrage du serveur Neovim pour les tests...${NC}"
-echo -e "${YELLOW}Timeout défini à ${MAX_TIMEOUT} secondes${NC}"
+echo -e "${BLUE}=== Running COC-Vue Integration Tests ===${NC}"
+echo -e "${YELLOW}Starting Neovim server for tests...${NC}"
+echo -e "${YELLOW}Timeout set to ${MAX_TIMEOUT} seconds${NC}"
 
-# Fonction pour nettoyer les processus à la sortie
+# Function to clean up processes on exit
 cleanup() {
-  echo -e "\n${YELLOW}Nettoyage des processus...${NC}"
+  echo -e "\n${YELLOW}Cleaning up processes...${NC}"
   
-  # Arrêter le serveur Neovim si nous l'avons démarré
+  # Stop Neovim server if we started it
   if [ -n "$SERVER_PID" ]; then
-    echo -e "${YELLOW}Arrêt du serveur Neovim (PID: $SERVER_PID)...${NC}"
+    echo -e "${YELLOW}Stopping Neovim server (PID: $SERVER_PID)...${NC}"
     kill $SERVER_PID 2>/dev/null
     sleep 1
     
-    # Vérifier si le processus est toujours en cours
+    # Check if process is still running
     if kill -0 $SERVER_PID 2>/dev/null; then
-      echo -e "${YELLOW}Arrêt forcé du serveur Neovim...${NC}"
+      echo -e "${YELLOW}Force stopping Neovim server...${NC}"
       kill -9 $SERVER_PID 2>/dev/null
     fi
   fi
   
-  # S'assurer que rien n'est en cours d'exécution sur le port 9999
+  # Make sure nothing is running on port 9999
   if lsof -i :9999 > /dev/null 2>&1; then
-    echo -e "${YELLOW}Arrêt forcé de tous les processus sur le port 9999...${NC}"
+    echo -e "${YELLOW}Force stopping all processes on port 9999...${NC}"
     kill -9 $(lsof -t -i:9999) 2>/dev/null
   fi
   
-  # Tuer le processus Jest s'il est toujours en cours d'exécution
+  # Kill Jest process if it's still running
   if [ -n "$JEST_PID" ]; then
-    echo -e "${YELLOW}Arrêt du processus Jest (PID: $JEST_PID)...${NC}"
+    echo -e "${YELLOW}Stopping Jest process (PID: $JEST_PID)...${NC}"
     kill $JEST_PID 2>/dev/null
     sleep 1
     
-    # Vérifier si le processus est toujours en cours
+    # Check if process is still running
     if kill -0 $JEST_PID 2>/dev/null; then
-      echo -e "${YELLOW}Arrêt forcé de Jest...${NC}"
+      echo -e "${YELLOW}Force stopping Jest...${NC}"
       kill -9 $JEST_PID 2>/dev/null
     fi
   fi
   
-  echo -e "${GREEN}Nettoyage terminé.${NC}"
+  echo -e "${GREEN}Cleanup completed.${NC}"
 }
 
 # Configurer le trap pour nettoyer en cas d'interruption
 trap cleanup EXIT INT TERM
 
-# Démarrer le serveur Neovim avec notre script dédié
-echo -e "${YELLOW}Démarrage du serveur Neovim pour les tests...${NC}"
+# Start Neovim server with our dedicated script
+echo -e "${YELLOW}Starting Neovim server for tests...${NC}"
 ./test-improved/scripts/start-test-server.sh
 SERVER_STATUS=$?
 
-# Vérifier si le serveur a démarré correctement
+# Check if server started correctly
 if [ $SERVER_STATUS -ne 0 ]; then
-  echo -e "${RED}ERREUR: Le serveur Neovim n'a pas pu démarrer correctement.${NC}"
-  echo -e "${YELLOW}Consultez les logs dans /tmp/neovim-server.log pour plus de détails.${NC}"
+  echo -e "${RED}ERROR: Neovim server could not start properly.${NC}"
+  echo -e "${YELLOW}Check logs in /tmp/neovim-server.log for details.${NC}"
   exit 1
 fi
 
-# Capturer le PID du serveur pour pouvoir l'arrêter plus tard
+# Capture server PID to stop it later
 SERVER_PID=$(lsof -i :9999 -t)
 
-echo -e "${YELLOW}Exécution des tests d'intégration...${NC}"
+echo -e "${YELLOW}Running integration tests...${NC}"
 
-# Exécuter les tests d'intégration avec Jest en arrière-plan
+# Run integration tests with Jest in background
 VERBOSE_LOGS=${VERBOSE_LOGS:-false} npx jest --config ./test-improved/jest.config.js --selectProjects INTEGRATION "$@" &
 JEST_PID=$!
 
 # Surveiller le processus Jest avec un timeout
 ELAPSED=0
 while kill -0 $JEST_PID 2>/dev/null; do
-  # Vérifier si le timeout est atteint
+  # Check if timeout is reached
   if [ $ELAPSED -ge $MAX_TIMEOUT ]; then
-    echo -e "\n${RED}ERREUR: Les tests ont dépassé le timeout de ${MAX_TIMEOUT} secondes.${NC}"
-    echo -e "${RED}Arrêt forcé des tests...${NC}"
+    echo -e "\n${RED}ERROR: Tests exceeded timeout of ${MAX_TIMEOUT} seconds.${NC}"
+    echo -e "${RED}Force stopping tests...${NC}"
     kill -9 $JEST_PID 2>/dev/null
     EXIT_CODE=1
     break
   fi
   
-  # Attendre 1 seconde et incrémenter le compteur
+  # Wait 1 second and increment counter
   sleep 1
   ELAPSED=$((ELAPSED + 1))
   
@@ -103,22 +103,22 @@ while kill -0 $JEST_PID 2>/dev/null; do
   fi
 done
 
-# Attendre que Jest se termine (s'il n'a pas été tué)
+# Wait for Jest to finish (if not killed)
 wait $JEST_PID 2>/dev/null
 JEST_EXIT_CODE=$?
 
-# Si EXIT_CODE n'est pas défini (pas de timeout), utiliser le code de sortie de Jest
+# If EXIT_CODE is not set (no timeout), use Jest exit code
 if [ -z "$EXIT_CODE" ]; then
   EXIT_CODE=$JEST_EXIT_CODE
 fi
 
 if [ $EXIT_CODE -eq 0 ]; then
-  echo -e "\n${GREEN}✓ Tous les tests d'intégration ont réussi !${NC}"
+  echo -e "\n${GREEN}✓ All integration tests passed!${NC}"
 else
-  echo -e "\n${RED}✗ Certains tests d'intégration ont échoué.${NC}"
-  echo -e "${YELLOW}Pour voir les logs détaillés, exécutez avec VERBOSE_LOGS=true :${NC}"
+  echo -e "\n${RED}✗ Some integration tests failed.${NC}"
+  echo -e "${YELLOW}To see detailed logs, run with VERBOSE_LOGS=true:${NC}"
   echo -e "${YELLOW}VERBOSE_LOGS=true ./test-improved/scripts/run-integration-tests.sh${NC}"
-  echo -e "${YELLOW}Pour augmenter le timeout, utilisez MAX_TIMEOUT=<secondes> :${NC}"
+  echo -e "${YELLOW}To increase timeout, use MAX_TIMEOUT=<seconds>:${NC}"
   echo -e "${YELLOW}MAX_TIMEOUT=600 ./test-improved/scripts/run-integration-tests.sh${NC}"
 fi
 

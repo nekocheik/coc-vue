@@ -1,76 +1,76 @@
 #!/bin/bash
 
-# Script pour exécuter les tests unitaires avec une configuration optimisée
-# Ce script réduit les logs et améliore la lisibilité des résultats
-# Ajout d'un mécanisme de timeout pour éviter les blocages
+# Script to run unit tests with optimized configuration
+# Added timeout mechanism to avoid deadlocks
 
-# Couleurs pour une meilleure lisibilité
+# Colors for better readability
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Définir le timeout global (en secondes)
-MAX_TIMEOUT=${MAX_TIMEOUT:-120}  # 2 minutes par défaut pour les tests unitaires
+# Define global timeout (in seconds)
+MAX_TIMEOUT=${MAX_TIMEOUT:-120}  # 2 minutes default for unit tests
 
-echo -e "${BLUE}=== Exécution des tests unitaires COC-Vue ===${NC}"
-echo -e "${YELLOW}Démarrage des tests...${NC}"
-echo -e "${YELLOW}Timeout défini à ${MAX_TIMEOUT} secondes${NC}"
+echo -e "${BLUE}=== Running COC-Vue Unit Tests ===${NC}"
+echo -e "${YELLOW}Starting tests...${NC}"
+echo -e "${YELLOW}Timeout set to ${MAX_TIMEOUT} seconds${NC}"
 
-# Fonction pour nettoyer les processus à la sortie
+# Function to clean up processes on exit
 cleanup() {
+  echo -e "\n${YELLOW}Cleaning up processes...${NC}"
   # Tuer le processus Jest s'il est toujours en cours d'exécution
   if [ -n "$JEST_PID" ]; then
-    echo -e "${YELLOW}Arrêt forcé de Jest...${NC}"
+    echo -e "${YELLOW}Force stopping Jest...${NC}"
     kill -9 $JEST_PID 2>/dev/null
   fi
 }
 
-# Configurer le trap pour nettoyer en cas d'interruption
+# Configure trap for cleanup on interruption
 trap cleanup EXIT INT TERM
 
-# Exécuter les tests unitaires avec Jest en arrière-plan
-npx jest --config ./test-improved/jest.config.js --selectProjects UNIT --silent "$@" &
+# Run unit tests with Jest in background
+VERBOSE_LOGS=${VERBOSE_LOGS:-false} npx jest --config ./test-improved/jest.config.js --selectProjects UNIT "$@" &
 JEST_PID=$!
 
-# Surveiller le processus Jest avec un timeout
+# Monitor Jest process with timeout
 ELAPSED=0
 while kill -0 $JEST_PID 2>/dev/null; do
-  # Vérifier si le timeout est atteint
+  # Check if timeout is reached
   if [ $ELAPSED -ge $MAX_TIMEOUT ]; then
-    echo -e "\n${RED}ERREUR: Les tests ont dépassé le timeout de ${MAX_TIMEOUT} secondes.${NC}"
-    echo -e "${RED}Arrêt forcé des tests...${NC}"
+    echo -e "\n${RED}ERROR: Tests exceeded timeout of ${MAX_TIMEOUT} seconds.${NC}"
+    echo -e "${RED}Force stopping tests...${NC}"
     kill -9 $JEST_PID 2>/dev/null
     EXIT_CODE=1
     break
   fi
   
-  # Attendre 1 seconde et incrémenter le compteur
+  # Wait 1 second and increment counter
   sleep 1
   ELAPSED=$((ELAPSED + 1))
   
-  # Afficher un point toutes les 5 secondes pour montrer que le script est toujours actif
+  # Show a dot every 5 seconds to indicate script is still active
   if [ $((ELAPSED % 5)) -eq 0 ]; then
     echo -n "."
   fi
 done
 
-# Attendre que Jest se termine (s'il n'a pas été tué)
+# Wait for Jest to finish (if not killed)
 wait $JEST_PID 2>/dev/null
 JEST_EXIT_CODE=$?
 
-# Si EXIT_CODE n'est pas défini (pas de timeout), utiliser le code de sortie de Jest
+# If EXIT_CODE is not set (no timeout), use Jest exit code
 if [ -z "$EXIT_CODE" ]; then
   EXIT_CODE=$JEST_EXIT_CODE
 fi
 
 if [ $EXIT_CODE -eq 0 ]; then
-  echo -e "\n${GREEN}✓ Tous les tests unitaires ont réussi !${NC}"
+  echo -e "\n${GREEN}✓ All unit tests passed!${NC}"
 else
-  echo -e "\n${RED}✗ Certains tests unitaires ont échoué.${NC}"
-  echo -e "${YELLOW}Pour augmenter le timeout, utilisez MAX_TIMEOUT=<secondes> :${NC}"
-  echo -e "${YELLOW}MAX_TIMEOUT=300 ./test-improved/scripts/run-unit-tests.sh${NC}"
+  echo -e "\n${RED}✗ Some unit tests failed.${NC}"
+  echo -e "${YELLOW}To see detailed logs, run with VERBOSE_LOGS=true:${NC}"
+  echo -e "${YELLOW}VERBOSE_LOGS=true ./test-improved/scripts/run-unit-tests.sh${NC}"
 fi
 
 exit $EXIT_CODE

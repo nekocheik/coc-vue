@@ -1,15 +1,15 @@
 /**
- * Configuration globale pour Jest
- * Ce fichier est exécuté avant chaque test
+ * Global Jest configuration
+ * This file is executed before each test
  */
 
-// Augmenter le timeout par défaut pour tous les tests
+// Increase default timeout for all tests
 jest.setTimeout(30000);
 
-// Supprimer les avertissements inutiles de Jest
+// Remove unnecessary Jest warnings
 const originalConsoleWarn = console.warn;
 console.warn = function(...args) {
-  // Filtrer certains avertissements connus
+  // Filter known warnings
   const message = args[0]?.toString() || '';
   if (
     message.includes('jest-environment-jsdom') ||
@@ -21,7 +21,7 @@ console.warn = function(...args) {
   originalConsoleWarn.apply(console, args);
 };
 
-// Ajouter des matchers Jest personnalisés
+// Add custom Jest matchers
 expect.extend({
   toBeWithinRange(received, floor, ceiling) {
     const pass = received >= floor && received <= ceiling;
@@ -62,7 +62,7 @@ expect.extend({
   }
 });
 
-// Fonction utilitaire pour attendre qu'une condition soit remplie
+// Utility function to wait for a condition to be met
 global.waitForCondition = async function(condition, timeout = 5000, interval = 100) {
   const startTime = Date.now();
   while (Date.now() - startTime < timeout) {
@@ -71,5 +71,5 @@ global.waitForCondition = async function(condition, timeout = 5000, interval = 1
     }
     await new Promise(resolve => setTimeout(resolve, interval));
   }
-  throw new Error(`Condition non remplie après ${timeout}ms`);
+  throw new Error(`Condition not met after ${timeout}ms`);
 };

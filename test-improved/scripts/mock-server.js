@@ -1,28 +1,28 @@
 /**
- * Serveur mock pour les tests d'intégration
- * Ce serveur simule le comportement du serveur Neovim pour les tests
+ * Mock server for integration tests
+ * This server simulates Neovim server behavior for tests
  */
 const net = require('net');
 
-// Configuration du serveur
+// Server configuration
 const PORT = 9999;
 const HOST = '127.0.0.1';
 
-// Stockage pour les composants et les événements
+// Storage for components and events
 const components = new Map();
 let events = [];
 
-// Créer le serveur TCP
+// Create TCP server
 const server = net.createServer((socket) => {
-  console.log(`Client connecté: ${socket.remoteAddress}:${socket.remotePort}`);
+  console.log(`Client connected: ${socket.remoteAddress}:${socket.remotePort}`);
   
-  // Gérer les données reçues
+  // Handle received data
   socket.on('data', (data) => {
     try {
       const command = JSON.parse(data.toString());
-      console.log(`Commande reçue: ${command.type} (ID: ${command.id})`);
+      console.log(`Received command: ${command.type} (ID: ${command.id})`);
       
-      // Traiter la commande
+      // Process command
       let response = {
         id: command.id,
         success: true
@@ -48,11 +48,11 @@ const server = net.createServer((socket) => {
           const component = components.get(command.id);
           if (!component) {
             response.success = false;
-            response.error = `Composant non trouvé: ${command.id}`;
+            response.error = `Component not found: ${command.id}`;
             break;
           }
           
-          // Simuler différentes méthodes
+          // Simulate different methods
           switch (command.method) {
             case 'mount':
               component.state.mounted = true;
@@ -110,7 +110,7 @@ const server = net.createServer((socket) => {
               
             default:
               response.success = false;
-              response.error = `Méthode non supportée: ${command.method}`;
+              response.error = `Method not supported: ${command.method}`;
           }
           break;
           
@@ -118,7 +118,7 @@ const server = net.createServer((socket) => {
           const comp = components.get(command.id);
           if (!comp) {
             response.success = false;
-            response.error = `Composant non trouvé: ${command.id}`;
+            response.error = `Component not found: ${command.id}`;
             break;
           }
           response.state = comp.state;
@@ -130,15 +130,15 @@ const server = net.createServer((socket) => {
           
         default:
           response.success = false;
-          response.error = `Type de commande non supporté: ${command.type}`;
+          response.error = `Unsupported command type: ${command.type}`;
       }
       
-      // Envoyer la réponse
+      // Send response
       socket.write(JSON.stringify(response));
-      console.log(`Réponse envoyée: ${response.success ? 'succès' : 'échec'}`);
+      console.log(`Response sent: ${response.success ? 'success' : 'failure'}`);
       
     } catch (err) {
-      console.error(`Erreur lors du traitement de la commande: ${err.message}`);
+      console.error(`Error while processing command: ${err.message}`);
       socket.write(JSON.stringify({
         id: 'error',
         success: false,
@@ -147,39 +147,39 @@ const server = net.createServer((socket) => {
     }
   });
   
-  // Gérer la déconnexion
+  // Handle disconnection
   socket.on('close', () => {
-    console.log(`Client déconnecté: ${socket.remoteAddress}:${socket.remotePort}`);
+    console.log(`Client disconnected: ${socket.remoteAddress}:${socket.remotePort}`);
   });
   
-  // Gérer les erreurs
+  // Handle socket errors
   socket.on('error', (err) => {
-    console.error(`Erreur de socket: ${err.message}`);
+    console.error(`Socket error: ${err.message}`);
   });
 });
 
-// Gérer les erreurs du serveur
+// Handle server errors
 server.on('error', (err) => {
-  console.error(`Erreur du serveur: ${err.message}`);
+  console.error(`Server error: ${err.message}`);
   if (err.code === 'EADDRINUSE') {
-    console.error(`Le port ${PORT} est déjà utilisé. Arrêtez tout processus existant sur ce port.`);
+    console.error(`Port ${PORT} is already in use. Stop any existing process on this port.`);
     process.exit(1);
   }
 });
 
-// Démarrer le serveur
+// Start server
 server.listen(PORT, HOST, () => {
-  console.log(`Serveur mock démarré sur ${HOST}:${PORT}`);
+  console.log(`Mock server started on ${HOST}:${PORT}`);
 });
 
-// Gérer la sortie propre
+// Handle clean exit
 process.on('SIGINT', () => {
-  console.log('Arrêt du serveur mock...');
+  console.log('Stopping mock server...');
   server.close(() => {
-    console.log('Serveur mock arrêté.');
+    console.log('Mock server stopped.');
     process.exit(0);
   });
 });
 
-// Maintenir le serveur en vie
-console.log('Serveur mock en attente de connexions...');
+// Keep server alive
+console.log('Mock server waiting for connections...');

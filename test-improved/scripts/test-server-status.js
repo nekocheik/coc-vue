@@ -1,22 +1,22 @@
 /**
- * Script pour vérifier la disponibilité du serveur de test
- * Ce script tente de se connecter au serveur et de lui envoyer une commande ping
- * pour vérifier qu'il est opérationnel
+ * Script to check test server availability
+ * Connects to the test server and sends a ping command
+ * to verify it is operational
  */
 const net = require('net');
 
-// Fonction pour vérifier si le serveur est accessible et répond correctement
+// Function to check if server is accessible and responds correctly
 function checkServer() {
   return new Promise((resolve, reject) => {
     const socket = new net.Socket();
     let responseReceived = false;
     
-    // Définir un timeout pour la connexion
+    // Set connection timeout
     socket.setTimeout(2000);
     
     socket.on('timeout', () => {
       socket.destroy();
-      reject(new Error('Timeout lors de la tentative de connexion au serveur'));
+      reject(new Error('Timeout when trying to connect to server'));
     });
     
     socket.on('error', (err) => {
@@ -25,9 +25,9 @@ function checkServer() {
     });
     
     socket.on('connect', () => {
-      console.log('Connecté au serveur, envoi d\'une commande ping...');
+      console.log('Connected to server, sending ping command...');
       
-      // Envoyer une commande ping
+      // Send ping command
       const pingCommand = {
         id: `ping_${Date.now()}`,
         type: 'ping'
@@ -35,11 +35,11 @@ function checkServer() {
       
       socket.write(JSON.stringify(pingCommand));
       
-      // Attendre la réponse pendant 2 secondes maximum
+      // Wait for response for maximum 2 seconds
       setTimeout(() => {
         if (!responseReceived) {
           socket.destroy();
-          reject(new Error('Pas de réponse du serveur après l\'envoi de la commande ping'));
+          reject(new Error('No response from server after sending ping command'));
         }
       }, 2000);
     });
@@ -50,33 +50,33 @@ function checkServer() {
         responseReceived = true;
         
         if (response.success && response.message === 'pong') {
-          console.log('Serveur opérationnel (réponse pong reçue)');
+          console.log('Server operational (pong response received)');
           socket.end();
           resolve(true);
         } else {
-          console.log('Réponse invalide du serveur:', response);
+          console.log('Invalid server response:', response);
           socket.end();
-          reject(new Error('Réponse invalide du serveur'));
+          reject(new Error('Invalid server response'));
         }
       } catch (err) {
-        console.error('Erreur lors du traitement de la réponse:', err);
+        console.error('Error while processing response:', err);
         socket.destroy();
         reject(err);
       }
     });
     
-    // Se connecter au serveur
+    // Connect to server
     socket.connect(9999, '127.0.0.1');
   });
 }
 
-// Exécuter la vérification
+// Run verification
 checkServer()
   .then(() => {
-    console.log('Le serveur est opérationnel');
+    console.log('Server is operational');
     process.exit(0);
   })
   .catch((err) => {
-    console.error('Erreur lors de la vérification du serveur:', err.message);
+    console.error('Error while checking server:', err.message);
     process.exit(1);
   });

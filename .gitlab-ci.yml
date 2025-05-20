@@ -25,26 +25,26 @@ build:
       - dist/
     expire_in: 1 week
 
-# Job de test simplifié (avec mocks)
+# Simplified test job (with mocks)
 test:simplified:
   stage: test
-  image: docker:20.10.16
+  image: docker:latest
   services:
-    - docker:20.10.16-dind
+    - docker:dind
   script:
     - docker build -t coc-vue-test .
     - docker run --rm coc-vue-test ./scripts/test/runners/run-simplified-tests.sh
 
-# Job de test complet (optionnel, peut échouer)
+# Full test job (optional, may fail)
 test:full:
   stage: test
-  image: docker:20.10.16
+  image: docker:latest
   services:
-    - docker:20.10.16-dind
+    - docker:dind
   script:
     - docker build -t coc-vue-test .
     - docker run --rm coc-vue-test ./scripts/run-tests-with-timeout.sh
-  allow_failure: true  # Ce job peut échouer sans faire échouer le pipeline
+  allow_failure: true
 
 # Job de déploiement (exemple)
 deploy:
