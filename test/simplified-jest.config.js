@@ -1,6 +1,6 @@
 /**
- * Configuration Jest simplifiée pour le projet COC-Vue
- * Cette configuration est optimisée pour les tests avec mocks
+ * Simplified Jest configuration for the COC-Vue project
+ * This configuration is optimized for tests with mocks
  */
 const baseConfig = {
   preset: 'ts-jest',
@@ -23,13 +23,13 @@ const baseConfig = {
     '/node_modules/'
   ],
   setupFilesAfterEnv: ['<rootDir>/utils/jest-setup.js'],
-  // Définir les variables d'environnement pour tous les tests
+  // Define environment variables for all tests
   globals: {
     MOCK_NEOVIM: true
   }
 };
 
-// Configuration pour les tests unitaires
+// Configuration for unit tests
 const unitConfig = {
   ...baseConfig,
   displayName: 'UNIT',
@@ -44,7 +44,7 @@ const unitConfig = {
   }
 };
 
-// Configuration pour les tests d'intégration
+// Configuration for integration tests
 const integrationConfig = {
   ...baseConfig,
   displayName: 'INTEGRATION',
@@ -55,7 +55,7 @@ const integrationConfig = {
   ]
 };
 
-// Exporter les configurations
+// Export configurations
 module.exports = {
   projects: [
     unitConfig,

@@ -1,50 +1,50 @@
 #!/bin/bash
 # run-unit-tests.sh
-# Script pour exécuter les tests unitaires avec Jest
+# Script to run unit tests with Jest
 
-# Importer les utilitaires communs
+# Import common utilities
 source "$(dirname "${BASH_SOURCE[0]}")/../core/test-utils.sh"
 
-# Définir le timeout global (en secondes)
-MAX_TIMEOUT=${MAX_TIMEOUT:-120}  # 2 minutes par défaut
+# Set global timeout (in seconds)
+MAX_TIMEOUT=${MAX_TIMEOUT:-120}  # 2 minutes by default
 
-# Fonction de nettoyage à la sortie
+# Cleanup function on exit
 cleanup() {
-  print_info "Nettoyage des ressources..."
+  print_info "Cleaning up resources..."
   
-  # Tuer le processus Jest s'il est toujours en cours d'exécution
+  # Kill Jest process if it's still running
   if [ -n "$JEST_PID" ]; then
     kill_process $JEST_PID
   fi
   
-  print_success "Nettoyage terminé."
+  print_success "Cleanup completed."
 }
 
-# Fonction principale
+# Main function
 main() {
-  # Afficher l'en-tête
-  print_header "Exécution des tests unitaires COC-Vue"
-  print_info "Timeout défini à ${MAX_TIMEOUT} secondes"
+  # Display header
+  print_header "Running COC-Vue unit tests"
+  print_info "Timeout set to ${MAX_TIMEOUT} seconds"
   
-  # Vérifier les prérequis
+  # Check prerequisites
   check_prerequisites "node" "npx" "jest"
   
-  # Configurer le trap pour nettoyer en cas d'interruption
+  # Set up trap for cleanup on interruption
   trap cleanup EXIT INT TERM
   
-  print_info "Démarrage des tests unitaires..."
+  print_info "Starting unit tests..."
   
-  # Construire la commande Jest
+  # Build Jest command
   local jest_cmd="npx jest --config ./test/jest.config.js"
   
-  # Ajouter les arguments spécifiques
+  # Add specific arguments
   if [ $# -eq 0 ]; then
-    # Si aucun argument n'est fourni, sélectionner le projet UNIT
+    # If no arguments provided, select UNIT project
     jest_cmd="$jest_cmd --selectProjects UNIT"
   else
-    # Sinon, utiliser les arguments fournis
+    # Otherwise, use provided arguments
     for arg in "$@"; do
-      # Ne pas transmettre les arguments spécifiques au script principal
+      # Don't pass script-specific arguments to main script
       if [[ "$arg" != "--unit-only" && "$arg" != "--integration-only" && 
             "$arg" != "--component" && "$arg" != "--command" && 
             "$arg" != "--ping" && "$arg" != "--all" ]]; then
@@ -53,50 +53,50 @@ main() {
     done
   fi
   
-  print_debug "Commande Jest: $jest_cmd"
+  print_debug "Jest command: $jest_cmd"
   
-  # Exécuter les tests unitaires avec Jest en arrière-plan
+  # Run unit tests with Jest in background
   VERBOSE_LOGS=${VERBOSE_LOGS:-false} eval "$jest_cmd" &
   JEST_PID=$!
   
-  # Surveiller le processus Jest avec un timeout
+  # Monitor Jest process with timeout
   local elapsed=0
   local interval=1
   while kill -0 $JEST_PID 2>/dev/null; do
-    # Vérifier si le timeout est atteint
+    # Check if timeout is reached
     if [ $elapsed -ge $MAX_TIMEOUT ]; then
-      print_error "ERREUR: Les tests ont dépassé le timeout de ${MAX_TIMEOUT} secondes."
-      print_error "Arrêt forcé des tests..."
+      print_error "ERROR: Tests exceeded timeout of ${MAX_TIMEOUT} seconds."
+      print_error "Force stopping tests..."
       kill_process $JEST_PID true
       exit 1
     fi
     
-    # Attendre et incrémenter le compteur
+    # Wait and increment counter
     sleep $interval
     elapsed=$((elapsed + interval))
     
-    # Afficher un point toutes les 10 secondes pour montrer que le script est toujours actif
+    # Display a dot every 10 seconds to show script is still active
     if [ $((elapsed % 10)) -eq 0 ]; then
       echo -n "."
     fi
   done
   
-  # Attendre que Jest se termine (s'il n'a pas été tué)
+  # Wait for Jest to finish (if not killed)
   wait $JEST_PID 2>/dev/null
   local exit_code=$?
   
   if [ $exit_code -eq 0 ]; then
-    print_success "✓ Tous les tests unitaires ont réussi !"
+    print_success "✓ All unit tests passed!"
   else
-    print_error "✗ Certains tests unitaires ont échoué."
-    print_info "Pour voir les logs détaillés, exécutez avec VERBOSE_LOGS=true :"
+    print_error "✗ Some unit tests failed."
+    print_info "To see detailed logs, run with VERBOSE_LOGS=true:"
     print_info "VERBOSE_LOGS=true ./scripts/test/runners/run-unit-tests.sh"
-    print_info "Pour augmenter le timeout, utilisez MAX_TIMEOUT=<secondes> :"
+    print_info "To increase timeout, use MAX_TIMEOUT=<seconds>:"
     print_info "MAX_TIMEOUT=300 ./scripts/test/runners/run-unit-tests.sh"
   fi
   
   return $exit_code
 }
 
-# Exécuter la fonction principale avec les arguments
+# Run main function with arguments
 main "$@"

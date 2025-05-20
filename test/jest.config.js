@@ -1,6 +1,6 @@
 /**
- * Configuration Jest principale pour le projet COC-Vue
- * Configuration robuste et optimisée pour les tests unitaires et d'intégration
+ * Main Jest configuration for the COC-Vue project
+ * Robust configuration optimized for unit and integration tests
  */
 const baseConfig = {
   preset: 'ts-jest',
@@ -25,7 +25,7 @@ const baseConfig = {
   setupFilesAfterEnv: ['<rootDir>/utils/jest-setup.js']
 };
 
-// Configuration pour les tests unitaires
+// Configuration for unit tests
 const unitConfig = {
   ...baseConfig,
   displayName: 'UNIT',
@@ -40,7 +40,7 @@ const unitConfig = {
   }
 };
 
-// Configuration pour les tests d'intégration
+// Configuration for integration tests
 const integrationConfig = {
   ...baseConfig,
   displayName: 'INTEGRATION',
@@ -51,7 +51,7 @@ const integrationConfig = {
   ]
 };
 
-// Exporter les configurations
+// Export configurations
 module.exports = {
   projects: [
     unitConfig,
