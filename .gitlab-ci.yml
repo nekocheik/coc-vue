@@ -7,13 +7,13 @@ variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ""
 
-# Cache des dépendances npm
+# NPM dependencies cache
 cache:
   key: ${CI_COMMIT_REF_SLUG}
   paths:
     - node_modules/
 
-# Job de construction
+# Build job
 build:
   stage: build
   image: node:18-slim
@@ -46,7 +46,7 @@ test:full:
     - docker run --rm coc-vue-test ./scripts/run-tests-with-timeout.sh
   allow_failure: true
 
-# Job de déploiement (exemple)
+# Deployment job (example)
 deploy:
   stage: deploy
   image: node:18-slim

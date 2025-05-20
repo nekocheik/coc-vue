@@ -5,8 +5,8 @@
 import { withComponent, expectState, ComponentTestHelper } from '../utils/test-helpers';
 
 describe('Select Component Integration', () => {
-  // Test du cycle de vie du composant
-  describe('Cycle de vie', () => {
+  // Component lifecycle tests
+  describe('Lifecycle', () => {
     it('should create a Select component', async () => {
       await withComponent('select', async (helper) => {
         const state = await helper.getState();
@@ -19,15 +19,14 @@ describe('Select Component Integration', () => {
     });
   });
 
-  // Tests d'interaction avec le composant
+  // Component interaction tests
   describe('Component Interactions', () => {
     let helper: ComponentTestHelper;
     let component: any;
 
     beforeEach(async () => {
-      // Check initial state
       await withComponent('select', async (helper) => {
-        // Vérifier l'état initial
+        // Check initial state
         let state = await helper.getState();
         expect(state.is_open).toBe(false);
       });
@@ -35,13 +34,13 @@ describe('Select Component Integration', () => {
 
     it('should handle selection', async () => {
       await withComponent('select', async (helper) => {
-        // Ouvrir le menu
+        // Open menu
         await helper.callMethod('open');
         
-        // Sélectionner la deuxième option (index 1)
+        // Select second option (index 1)
         await helper.callMethod('select_option', 1);
         
-        // Vérifier la sélection
+        // Verify selection
         const state = await helper.getState();
         expectState(state, {
           selected_index: 1,
@@ -54,22 +53,22 @@ describe('Select Component Integration', () => {
 
     it('should handle multi-selection', async () => {
       await withComponent('select', async (helper) => {
-        // Créer un composant en mode multi-sélection
+        // Create component in multi-selection mode
         await helper.createComponent({ multi: true });
         
-        // Ouvrir le menu
+        // Open menu
         await helper.callMethod('open');
         
-        // Sélectionner la première option
+        // Select first option
         await helper.callMethod('select_option', 0);
         let state = await helper.getState();
         expect(state.selected_options).toHaveLength(1);
         expect(state.selected_options[0].value).toBe('value1');
         
-        // Le menu devrait rester ouvert en mode multi-sélection
+        // Menu should stay open in multi-selection mode
         expect(state.is_open).toBe(true);
         
-        // Sélectionner une autre option
+        // Select another option
         await helper.callMethod('select_option', 2);
         state = await helper.getState();
         expect(state.selected_options).toHaveLength(2);
@@ -80,25 +79,25 @@ describe('Select Component Integration', () => {
 
     it('should handle navigational focus', async () => {
       await withComponent('select', async (helper) => {
-        // Ouvrir le menu
+        // Open menu
         await helper.callMethod('open');
         
-        // Focus sur la première option
+        // Focus first option
         await helper.callMethod('focus_option', 0);
         let state = await helper.getState();
         expect(state.focused_index).toBe(0);
         
-        // Passer à l'option suivante
+        // Move to next option
         await helper.callMethod('focus_next_option');
         state = await helper.getState();
         expect(state.focused_index).toBe(1);
         
-        // Passer à l'option suivante
+        // Move to next option
         await helper.callMethod('focus_next_option');
         state = await helper.getState();
         expect(state.focused_index).toBe(2);
         
-        // Revenir à l'option précédente
+        // Go back to previous option
         await helper.callMethod('focus_prev_option');
         state = await helper.getState();
         expect(state.focused_index).toBe(1);
@@ -106,24 +105,24 @@ describe('Select Component Integration', () => {
     });
   });
 
-  // Tests de mise à jour du composant
+  // Component update tests
   describe('Component Updates', () => {
     it('should update options', async () => {
       await withComponent('select', async (helper) => {
-        // État initial
+        // Initial state
         let state = await helper.getState();
         expect(state.options).toHaveLength(3);
         
-        // Nouvelles options
+        // New options
         const newOptions = [
-          { id: 'new1', text: 'Nouvelle Option 1', value: 'new_value1' },
-          { id: 'new2', text: 'Nouvelle Option 2', value: 'new_value2' }
+          { id: 'new1', text: 'New Option 1', value: 'new_value1' },
+          { id: 'new2', text: 'New Option 2', value: 'new_value2' }
         ];
         
-        // Mettre à jour les options
+        // Update options
         await helper.callMethod('update_options', newOptions);
         
-        // Vérifier la mise à jour
+        // Verify update
         state = await helper.getState();
         expect(state.options).toHaveLength(2);
         expect(state.options[0].id).toBe('new1');
@@ -133,35 +132,35 @@ describe('Select Component Integration', () => {
 
     it('should update disabled state', async () => {
       await withComponent('select', async (helper) => {
-        // État initial
+        // Initial state
         let state = await helper.getState();
         expect(state.disabled).toBe(false);
         
-        // Désactiver le composant
+        // Disable component
         await helper.callMethod('set_disabled', true);
         
-        // Vérifier que le composant est désactivé
+        // Verify component is disabled
         state = await helper.getState();
         expect(state.disabled).toBe(true);
         
-        // Essayer d'ouvrir le menu désactivé (devrait échouer)
+        // Try to open disabled menu (should fail)
         await helper.callMethod('open');
         
-        // Vérifier qu'il reste fermé
+        // Verify it stays closed
         state = await helper.getState();
         expect(state.is_open).toBe(false);
       });
     });
   });
 
-  // Tests de gestion des événements
+  // Event handling tests
   describe('Events', () => {
     it('should emit events on open and close', async () => {
       await withComponent('select', async (helper) => {
         // Clear existing events
         await helper.getEvents();
         
-        // Ouvrir le menu
+        // Open menu
         await helper.callMethod('open');
         
         // Verify open event
@@ -169,7 +168,7 @@ describe('Select Component Integration', () => {
         const openEvent = events.find(e => e.type === 'select:opened');
         expect(openEvent).toBeTruthy();
         
-        // Fermer le menu
+        // Close menu
         await helper.callMethod('close');
         
         // Verify close event
@@ -184,7 +183,7 @@ describe('Select Component Integration', () => {
         // Clear open events
         await helper.getEvents();
         
-        // Ouvrir le menu
+        // Open menu
         await helper.callMethod('open');
         
         // Select an option

@@ -63,7 +63,7 @@ export class VimComponent {
   destroyed: boolean = false;
   
   /**
-   * Constructeur du composant
+   * Component constructor
    */
   constructor(options: ComponentOptions) {
     this.id = options.id;
@@ -76,7 +76,7 @@ export class VimComponent {
     this.template = options.template || '';
     this.renderFn = options.render;
     
-    // Fusionner les hooks des options et de l'objet hooks
+    // Merge hooks from options and hooks object
     this.hooks = {
       beforeMount: options.beforeMount || options.hooks?.beforeMount,
       onMounted: options.onMounted || options.hooks?.onMounted,
@@ -85,10 +85,10 @@ export class VimComponent {
       onDestroyed: options.onDestroyed || options.hooks?.onDestroyed
     };
     
-    // Initialiser les propriétés calculées
+    // Initialize computed properties
     this.initComputedProperties();
     
-    // Enregistrer le composant auprès du bridge
+    // Register component with bridge
     this.registerWithBridge();
   }
   

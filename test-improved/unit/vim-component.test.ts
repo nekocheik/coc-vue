@@ -22,7 +22,7 @@ describe('VimComponent', () => {
     });
   });
   
-  describe('Cycle de vie', () => {
+  describe('Lifecycle', () => {
     it('should call lifecycle hooks in the correct order', async () => {
       // Create mocks for hooks
       const hooks = {
@@ -51,7 +51,7 @@ describe('VimComponent', () => {
       // Create component
       const component = new VimComponent(options);
       
-      // Monter le composant
+      // Mount component
       await component.mount();
       
       // Verify mounting hooks order
@@ -72,7 +72,7 @@ describe('VimComponent', () => {
         action: 'component:mounted'
       }));
       
-      // Mettre à jour l'état
+      // Update state
       await component.updateState({ message: 'Updated Message' });
       
       // Verify update hook
@@ -81,7 +81,7 @@ describe('VimComponent', () => {
       // Verify buffer update
       expect(mockNvim.call).toHaveBeenCalledWith('nvim_buf_set_lines', [1, 0, -1, false, ['Updated Message']]);
       
-      // Détruire le composant
+      // Destroy component
       await component.destroy();
       
       // Verify destruction hooks
@@ -101,7 +101,7 @@ describe('VimComponent', () => {
     });
   });
   
-  describe('Réactivité', () => {
+  describe('Reactivity', () => {
     it('should update buffer when state changes', async () => {
       // Create mock render function
       const renderFn = jest.fn().mockImplementation(state => [`Count: ${state.count}`]);
@@ -121,7 +121,7 @@ describe('VimComponent', () => {
       // Verify initial render
       expect(mockNvim.call).toHaveBeenCalledWith('nvim_buf_set_lines', [1, 0, -1, false, ['Count: 0']]);
       
-      // Mettre à jour l'état
+      // Update state
       await component.updateState({ count: 1 });
       
       // Verify re-render
@@ -155,7 +155,7 @@ describe('VimComponent', () => {
       // Verify initial render with computed property
       expect(mockNvim.call).toHaveBeenCalledWith('nvim_buf_set_lines', [1, 0, -1, false, ['Full Name: John Doe']]);
       
-      // Mettre à jour le prénom
+      // Update first name
       await component.updateState({ firstName: 'Jane' });
       
       // Verify re-render with updated computed property
@@ -184,14 +184,14 @@ describe('VimComponent', () => {
       // Watcher should not be called on initial render
       expect(watchCallback).not.toHaveBeenCalled();
       
-      // Mettre à jour l'état
+      // Update state
       await component.updateState({ count: 1 });
       
       // Verify watcher was called
       expect(watchCallback).toHaveBeenCalledTimes(1);
       expect(watchCallback).toHaveBeenCalledWith(1, 0);
       
-      // Mettre à jour l'état à nouveau
+      // Update state again
       await component.updateState({ count: 2 });
       
       // Verify watcher was called again
@@ -200,7 +200,7 @@ describe('VimComponent', () => {
     });
   });
   
-  describe('Méthodes', () => {
+  describe('Methods', () => {
     it('should handle method calls', async () => {
       // Create mock for method
       const incrementMethod = jest.fn().mockImplementation(function(this: VimComponent) {
@@ -226,7 +226,7 @@ describe('VimComponent', () => {
       // Verify initial render
       expect(mockNvim.call).toHaveBeenCalledWith('nvim_buf_set_lines', [1, 0, -1, false, ['Count: 0']]);
       
-      // Appeler la méthode
+      // Call method
       const result = await component.callMethod('increment');
       
       // Verify that the method was called and returned the correct value
