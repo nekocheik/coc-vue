@@ -1,10 +1,14 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
-  roots: ['<rootDir>/src/', '<rootDir>/test/', '<rootDir>/__tests__/'],
+  roots: ['<rootDir>/../src/', '<rootDir>/../test/', '<rootDir>/../__tests__/'],
   moduleNameMapper: {
-    '^coc.nvim$': '<rootDir>/__tests__/mocks/coc.ts',
-    '^@/(.*)$': '<rootDir>/src/$1'
+    '^coc.nvim$': '<rootDir>/../__tests__/mocks/coc.ts',
+    '^@/(.*)$': '<rootDir>/../src/$1',
+    '^../bridge/core$': '<rootDir>/../__tests__/mocks/bridge-core.ts',
+    '^../../src/bridge/core$': '<rootDir>/../__tests__/mocks/bridge-core.ts',
+    '^../components/vim-component$': '<rootDir>/../__tests__/mocks/vim-component.ts',
+    '^../../src/components/vim-component$': '<rootDir>/../__tests__/mocks/vim-component.ts'
   },
   transform: {
     '^.+\.tsx?$': 'ts-jest',
@@ -12,9 +16,6 @@ module.exports = {
   },
   testRegex: '(/__tests__/.*|(\.|/)(test|spec))\.(tsx?|vue)$',
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node', 'vue'],
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1'
-  },
   collectCoverage: true,
   coverageDirectory: 'coverage',
   collectCoverageFrom: [
@@ -28,14 +29,14 @@ module.exports = {
   // Si un test échoue de manière répétée pour des raisons connues, nous pouvons l'ajouter ici
   bail: false,
   verbose: true,
-  setupFilesAfterEnv: ['../src/jest-setup.js'],
-  watchPathIgnorePatterns: ['<rootDir>/lib/'],
+  setupFilesAfterEnv: ['<rootDir>/../src/jest-setup.js'],
+  watchPathIgnorePatterns: ['<rootDir>/../lib/'],
   globals: {
     'vue-jest': {
       experimentalCSSCompile: true
     },
     'ts-jest': {
-      tsconfig: 'tsconfig.json',
+      tsconfig: '<rootDir>/tsconfig.json',
       diagnostics: {
         warnOnly: true
       }

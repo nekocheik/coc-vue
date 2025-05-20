@@ -149,7 +149,7 @@ describe('VimComponent', () => {
           lastName: 'Doe'
         },
         computed: {
-          fullName: function() {
+          fullName: function(this: VimComponent) {
             return `${this.state.firstName} ${this.state.lastName}`;
           }
         },
@@ -206,7 +206,7 @@ describe('VimComponent', () => {
   
   describe('Methods', () => {
     it('should support calling methods', async () => {
-      const incrementMethod = jest.fn().mockImplementation(function() {
+      const incrementMethod = jest.fn().mockImplementation(function(this: VimComponent) {
         this.updateState({ count: this.state.count + 1 });
         return this.state.count;
       });
@@ -239,7 +239,7 @@ describe('VimComponent', () => {
     });
     
     it('should handle method calls from bridge messages', async () => {
-      const incrementMethod = jest.fn().mockImplementation(function(amount = 1) {
+      const incrementMethod = jest.fn().mockImplementation(function(this: VimComponent, amount = 1) {
         this.updateState({ count: this.state.count + amount });
         return this.state.count;
       });
