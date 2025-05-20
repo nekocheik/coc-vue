@@ -17,7 +17,8 @@
 [Features](#features) • 
 [Usage](#usage) • 
 [Documentation](#documentation) • 
-[Contributing](#contributing)
+[Contributing](#contributing) • 
+[Development Workflow](#development-workflow)
 
 </div>
 

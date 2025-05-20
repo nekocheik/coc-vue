@@ -1,6 +1,6 @@
 #!/bin/bash
 # coc-vue-cli.sh
-# CLI pour l'extension coc-vue
+# CLI for the coc-vue extension
 
 # Set the path to the project root
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -14,41 +14,50 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Fonction pour afficher l'en-tête
+# Function to display header
 print_header() {
   echo -e "\n${BLUE}=========================================${NC}"
-  echo -e "${BLUE}   CoC Vue CLI - Outil de développement   ${NC}"
+  echo -e "${BLUE}   CoC Vue CLI - Development Tool   ${NC}"
   echo -e "${BLUE}=========================================${NC}\n"
 }
 
-# Fonction pour afficher l'aide
+# Function to display help
 show_help() {
-  echo -e "${CYAN}Usage:${NC} ./coc-vue-cli.sh [commande] [options]"
+  echo -e "${CYAN}Usage:${NC} ./coc-vue-cli.sh [command] [options]"
   echo ""
-  echo -e "${CYAN}Commandes disponibles:${NC}"
-  echo -e "  ${GREEN}test${NC}                    Exécuter les tests d'intégration"
-  echo -e "  ${GREEN}test:component${NC}          Exécuter les tests de composants"
-  echo -e "  ${GREEN}test:component [section]${NC} Exécuter une section spécifique des tests de composants"
-  echo -e "  ${GREEN}test:command${NC}            Exécuter les tests de commandes"
-  echo -e "  ${GREEN}test:ping${NC}               Exécuter les tests de ping"
-  echo -e "  ${GREEN}server:start${NC}            Démarrer le serveur de composants"
-  echo -e "  ${GREEN}server:stop${NC}             Arrêter le serveur de composants"
-  echo -e "  ${GREEN}logs:check [étape]${NC}      Vérifier les logs pour une étape spécifique"
-  echo -e "  ${GREEN}logs:analyze${NC}            Analyser les résultats des tests"
-  echo -e "  ${GREEN}help${NC}                    Afficher cette aide"
+  echo -e "${CYAN}Available commands:${NC}"
+  echo -e "  ${GREEN}test${NC}                                Run integration tests"
+  echo -e "  ${GREEN}test:component${NC}                      Run component tests"
+  echo -e "  ${GREEN}test:component [section]${NC}            Run a specific section of component tests"
+  echo -e "  ${GREEN}test:command${NC}                        Run command tests"
+  echo -e "  ${GREEN}test:ping${NC}                           Run ping tests"
+  echo -e "  ${GREEN}server:start${NC}                        Start the component server"
+  echo -e "  ${GREEN}server:stop${NC}                         Stop the component server"
+  echo -e "  ${GREEN}logs:check [step]${NC}                   Check logs for a specific step"
+  echo -e "  ${GREEN}logs:analyze${NC}                        Analyze test results"
+  echo -e "  ${GREEN}ticket:create [category] [priority] [title]${NC}  Create a new ticket"
+  echo -e "  ${GREEN}ticket:list${NC}                         List all tickets"
+  echo -e "  ${GREEN}ticket:status [uuid] [status]${NC}       Change ticket status"
+  echo -e "  ${GREEN}ticket:deploy [uuid]${NC}                Deploy a ticket to GitHub Issues"
+  echo -e "  ${GREEN}help${NC}                                Display this help"
   echo ""
-  echo -e "${CYAN}Exemples:${NC}"
+  echo -e "${CYAN}Categories:${NC} feat, ui, structure, ci, docs, test, perf"
+  echo ""
+  echo -e "${CYAN}Examples:${NC}"
   echo -e "  ./coc-vue-cli.sh test:component"
   echo -e "  ./coc-vue-cli.sh test:component component-loading"
   echo -e "  ./coc-vue-cli.sh server:start"
   echo -e "  ./coc-vue-cli.sh logs:check server_startup"
+  echo -e "  ./coc-vue-cli.sh ticket:create feat 90 'Fix Vader Test Integration'"
+  echo -e "  ./coc-vue-cli.sh ticket:status a88cf6d1 in-progress"
+  echo -e "  ./coc-vue-cli.sh ticket:deploy a88cf6d1"
   echo ""
 }
 
-# Fonction pour exécuter les tests de composants
+# Function to run component tests
 run_component_tests() {
   local section=$1
-  echo -e "${YELLOW}Exécution des tests de composants...${NC}"
+  echo -e "${YELLOW}Running component tests...${NC}"
   
   if [ -n "$section" ]; then
     echo -e "${YELLOW}Section: ${section}${NC}"
@@ -58,61 +67,69 @@ run_component_tests() {
   fi
 }
 
-# Fonction pour exécuter les tests de commandes
+# Function to run command tests
 run_command_tests() {
-  echo -e "${YELLOW}Exécution des tests de commandes...${NC}"
+  echo -e "${YELLOW}Running command tests...${NC}"
   "$PROJECT_ROOT/scripts/test/runners/run-command-tests.sh"
 }
 
-# Fonction pour exécuter les tests de ping
+# Function to run ping tests
 run_ping_tests() {
-  echo -e "${YELLOW}Exécution des tests de ping...${NC}"
+  echo -e "${YELLOW}Running ping tests...${NC}"
   "$PROJECT_ROOT/scripts/test/runners/run-ping-tests.sh"
 }
 
-# Fonction pour démarrer le serveur de composants
+# Function to start the component server
 start_component_server() {
-  echo -e "${YELLOW}Démarrage du serveur de composants...${NC}"
+  echo -e "${YELLOW}Starting component server...${NC}"
   "$PROJECT_ROOT/scripts/server/run_component_server.sh" &
-  echo -e "${GREEN}Serveur démarré en arrière-plan. PID: $!${NC}"
-  echo -e "${YELLOW}Utilisez 'server:stop' pour arrêter le serveur.${NC}"
+  echo -e "${GREEN}Server started in background. PID: $!${NC}"
+  echo -e "${YELLOW}Use 'server:stop' to stop the server.${NC}"
 }
 
-# Fonction pour arrêter le serveur de composants
+# Function to stop the component server
 stop_component_server() {
-  echo -e "${YELLOW}Arrêt du serveur de composants...${NC}"
+  echo -e "${YELLOW}Stopping component server...${NC}"
   local server_pid=$(lsof -i :9999 -t)
   
   if [ -n "$server_pid" ]; then
-    echo -e "${YELLOW}Arrêt du processus avec PID: ${server_pid}${NC}"
+    echo -e "${YELLOW}Stopping process with PID: ${server_pid}${NC}"
     kill -9 $server_pid
-    echo -e "${GREEN}Serveur arrêté.${NC}"
+    echo -e "${GREEN}Server stopped.${NC}"
   else
-    echo -e "${RED}Aucun serveur en cours d'exécution sur le port 9999.${NC}"
+    echo -e "${RED}No server running on port 9999.${NC}"
   fi
 }
 
-# Fonction pour vérifier les logs
+# Function to check logs
 check_logs() {
   local step=$1
   
   if [ -z "$step" ]; then
-    echo -e "${RED}Erreur: Vous devez spécifier une étape pour vérifier les logs.${NC}"
-    echo -e "${YELLOW}Exemple: ./coc-vue-cli.sh logs:check server_startup${NC}"
+    echo -e "${RED}Error: You must specify a step to check logs.${NC}"
+    echo -e "${YELLOW}Example: ./coc-vue-cli.sh logs:check server_startup${NC}"
     return 1
   fi
   
-  echo -e "${YELLOW}Vérification des logs pour l'étape: ${step}${NC}"
+  echo -e "${YELLOW}Checking logs for step: ${step}${NC}"
   "$PROJECT_ROOT/scripts/utils/check_neovim_logs.sh" "$step"
 }
 
-# Fonction pour analyser les résultats des tests
+# Function to analyze test results
 analyze_test_results() {
-  echo -e "${YELLOW}Analyse des résultats des tests...${NC}"
+  echo -e "${YELLOW}Analyzing test results...${NC}"
   "$PROJECT_ROOT/scripts/utils/check_test_results.sh"
 }
 
-# Fonction principale
+# Function to handle ticket management commands
+handle_ticket_commands() {
+  local subcommand=$1
+  shift
+  
+  "$PROJECT_ROOT/scripts/ticket_management.sh" "$subcommand" "$@"
+}
+
+# Main function
 main() {
   print_header
   
@@ -144,11 +161,15 @@ main() {
     "logs:analyze")
       analyze_test_results
       ;;
+    "ticket:create" | "ticket:list" | "ticket:deploy" | "ticket:generate-all")
+      local subcommand=${command#ticket:}
+      handle_ticket_commands "$subcommand" "$@"
+      ;;
     "help" | "")
       show_help
       ;;
     *)
-      echo -e "${RED}Commande inconnue: ${command}${NC}"
+      echo -e "${RED}Unknown command: ${command}${NC}"
       show_help
       return 1
       ;;
