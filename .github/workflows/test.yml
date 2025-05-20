@@ -61,11 +61,11 @@ jobs:
             
             for file in .ci-artifacts/vader-reports/*_results.json; do
               if [ -f "$file" ]; then
-                # Utiliser grep au lieu de jq pour être plus tolérant aux erreurs de format
+                # Use grep instead of jq to be more tolerant of format errors
                 FILE_TOTAL=$(grep -o '"total":[[:space:]]*[0-9]\+' "$file" | grep -o '[0-9]\+')
                 FILE_SUCCESS=$(grep -o '"success":[[:space:]]*[0-9]\+' "$file" | grep -o '[0-9]\+')
                 
-                # Si les valeurs sont vides, essayer avec les anciens noms de champs
+                # If values are empty, try with old field names
                 if [ -z "$FILE_TOTAL" ]; then
                   FILE_TOTAL=$(grep -o '"total_count":[[:space:]]*[0-9]\+' "$file" | grep -o '[0-9]\+')
                 fi
@@ -73,7 +73,7 @@ jobs:
                   FILE_SUCCESS=$(grep -o '"success_count":[[:space:]]*[0-9]\+' "$file" | grep -o '[0-9]\+')
                 fi
                 
-                # Si toujours vide, utiliser des valeurs par défaut
+                # If still empty, use default values
                 FILE_TOTAL=${FILE_TOTAL:-0}
                 FILE_SUCCESS=${FILE_SUCCESS:-0}
                 

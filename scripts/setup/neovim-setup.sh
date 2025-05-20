@@ -277,7 +277,7 @@ fi
 
 # Verify build output
 print_step "Verifying build output..."
-# Limiter la recherche aux répertoires de premier niveau
+# Limit search to first-level directories
 if [ -d "$PROJECT_ROOT/lib" ]; then
   echo "Found directory: $PROJECT_ROOT/lib"
   if [ -f "$PROJECT_ROOT/lib/index.js" ]; then

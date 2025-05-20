@@ -1,134 +1,139 @@
 #!/bin/bash
-# Script pour exécuter les tests d'intégration avec le système de ports dynamiques
+# Script to run integration tests with dynamic port system
 
-# Couleurs pour une meilleure lisibilité
+# Colors for better readability
 GREEN='\033[0;32m'
-RED='\033[0;31m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Chemin vers la racine du projet
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-cd "$PROJECT_ROOT"
+SERVER_PID=""
+JEST_PID=""
 
-# Définir le timeout global (en secondes)
-MAX_TIMEOUT=${MAX_TIMEOUT:-300}  # 5 minutes par défaut
+# Set global timeout (in seconds)
+MAX_TIMEOUT=${MAX_TIMEOUT:-300}  # 5 minutes default
 
-echo -e "${BLUE}=== Exécution des tests d'intégration COC-Vue ===${NC}"
-echo -e "${YELLOW}Timeout défini à ${MAX_TIMEOUT} secondes${NC}"
+echo -e "${BLUE}=== Running COC-Vue Integration Tests ===${NC}"
+echo -e "${YELLOW}Timeout set to ${MAX_TIMEOUT} seconds${NC}"
 
-# Fonction pour nettoyer les processus à la sortie
+# Function to clean up processes on exit
 cleanup() {
-  echo -e "\n${YELLOW}Nettoyage des processus...${NC}"
-  
-  # Arrêter le serveur mock
+  local force=$1
+
+  # Stop mock server
   if [ -n "$SERVER_PID" ]; then
-    echo -e "${YELLOW}Arrêt du serveur mock (PID: $SERVER_PID)...${NC}"
+    echo -e "${YELLOW}Stopping mock server (PID: $SERVER_PID)...${NC}"
     kill $SERVER_PID 2>/dev/null
-    sleep 1
-    
-    # Vérifier si le processus est toujours en cours
-    if kill -0 $SERVER_PID 2>/dev/null; then
-      echo -e "${YELLOW}Arrêt forcé du serveur mock...${NC}"
+
+    # Check if process is still running
+    if [ "$force" = "true" ] && kill -0 $SERVER_PID 2>/dev/null; then
+      echo -e "${YELLOW}Force stopping mock server...${NC}"
       kill -9 $SERVER_PID 2>/dev/null
     fi
   fi
-  
-  # Tuer le processus Jest s'il est toujours en cours d'exécution
+
+  # Kill Jest process if still running
   if [ -n "$JEST_PID" ]; then
-    echo -e "${YELLOW}Arrêt du processus Jest (PID: $JEST_PID)...${NC}"
+    echo -e "${YELLOW}Stopping Jest process (PID: $JEST_PID)...${NC}"
     kill $JEST_PID 2>/dev/null
-    sleep 1
-    
-    # Vérifier si le processus est toujours en cours
-    if kill -0 $JEST_PID 2>/dev/null; then
-      echo -e "${YELLOW}Arrêt forcé de Jest...${NC}"
+
+    # Check if process is still running
+    if [ "$force" = "true" ] && kill -0 $JEST_PID 2>/dev/null; then
+      echo -e "${YELLOW}Force stopping Jest...${NC}"
       kill -9 $JEST_PID 2>/dev/null
     fi
   fi
-  
-  # Libérer les ports utilisés
-  node -e "require('./test/utils/port-manager').killAllActivePorts()"
-  
-  echo -e "${GREEN}Nettoyage terminé.${NC}"
+
+  # Free used ports
+  rm -f .server-info.json
+
+  echo -e "${GREEN}Cleanup completed.${NC}"
 }
 
-# Configurer le trap pour nettoyer en cas d'interruption
-trap cleanup EXIT INT TERM
+# Set up trap to clean up on interruption
+trap 'cleanup true' EXIT INT TERM
 
-# Démarrer le serveur mock avec notre script
-echo -e "${YELLOW}Démarrage du serveur mock pour les tests...${NC}"
-node "$PROJECT_ROOT/scripts/test/mock-server.js" > /tmp/mock-server.log 2>&1 &
+# Start mock server with our script
+echo -e "${YELLOW}Starting mock server for tests...${NC}"
+node scripts/test/mock-server.js &
 SERVER_PID=$!
 
-# Attendre que le serveur soit prêt (vérifier le fichier .server-info.json)
-echo -e "${YELLOW}Attente du démarrage du serveur...${NC}"
+# Wait for server to be ready (check .server-info.json file)
+echo -e "${YELLOW}Waiting for server to start...${NC}"
 MAX_WAIT=30
-for i in $(seq 1 $MAX_WAIT); do
-  if [ -f "$PROJECT_ROOT/test/.server-info.json" ]; then
-    SERVER_PORT=$(node -e "console.log(require('./test/.server-info.json').port)")
-    echo -e "${GREEN}Serveur mock démarré sur le port $SERVER_PORT.${NC}"
+for ((i=1; i<=MAX_WAIT; i++)); do
+  if [ -f .server-info.json ]; then
+    SERVER_PORT=$(grep -o '"port":[0-9]\+' .server-info.json | grep -o '[0-9]\+')
+    echo -e "${GREEN}Mock server started on port $SERVER_PORT.${NC}"
     break
   fi
-  
-  # Si on atteint la dernière tentative, échouer
+
+  # If we reach the last attempt, fail
   if [ $i -eq $MAX_WAIT ]; then
-    echo -e "${RED}ERREUR: Le serveur mock n'a pas démarré après $MAX_WAIT secondes.${NC}"
-    echo -e "${YELLOW}Consultez les logs dans /tmp/mock-server.log pour plus de détails.${NC}"
-    cleanup
+    echo -e "${RED}ERROR: Mock server did not start after $MAX_WAIT seconds.${NC}"
+    echo -e "${YELLOW}Check logs in /tmp/mock-server.log for details.${NC}"
+    cleanup true
     exit 1
   fi
-  
-  echo -n "."
+
   sleep 1
 done
 
-echo -e "${YELLOW}Exécution des tests d'intégration...${NC}"
+# Export server port for tests
+export MOCK_SERVER_PORT=$SERVER_PORT
 
-# Exécuter les tests d'intégration avec Jest en arrière-plan
-VERBOSE_LOGS=${VERBOSE_LOGS:-false} npx jest --config ./test/jest.config.js --selectProjects INTEGRATION "$@" &
+echo -e "${YELLOW}Running integration tests...${NC}"
+
+# Run integration tests with Jest in background
+npx jest --config ./test/integration-jest.config.js &
 JEST_PID=$!
 
-# Surveiller le processus Jest avec un timeout
-ELAPSED=0
-while kill -0 $JEST_PID 2>/dev/null; do
-  # Vérifier si le timeout est atteint
-  if [ $ELAPSED -ge $MAX_TIMEOUT ]; then
-    echo -e "\n${RED}ERREUR: Les tests ont dépassé le timeout de ${MAX_TIMEOUT} secondes.${NC}"
-    echo -e "${RED}Arrêt forcé des tests...${NC}"
-    kill -9 $JEST_PID 2>/dev/null
-    EXIT_CODE=1
+# Monitor Jest process with timeout
+SECONDS=0
+EXIT_CODE=""
+
+# Check if timeout is reached
+while [ $SECONDS -lt $MAX_TIMEOUT ]; do
+  if ! kill -0 $JEST_PID 2>/dev/null; then
     break
   fi
-  
-  # Attendre 1 seconde et incrémenter le compteur
+
+  # Wait 1 second and increment counter
   sleep 1
-  ELAPSED=$((ELAPSED + 1))
-  
-  # Afficher un point toutes les 10 secondes pour montrer que le script est toujours actif
-  if [ $((ELAPSED % 10)) -eq 0 ]; then
+
+  # Show a dot every 10 seconds to show script is still active
+  if [ $((SECONDS % 10)) -eq 0 ]; then
     echo -n "."
   fi
 done
 
-# Attendre que Jest se termine (s'il n'a pas été tué)
-wait $JEST_PID 2>/dev/null
-JEST_EXIT_CODE=$?
-
-# Si EXIT_CODE n'est pas défini (pas de timeout), utiliser le code de sortie de Jest
-if [ -z "$EXIT_CODE" ]; then
-  EXIT_CODE=$JEST_EXIT_CODE
+# If Jest is still running after timeout
+if kill -0 $JEST_PID 2>/dev/null; then
+  echo -e "\n${RED}ERROR: Tests exceeded timeout of ${MAX_TIMEOUT} seconds.${NC}"
+  echo -e "${RED}Force stopping tests...${NC}"
+  EXIT_CODE=124
+  cleanup true
 fi
 
+# Wait for Jest to finish (if not killed)
+wait $JEST_PID
+JEST_EXIT=$?
+
+# If EXIT_CODE is not set (no timeout), use Jest's exit code
+if [ -z "$EXIT_CODE" ]; then
+  EXIT_CODE=$JEST_EXIT
+fi
+
+# Clean up processes
+cleanup false
+
 if [ $EXIT_CODE -eq 0 ]; then
-  echo -e "\n${GREEN}✓ Tous les tests d'intégration ont réussi !${NC}"
+  echo -e "\n${GREEN}✓ All integration tests passed!${NC}"
 else
-  echo -e "\n${RED}✗ Certains tests d'intégration ont échoué.${NC}"
-  echo -e "${YELLOW}Pour voir les logs détaillés, exécutez avec VERBOSE_LOGS=true :${NC}"
-  echo -e "${YELLOW}VERBOSE_LOGS=true ./test/scripts/run-integration-tests.sh${NC}"
-  echo -e "${YELLOW}Pour augmenter le timeout, utilisez MAX_TIMEOUT=<secondes> :${NC}"
-  echo -e "${YELLOW}MAX_TIMEOUT=600 ./test/scripts/run-integration-tests.sh${NC}"
+  echo -e "\n${RED}✗ Some integration tests failed.${NC}"
+  echo -e "${YELLOW}To see detailed logs, run with VERBOSE_LOGS=true:${NC}"
+  echo "VERBOSE_LOGS=true npm run test:integration"
 fi
 
 exit $EXIT_CODE
