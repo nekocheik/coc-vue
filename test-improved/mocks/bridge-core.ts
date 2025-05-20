@@ -1,7 +1,9 @@
-// Mock version of bridge/core.ts for testing
-import { mockNvim } from './nvim';
+/**
+ * Mock amélioré pour bridge/core.ts
+ * Ce mock est plus propre, plus facile à maintenir et à tester
+ */
 
-// Define message types
+// Définir les types de messages
 export enum MessageType {
   INIT = 'init',
   STATE = 'state',
@@ -11,7 +13,7 @@ export enum MessageType {
   ERROR = 'error'
 }
 
-// Define bridge message interface
+// Définir l'interface du message
 export interface BridgeMessage {
   id: string;
   type: MessageType;
@@ -20,17 +22,16 @@ export interface BridgeMessage {
   correlationId?: string;
 }
 
-// Define message handler type
+// Définir le type du gestionnaire de messages
 export type MessageHandler = (message: BridgeMessage) => Promise<void>;
 
 // Mock BridgeCore class
 export class BridgeCore {
-  private static instance: BridgeCore;
+  private static instance: BridgeCore | null = null;
   private handlers: Map<string, MessageHandler> = new Map();
   
-  // Mock for testing
+  // Mocks pour les tests
   public sendMessage = jest.fn().mockImplementation(async (message: BridgeMessage) => {
-    // Mock implementation that just returns a success response
     return {
       success: true,
       data: { received: true }
@@ -39,6 +40,9 @@ export class BridgeCore {
   
   private constructor() {}
   
+  /**
+   * Obtenir l'instance singleton
+   */
   static getInstance(): BridgeCore {
     if (!BridgeCore.instance) {
       BridgeCore.instance = new BridgeCore();
@@ -46,30 +50,57 @@ export class BridgeCore {
     return BridgeCore.instance;
   }
   
+  /**
+   * Enregistrer un gestionnaire de messages
+   */
   registerHandler(id: string, handler: MessageHandler): void {
     this.handlers.set(id, handler);
   }
   
+  /**
+   * Désenregistrer un gestionnaire de messages
+   */
   unregisterHandler(id: string): void {
     this.handlers.delete(id);
   }
   
+  /**
+   * Obtenir un gestionnaire de messages
+   */
   getHandler(id: string): MessageHandler | undefined {
     return this.handlers.get(id);
   }
   
-  async receiveMessage(message: string): Promise<void> {
-    // Mock implementation
-    const parsedMessage = JSON.parse(message);
-    // Process message if needed for tests
+  /**
+   * Simuler la réception d'un message
+   */
+  async receiveMessage(message: BridgeMessage | string): Promise<void> {
+    const parsedMessage = typeof message === 'string' ? JSON.parse(message) : message;
+    const handler = this.handlers.get(parsedMessage.id);
+    
+    if (handler) {
+      await handler(parsedMessage);
+    }
   }
   
-  // Reset all mocks for testing
+  /**
+   * Réinitialiser tous les mocks et gestionnaires
+   */
   resetMocks(): void {
     this.sendMessage.mockClear();
     this.handlers.clear();
   }
+  
+  /**
+   * Réinitialiser l'instance singleton (utile pour les tests)
+   */
+  static resetInstance(): void {
+    if (BridgeCore.instance) {
+      BridgeCore.instance.resetMocks();
+      BridgeCore.instance = null;
+    }
+  }
 }
 
-// Export singleton instance
+// Exporter l'instance singleton
 export const bridgeCore = BridgeCore.getInstance();
