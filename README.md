@@ -423,47 +423,70 @@ The project uses several tools to maintain high code quality:
 - **Jest** for testing
 - **Webpack** for bundling
 
-## 📦 Docker et Intégration Continue
+## 📦 Docker and Continuous Integration
 
-Le projet inclut une configuration Docker pour faciliter les tests et l'intégration continue.
+The project includes Docker configuration for testing and continuous integration with both GitLab and GitHub.
 
-### Tests avec Docker
+### Docker Testing
 
-Pour exécuter les tests dans un environnement Docker isolé :
+Run tests in an isolated Docker environment:
 
 ```bash
-# Exécuter les tests simplifiés avec Docker
-./docker-test.sh
+# Run simplified tests with Docker
+./scripts/run-docker-tests.sh
 
-# Ou utiliser Docker Compose
+# Or use Docker Compose directly
 docker-compose up test
 
-# Pour exécuter les tests complets (peut échouer)
+# Run full tests (may fail)
 docker-compose up test-full
 ```
 
-### Intégration GitLab CI
+### GitHub CI Integration
 
-Le projet inclut un fichier `.gitlab-ci.yml` prêt à l'emploi pour l'intégration continue avec GitLab :
+The project includes GitHub Actions workflows for continuous integration:
 
-- **Build** : Compile le projet et génère les artefacts
-- **Test Simplifié** : Exécute les tests avec mocks (doit toujours réussir)
-- **Test Complet** : Exécute les tests complets (optionnel, peut échouer)
-- **Déploiement** : Crée un package pour le déploiement (sur les tags et la branche master)
+```bash
+# Set up GitHub CI integration
+./scripts/setup-github-ci.sh
 
-Pour utiliser cette configuration :
+# Monitor workflow runs
+gh run list
+```
 
-1. Assurez-vous que votre instance GitLab dispose de runners avec support Docker
-2. Poussez votre code vers GitLab
-3. Le pipeline CI s'exécutera automatiquement
+The GitHub workflow:
+- Runs on pushes to main/master branches and pull requests
+- Builds and runs tests in Docker containers
+- Uploads test results as artifacts
+- Handles secrets securely
 
-### Personnalisation de l'environnement Docker
+### GitLab CI Integration
 
-Vous pouvez personnaliser l'environnement Docker en modifiant les fichiers suivants :
+The project also includes a `.gitlab-ci.yml` file for GitLab CI/CD:
 
-- `Dockerfile` : Configuration de l'image Docker
-- `docker-compose.yml` : Configuration des services Docker
-- `.gitlab-ci.yml` : Configuration du pipeline CI
+- **Build**: Compiles the project and generates artifacts
+- **Test Simplified**: Runs tests with mocks (should always succeed)
+- **Test Full**: Runs complete tests (optional, may fail)
+- **Deployment**: Creates a package for deployment (on tags and master branch)
+
+### Managing Secrets
+
+Sensitive information is handled securely:
+
+- Local secrets are stored in `.env` files (excluded from version control)
+- CI secrets are stored in GitHub/GitLab secret storage
+- See [TESTS.md](TESTS.md) for detailed instructions on managing secrets
+
+### Customizing the Docker Environment
+
+You can customize the Docker environment by modifying these files:
+
+- `Dockerfile`: Docker image configuration
+- `docker-compose.yml`: Docker services configuration
+- `.github/workflows/test.yml`: GitHub CI configuration
+- `.gitlab-ci.yml`: GitLab CI configuration
+
+For detailed documentation on testing with Docker and CI integration, see [TESTS.md](TESTS.md).
 
 ## 🔍 Debugging Guide
 
