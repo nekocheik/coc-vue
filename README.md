@@ -199,6 +199,56 @@ Thanks to the agnostic architecture, adding new components is straightforward:
 
 1. Create a new component class in `src/components/`
 2. Implement the required methods and properties
+
+## 🎫 Ticket-Based Development
+
+We use a structured ticket-based workflow for all development tasks. This ensures that all changes are properly tracked, tested, and documented.
+
+### Ticket Categories
+
+Tickets are organized into the following categories:
+
+| Category | Description | Example |
+|----------|-------------|--------|
+| `feat` | New features or enhancements | Adding a new component |
+| `ui` | User interface components | Improving component styling |
+| `structure` | Code structure improvements | Refactoring the test directory |
+| `ci` | CI/CD pipeline enhancements | Adding code coverage reporting |
+| `docs` | Documentation improvements | Updating API documentation |
+| `test` | Testing infrastructure | Adding new test cases |
+| `perf` | Performance optimizations | Improving component rendering |
+
+### Ticket Workflow
+
+1. **Create a ticket** for your task using the CLI:
+   ```bash
+   ./coc-vue-cli.sh ticket:create [category] [priority] [title]
+   ```
+   Example: `./coc-vue-cli.sh ticket:create feat 90 "Add Modal Component"`
+
+2. **Follow the workflow** defined in the ticket template:
+   - Each category has a specific workflow tailored to that type of task
+   - Complete each step in the workflow before moving to the next
+   - Update the ticket status as you progress
+
+3. **Update ticket status** as you work:
+   ```bash
+   ./coc-vue-cli.sh ticket:status [uuid] [status]
+   ```
+   Example: `./coc-vue-cli.sh ticket:status a88cf6d1 in-progress`
+
+4. **Deploy to GitHub Issues** for team tracking:
+   ```bash
+   ./coc-vue-cli.sh ticket:deploy [uuid]
+   ```
+   This creates a GitHub issue with all the ticket details and links it to your local ticket.
+
+5. **List all tickets** to see what's in progress:
+   ```bash
+   ./coc-vue-cli.sh ticket:list
+   ```
+
+For more detailed information on the ticketing system, see [TICKETING.md](docs/TICKETING.md).
 3. Register the component in the component registry
 
 No hardcoded references are needed - the extension will automatically detect and implement the component's methods.
