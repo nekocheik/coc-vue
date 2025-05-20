@@ -12,26 +12,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      
-      # Cache Docker layers
-      - name: Cache Docker layers
-        uses: actions/cache@v3
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
+      - name: Set up Docker
+        run: |
+          docker --version
+          docker-compose --version
       
       - name: Build Docker image
         run: |
           docker-compose build test
-        env:
-          DOCKER_BUILDKIT: 1
       
       - name: Run tests in Docker
-        id: run_tests
         run: |
           mkdir -p test-results
           docker-compose run --rm test | tee test-output.log
@@ -46,7 +36,7 @@ jobs:
         if: always()
         run: |
           echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
-          if grep -q "Tous les tests ont réussi" test-output.log; then
+          if grep -q "Tous les tests ont réussi" test-output.log || grep -q "All tests passed" test-output.log; then
             echo "✅ All tests passed successfully!" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ Some tests failed. See logs for details." >> $GITHUB_STEP_SUMMARY
@@ -55,13 +45,3 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           cat test-output.log >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-      
-      # Upload test results as artifacts
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v2
-        with:
-          name: test-results
-          path: |
-            test-results/
-            test-output.log
