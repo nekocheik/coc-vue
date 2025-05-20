@@ -1,13 +1,15 @@
 /**
- * Gestionnaire de ports pour les tests
- * Ce module gère l'allocation dynamique des ports pour les serveurs de test
- * Version améliorée avec gestion robuste des erreurs et des conflits
+ * Port manager for tests
+ * This module handles dynamic port allocation for test servers
+ * Enhanced version with robust error handling and conflict management
  */
 const fs = require('fs');
 const path = require('path');
 const net = require('net');
 const os = require('os');
 const { execSync, exec } = require('child_process');
+const { promisify } = require('util');
+const execAsync = promisify(exec);
 
 // Configuration
 const PORT_RANGE_START = 9100;

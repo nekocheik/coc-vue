@@ -3,18 +3,19 @@
 # Script to run tests in "watch" mode
 # This script is useful during development to see test results in real-time
 
-# Colors for better readability
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Colors for output
+RED='\\033[0;31m'
+GREEN='\\033[0;32m'
+YELLOW='\\033[1;33m'
+BLUE='\\033[0;34m'
+NC='\\033[0m'
 
-echo -e "${BLUE}=== Mode Watch for COC-Vue Tests ===${NC}"
+echo -e "${BLUE}=== Watch Mode for COC-Vue Tests ===${NC}"
 echo -e "${YELLOW}Tests will be automatically re-executed when files are modified.${NC}"
 echo -e "${YELLOW}Press 'q' to quit, 'p' to filter by file name.${NC}"
 echo
 
+# Set test type from argument or default to unit tests
 # By default, run unit tests in watch mode
 # Integration tests are not run in watch mode as they require a Neovim server
 TEST_TYPE=${1:-"unit"}

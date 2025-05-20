@@ -1,45 +1,73 @@
+/**
+ * Jest configuration for coc-vue
+ * This file contains the main test configuration
+ */
+
 module.exports = {
+  // Test environment configuration
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
-  roots: ['<rootDir>/../src/', '<rootDir>/../test/', '<rootDir>/../__tests__/'],
-  moduleNameMapper: {
-    '^coc.nvim$': '<rootDir>/../__tests__/mocks/coc.ts',
-    '^@/(.*)$': '<rootDir>/../src/$1',
-    '^../bridge/core$': '<rootDir>/../__tests__/mocks/bridge-core.ts',
-    '^../../src/bridge/core$': '<rootDir>/../__tests__/mocks/bridge-core.ts',
-    '^../components/vim-component$': '<rootDir>/../__tests__/mocks/vim-component.ts',
-    '^../../src/components/vim-component$': '<rootDir>/../__tests__/mocks/vim-component.ts'
-  },
   transform: {
-    '^.+\.tsx?$': 'ts-jest',
-    '^.+\.vue$': '@vue/vue3-jest'
+    '^.+\\.tsx?$': ['ts-jest', {
+      tsconfig: 'tsconfig.json'
+    }],
+    '^.+\\.vue$': '@vue/vue3-jest'
   },
-  testRegex: '(/__tests__/.*|(\.|/)(test|spec))\.(tsx?|vue)$',
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node', 'vue'],
-  collectCoverage: true,
-  coverageDirectory: 'coverage',
+  moduleFileExtensions: [
+    'ts',
+    'tsx',
+    'js',
+    'jsx',
+    'json',
+    'vue'
+  ],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/dist/'
+  ],
+  setupFilesAfterEnv: [
+    '<rootDir>/test/setup.js'
+  ],
+  
+  // Important: This section handles known issues
+  // If a test consistently fails for known reasons, we can add it here
+  testFailureExitCode: 1,
+  
+  // Coverage configuration
   collectCoverageFrom: [
     'src/**/*.{ts,tsx,vue}',
     '!src/**/*.d.ts',
+    '!src/types/**/*'
   ],
-  testPathIgnorePatterns: [
-    '/node_modules/'
+  coverageReporters: [
+    'text',
+    'lcov',
+    'json-summary'
   ],
-  // Important: Cette section permet de gérer les problèmes connus
-  // Si un test échoue de manière répétée pour des raisons connues, nous pouvons l'ajouter ici
-  bail: false,
-  verbose: true,
-  setupFilesAfterEnv: ['<rootDir>/../src/jest-setup.js'],
-  watchPathIgnorePatterns: ['<rootDir>/../lib/'],
-  globals: {
-    'vue-jest': {
-      experimentalCSSCompile: true
+  coverageDirectory: '<rootDir>/coverage',
+  
+  // Project configuration
+  projects: [
+    {
+      displayName: 'UNIT',
+      testMatch: ['<rootDir>/test/unit/**/*.test.ts'],
+      setupFilesAfterEnv: [
+        '<rootDir>/test/setup.js'
+      ]
     },
-    'ts-jest': {
-      tsconfig: '<rootDir>/tsconfig.json',
-      diagnostics: {
-        warnOnly: true
-      }
+    {
+      displayName: 'INTEGRATION',
+      testMatch: ['<rootDir>/test/integration/**/*.test.ts'],
+      setupFilesAfterEnv: [
+        '<rootDir>/test/setup.js',
+        '<rootDir>/test/integration/setup.js'
+      ]
     }
-  }
+  ],
+  
+  // Global timeout configuration
+  testTimeout: 30000,
+  
+  // Verbose output for debugging
+  verbose: true
 };

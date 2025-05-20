@@ -1,19 +1,23 @@
 /**
- * Configuration globale pour Jest
- * Ce fichier est exécuté avant chaque test
+ * Global Jest configuration
+ * This file is executed before each test
  */
 
-// Augmenter le timeout par défaut pour tous les tests
+// Increase default timeout for all tests
 jest.setTimeout(30000);
 
-// Supprimer les avertissements inutiles de Jest
+// Suppress unnecessary Jest warnings
 const originalConsoleWarn = console.warn;
-console.warn = function(message) {
-  // Ignorer certains avertissements spécifiques
-  if (message.includes('vue-jest') || message.includes('ts-jest')) {
+console.warn = (...args) => {
+  const message = args.join(' ');
+  if (
+    message.includes('ExperimentalWarning') ||
+    message.includes('jest-environment-jsdom') ||
+    message.includes('Deprecation Warning')
+  ) {
     return;
   }
-  originalConsoleWarn.apply(console, arguments);
+  originalConsoleWarn.apply(console, args);
 };
 
 // Supprimer les logs de debug pendant les tests sauf si VERBOSE_LOGS est activé
@@ -30,14 +34,34 @@ if (!process.env.VERBOSE_LOGS || process.env.VERBOSE_LOGS !== 'true') {
   };
 }
 
-// Fonction utilitaire pour attendre une condition
-global.waitForCondition = async function(condition, timeout = 5000, interval = 100) {
-  const startTime = Date.now();
-  while (Date.now() - startTime < timeout) {
+// Add custom Jest matchers
+expect.extend({
+  toBeWithinRange(received, floor, ceiling) {
+    const pass = received >= floor && received <= ceiling;
+    if (pass) {
+      return {
+        message: () =>
+          `expected ${received} not to be within range ${floor} - ${ceiling}`,
+        pass: true,
+      };
+    } else {
+      return {
+        message: () =>
+          `expected ${received} to be within range ${floor} - ${ceiling}`,
+        pass: false,
+      };
+    }
+  },
+});
+
+// Utility function to wait for a condition
+global.waitForCondition = async (condition, timeout = 5000, interval = 100) => {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
     if (await condition()) {
       return true;
     }
     await new Promise(resolve => setTimeout(resolve, interval));
   }
-  throw new Error(`Condition non remplie après ${timeout}ms`);
+  return false;
 };

@@ -1,146 +1,152 @@
 #!/bin/bash
-# run-simplified-tests.sh
-# Script pour exécuter les tests simplifiés sans dépendre de l'intégration Neovim
+# Script to run simplified tests without Neovim integration dependency
 
-# Définir le chemin vers la racine du projet
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-cd "$PROJECT_ROOT"
+# Import common utilities
+source "$(dirname "$0")/../../utils/output.sh"
 
-# Afficher le répertoire de travail pour le débogage
-echo "Répertoire de travail: $(pwd)"
-echo "PROJECT_ROOT: $PROJECT_ROOT"
+# Display working directory for debugging
+echo "Working directory: $(pwd)"
 
-# Couleurs pour l'affichage
-GREEN='\033[0;32m'
+# Colors for display
 RED='\033[0;31m'
-YELLOW='\033[0;33m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Fonction pour afficher l'en-tête
+# Function to display header
 print_header() {
-  echo -e "\n${BLUE}=========================================${NC}"
-  echo -e "${BLUE}   Tests simplifiés pour coc-vue   ${NC}"
-  echo -e "${BLUE}=========================================${NC}\n"
+  echo -e "\n${BLUE}   Simplified Tests for coc-vue   ${NC}"
+  echo -e "${BLUE}================================${NC}\n"
 }
 
-# Fonction pour afficher les messages d'information
+# Function to display information messages
 print_info() {
   echo -e "${YELLOW}$1${NC}"
 }
 
-# Fonction pour afficher les messages de succès
+# Function to display success messages
 print_success() {
   echo -e "${GREEN}$1${NC}"
 }
 
-# Fonction pour afficher les messages d'erreur
+# Function to display error messages
 print_error() {
   echo -e "${RED}$1${NC}"
 }
 
-# Fonction pour nettoyer les ressources
+# Function to clean up resources
 cleanup() {
-  print_info "Nettoyage des ressources..."
+  # Kill any remaining Jest processes
+  pkill -f "jest" 2>/dev/null
   
-  # Tuer les processus sur le port 9999
-  if lsof -i :9999 > /dev/null 2>&1; then
-    print_info "Nettoyage des processus sur le port 9999..."
-    lsof -i :9999 -t | xargs kill -9 2>/dev/null || true
-  fi
+  # Clean up temporary files
+  rm -f /tmp/test-*.log 2>/dev/null
+  rm -rf /tmp/test-results 2>/dev/null
   
-  # Nettoyer les fichiers temporaires
-  rm -f /tmp/component-server.log /tmp/simplified-test.log
-  
-  print_success "Nettoyage terminé."
+  exit ${1:-$?}
 }
 
-# Fonction pour exécuter les tests unitaires
+# Clean up temporary files
+cleanup_temp_files() {
+  rm -f /tmp/test-*.log 2>/dev/null
+  rm -rf /tmp/test-results 2>/dev/null
+}
+
+# Function to run unit tests
 run_unit_tests() {
-  print_info "Exécution des tests unitaires..."
+  print_info "Running unit tests with mocks..."
   
-  # Exécuter les tests unitaires avec Jest et la configuration simplifiée
-  MOCK_NEOVIM=true npx jest --config "$PROJECT_ROOT/test/simplified-jest.config.js" --testPathPattern="__tests__/(?!integration)" --passWithNoTests
+  # Run unit tests with Jest and simplified configuration
+  npx jest --config ./test-improved/jest.config.js \
+    --testPathPattern="__tests__/(?!integration)" \
+    --passWithNoTests \
+    "$@"
+  
   local result=$?
   
   if [ $result -eq 0 ]; then
-    print_success "✓ Tests unitaires réussis !"
+    print_success "✓ Unit tests passed!"
   else
-    print_error "✗ Tests unitaires échoués."
+    print_error "✗ Unit tests failed."
   fi
   
   return $result
 }
 
-# Fonction pour exécuter les tests de composants
+# Function to run component tests
 run_component_tests() {
-  print_info "Exécution des tests de composants avec mocks..."
+  print_info "Running component tests with mocks..."
   
-  # Exécuter les tests de composants avec Jest et la configuration simplifiée
-  MOCK_NEOVIM=true npx jest --config "$PROJECT_ROOT/test/simplified-jest.config.js" --testPathPattern="__tests__/components" --passWithNoTests
+  # Run component tests with Jest and simplified configuration
+  npx jest --config ./test-improved/jest.config.js \
+    --testPathPattern="__tests__/components" \
+    --passWithNoTests \
+    "$@"
+  
   local result=$?
   
   if [ $result -eq 0 ]; then
-    print_success "✓ Tests de composants réussis !"
+    print_success "✓ Component tests passed!"
   else
-    print_error "✗ Tests de composants échoués."
+    print_error "✗ Component tests failed."
   fi
   
   return $result
 }
 
-# Fonction pour exécuter les tests d'intégration simplifiés
+# Function to run simplified integration tests
 run_integration_tests() {
-  print_info "Exécution des tests d'intégration simplifiés..."
+  print_info "Running simplified integration tests..."
   
-  # Exécuter les tests d'intégration avec Jest et la configuration simplifiée
-  MOCK_NEOVIM=true npx jest --config "$PROJECT_ROOT/test/simplified-jest.config.js" --testPathPattern="__tests__/integration" --passWithNoTests
+  # Run integration tests with Jest and simplified configuration
+  npx jest --config ./test-improved/jest.config.js \
+    --testPathPattern="__tests__/integration" \
+    --passWithNoTests \
+    "$@"
+  
   local result=$?
   
   if [ $result -eq 0 ]; then
-    print_success "✓ Tests d'intégration réussis !"
+    print_success "✓ Integration tests passed!"
   else
-    print_error "✗ Tests d'intégration échoués."
+    print_error "✗ Integration tests failed."
   fi
   
   return $result
 }
 
-# Fonction principale
+# Main function
 main() {
+  # Configure trap for cleanup on interruption
+  trap cleanup SIGINT SIGTERM
+  
+  # Display header
   print_header
   
-  # Configurer le trap pour nettoyer en cas d'interruption
-  trap cleanup EXIT INT TERM
-  
-  # Nettoyer les ressources avant de commencer
-  cleanup
-  
-  # Exécuter les tests
-  run_unit_tests
+  # Run tests
+  run_unit_tests "$@"
   local unit_result=$?
   
-  run_component_tests
+  run_component_tests "$@"
   local component_result=$?
   
-  run_integration_tests
+  run_integration_tests "$@"
   local integration_result=$?
   
-  # Afficher le résumé
-  echo -e "\n${BLUE}=== Résumé des tests ====${NC}"
-  [ $unit_result -eq 0 ] && echo -e "${GREEN}✓ Tests unitaires: SUCCÈS${NC}" || echo -e "${RED}✗ Tests unitaires: ÉCHEC (code $unit_result)${NC}"
-  [ $component_result -eq 0 ] && echo -e "${GREEN}✓ Tests de composants: SUCCÈS${NC}" || echo -e "${RED}✗ Tests de composants: ÉCHEC (code $component_result)${NC}"
-  [ $integration_result -eq 0 ] && echo -e "${GREEN}✓ Tests d'intégration: SUCCÈS${NC}" || echo -e "${RED}✗ Tests d'intégration: ÉCHEC (code $integration_result)${NC}"
+  # Display summary
+  echo -e "\n${BLUE}=== Test Summary ====${NC}"
+  [ $unit_result -eq 0 ] && echo -e "${GREEN}✓ Unit tests: PASSED${NC}" || echo -e "${RED}✗ Unit tests: FAILED (code $unit_result)${NC}"
+  [ $component_result -eq 0 ] && echo -e "${GREEN}✓ Component tests: PASSED${NC}" || echo -e "${RED}✗ Component tests: FAILED (code $component_result)${NC}"
+  [ $integration_result -eq 0 ] && echo -e "${GREEN}✓ Integration tests: PASSED${NC}" || echo -e "${RED}✗ Integration tests: FAILED (code $integration_result)${NC}"
   
-  # Calculer le résultat global
-  if [ $unit_result -eq 0 ] && [ $component_result -eq 0 ] && [ $integration_result -eq 0 ]; then
-    print_success "Tous les tests ont réussi!"
-    exit 0
-  else
-    print_error "Certains tests ont échoué."
-    exit 1
-  fi
+  # Clean up
+  cleanup_temp_files
+  
+  # Return overall result
+  [ $unit_result -eq 0 ] && [ $component_result -eq 0 ] && [ $integration_result -eq 0 ]
+  return $?
 }
 
-# Exécuter la fonction principale
+# Execute main function
 main "$@"

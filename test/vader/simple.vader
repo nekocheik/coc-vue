@@ -1,13 +1,42 @@
-# Test simple pour comprendre le fonctionnement de Vader
+# Simple test to understand Vader functionality
 
-Execute (Test simple):
-  " Test d'une variable Vim
-  let g:test_var = 'test'
-  
-  " Test d'un bloc Lua simple
-  lua print('Test Lua')
-  lua local test = 'test'
-  lua print(test)
-  
-  " Test d'assertion
-  lua assert(true, "Ceci devrait passer")
+# Basic assertions
+Execute (Basic assertions):
+  let g:test_value = 42
+  let g:test_string = 'Hello'
+  let g:test_list = [1, 2, 3]
+
+Then (Verify basic values):
+  Assert g:test_value == 42
+  Assert g:test_string == 'Hello'
+  Assert len(g:test_list) == 3
+
+# Lua integration
+Execute (Lua integration):
+  lua << EOF
+  -- Set some test values
+  vim.g.lua_test_value = 100
+  vim.g.lua_test_string = 'World'
+  vim.g.lua_test_table = {a = 1, b = 2}
+  EOF
+
+Then (Verify Lua values):
+  Assert g:lua_test_value == 100
+  Assert g:lua_test_string == 'World'
+  lua assert(vim.g.lua_test_table.a == 1)
+  lua assert(vim.g.lua_test_table.b == 2)
+
+# Buffer operations
+Execute (Buffer operations):
+  new
+  let g:test_buf = bufnr('%')
+  call setline(1, ['Line 1', 'Line 2', 'Line 3'])
+
+Then (Verify buffer content):
+  Assert getline(1) == 'Line 1'
+  Assert getline(2) == 'Line 2'
+  Assert getline(3) == 'Line 3'
+  Assert line('$') == 3
+
+Execute (Clean up):
+  bwipeout!

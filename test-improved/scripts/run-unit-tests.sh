@@ -25,20 +25,21 @@ cleanup() {
     echo -e "${YELLOW}Force stopping Jest...${NC}"
     kill -9 $JEST_PID 2>/dev/null
   fi
+  exit $EXIT_CODE
 }
 
 # Configure trap for cleanup on interruption
-trap cleanup EXIT INT TERM
+trap cleanup SIGINT SIGTERM
 
 # Run unit tests with Jest in background
 VERBOSE_LOGS=${VERBOSE_LOGS:-false} npx jest --config ./test-improved/jest.config.js --selectProjects UNIT "$@" &
 JEST_PID=$!
 
 # Monitor Jest process with timeout
-ELAPSED=0
+SECONDS=0
 while kill -0 $JEST_PID 2>/dev/null; do
   # Check if timeout is reached
-  if [ $ELAPSED -ge $MAX_TIMEOUT ]; then
+  if [ $SECONDS -ge $MAX_TIMEOUT ]; then
     echo -e "\n${RED}ERROR: Tests exceeded timeout of ${MAX_TIMEOUT} seconds.${NC}"
     echo -e "${RED}Force stopping tests...${NC}"
     kill -9 $JEST_PID 2>/dev/null
@@ -48,12 +49,6 @@ while kill -0 $JEST_PID 2>/dev/null; do
   
   # Wait 1 second and increment counter
   sleep 1
-  ELAPSED=$((ELAPSED + 1))
-  
-  # Show a dot every 5 seconds to indicate script is still active
-  if [ $((ELAPSED % 5)) -eq 0 ]; then
-    echo -n "."
-  fi
 done
 
 # Wait for Jest to finish (if not killed)

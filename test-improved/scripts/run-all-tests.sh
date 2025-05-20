@@ -25,53 +25,52 @@ echo -e "${YELLOW}Global Timeout: $(show_time $GLOBAL_TIMEOUT)${NC}"
 # Create reports directory if it doesn't exist
 REPORT_DIR="./test-improved/reports"
 mkdir -p $REPORT_DIR
+mkdir -p "$REPORT_DIR/coverage"
 
 # Function to display elapsed time
 function show_time() {
   local T=$1
-  local H=$((T/3600))
-  local M=$(((T%3600)/60))
+  local D=$((T/60/60/24))
+  local H=$((T/60/60%24))
+  local M=$((T/60%60))
   local S=$((T%60))
   
-  if [ $H -gt 0 ]; then
-    printf "%dh %dm %ds" $H $M $S
+  if [ $D -gt 0 ]; then
+    echo "${D}d ${H}h ${M}m ${S}s"
+  elif [ $H -gt 0 ]; then
+    echo "${H}h ${M}m ${S}s"
   elif [ $M -gt 0 ]; then
-    printf "%dm %ds" $M $S
+    echo "${M}m ${S}s"
   else
-    printf "%ds" $S
+    echo "${S}s"
   fi
 }
 
 # Function to monitor global timeout and stop tests if necessary
 function monitor_timeout() {
-  local start_time=$1
-  local timeout=$2
-  local elapsed=0
+  local timeout=$1
+  local start_time=$SECONDS
   
-  while [ $elapsed -lt $timeout ]; do
+  while true; do
     sleep 5
-    current_time=$(date +%s)
-    elapsed=$((current_time - start_time))
+    local current_time=$SECONDS
+    local elapsed=$((current_time - start_time))
     
-    # Check if the main process is still running
-    if ! ps -p $$ > /dev/null; then
-      return 0
+    if [ $elapsed -ge $timeout ]; then
+      echo -e "\n${RED}ERROR: Tests exceeded the global timeout of $(show_time $timeout).${NC}"
+      echo -e "${RED}Forcing stop of all test processes...${NC}"
+      
+      # Kill all running Jest processes
+      pkill -f "jest" 2>/dev/null
+      
+      exit 1
     fi
   done
-  
-  echo -e "\n${RED}ERROR: Tests exceeded the global timeout of $(show_time $timeout).${NC}"
-  echo -e "${RED}Forcing stop of all test processes...${NC}"
-  
-  # Kill all running Jest processes
-  pkill -f "jest" 2>/dev/null
-  
-  # Kill the main process (this script)
-  kill -9 $$ 2>/dev/null
 }
 
 # Start global timeout monitoring in the background
-START_TIME=$(date +%s)
-monitor_timeout $START_TIME $GLOBAL_TIMEOUT &
+START_TIME=$SECONDS
+monitor_timeout $GLOBAL_TIMEOUT &
 MONITOR_PID=$!
 
 # Function to clean up processes on exit
@@ -100,7 +99,7 @@ INTEGRATION_EXIT_CODE=$?
 kill $MONITOR_PID 2>/dev/null
 
 # Calculate total time
-END_TIME=$(date +%s)
+END_TIME=$SECONDS
 TOTAL_TIME=$((END_TIME - START_TIME))
 
 echo -e "${BLUE}=======================================${NC}"
@@ -124,7 +123,7 @@ fi
 echo
 
 # Generate coverage report with timeout
-echo -e "${YELLOW}Generating code coverage report...${NC}"
+echo -e "${CYAN}Generating code coverage report...${NC}"
 timeout 60s npx jest --config ./test-improved/jest.config.js --coverage --coverageReporters="json-summary" --coverageDirectory=$REPORT_DIR/coverage
 COVERAGE_EXIT_CODE=$?
 
