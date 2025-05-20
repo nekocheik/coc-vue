@@ -118,10 +118,13 @@ export function resetAllMocks() {
 export default {
   workspace: mockWorkspace,
   Disposable: class Disposable {
-    constructor(fn) {
+    dispose: () => void;
+    
+    constructor(fn?: () => void) {
       this.dispose = fn || (() => {});
     }
-    static create(fn) {
+    
+    static create(fn?: () => void): Disposable {
       return new Disposable(fn);
     }
   },

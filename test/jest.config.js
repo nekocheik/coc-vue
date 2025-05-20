@@ -1,6 +1,6 @@
 /**
  * Configuration Jest principale pour le projet COC-Vue
- * Cette configuration est utilisée pour tous les tests
+ * Configuration robuste et optimisée pour les tests unitaires et d'intégration
  */
 const baseConfig = {
   preset: 'ts-jest',
@@ -50,8 +50,6 @@ const integrationConfig = {
     '<rootDir>/utils/integration-setup.js'
   ]
 };
-
-// Note: Les timeouts sont définis dans les fichiers de setup
 
 // Exporter les configurations
 module.exports = {

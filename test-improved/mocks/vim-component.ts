@@ -133,7 +133,7 @@ export class VimComponent {
             type: MessageType.ERROR,
             action: 'methodError',
             correlationId: message.correlationId,
-            payload: { error: error.message }
+            payload: { error: error instanceof Error ? error.message : String(error) }
           });
         }
       }

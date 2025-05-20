@@ -5,7 +5,7 @@
 import { NeovimClient, ComponentConfig } from './neovim-client';
 
 // Options par défaut pour les composants
-export const DEFAULT_OPTIONS = {
+export const DEFAULT_OPTIONS: Record<string, Record<string, any>> = {
   SELECT: {
     title: 'Test Select',
     options: [
