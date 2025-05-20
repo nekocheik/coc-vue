@@ -13,6 +13,8 @@ jobs:
     
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -27,42 +29,61 @@ jobs:
           cat > scripts/check-french-words.js << 'EOL'
           const fs = require('fs');
           const path = require('path');
+          const { execSync } = require('child_process');
           
-          // Common French words to check (200 most common words)
-          const frenchWords = [
-            'le', 'la', 'les', 'un', 'une', 'des', 'ce', 'cette', 'ces',
-            'mon', 'ton', 'son', 'notre', 'votre', 'leur', 'mes', 'tes', 'ses',
-            'être', 'avoir', 'faire', 'dire', 'aller', 'voir', 'savoir', 'pouvoir',
-            'falloir', 'vouloir', 'venir', 'prendre', 'devoir', 'parler', 'trouver',
-            'donner', 'regarder', 'aimer', 'croire', 'passer', 'attendre', 'partir',
-            'mettre', 'rester', 'demander', 'répondre', 'entendre', 'penser', 'sortir',
-            'connaître', 'sembler', 'tenir', 'comprendre', 'rendre', 'devenir', 'sentir',
-            'recevoir', 'revenir', 'rappeler', 'permettre', 'porter', 'montrer', 'jouer',
-            'ouvrir', 'arrêter', 'chercher', 'commencer', 'écrire', 'appeler', 'marcher',
-            'vivre', 'espérer', 'asseoir', 'rentrer', 'reprendre', 'servir', 'décider',
-            'réussir', 'essayer', 'finir', 'perdre', 'expliquer', 'occuper', 'accepter',
-            'changer', 'présenter', 'agir', 'poser', 'garder', 'quitter', 'suivre',
-            'manger', 'arriver', 'utiliser', 'laisser', 'travailler', 'créer',
-            'très', 'aussi', 'plus', 'moins', 'bien', 'mal', 'vite', 'tard',
-            'tôt', 'loin', 'près', 'maintenant', 'toujours', 'jamais', 'parfois',
-            'souvent', 'aujourd\'hui', 'demain', 'hier', 'ici', 'là', 'donc',
-            'alors', 'voilà', 'déjà', 'encore', 'enfin', 'pendant', 'depuis',
-            'vers', 'chez', 'dans', 'sur', 'sous', 'avec', 'sans', 'pour',
-            'par', 'mais', 'ou', 'et', 'donc', 'car', 'bonjour', 'merci',
-            'oui', 'non', 'peut-être', 'pourquoi', 'comment', 'quand', 'où',
-            'qui', 'que', 'quoi', 'quel', 'quelle', 'lequel', 'laquelle',
-            'ceci', 'cela', 'celui', 'celle', 'ceux', 'celles', 'chaque',
-            'tout', 'toute', 'tous', 'toutes', 'aucun', 'aucune', 'plusieurs',
-            'certains', 'certaines', 'même', 'autre', 'autres', 'quelque',
-            'quelques', 'nouveau', 'nouvelle', 'nouveaux', 'nouvelles', 'bon',
-            'bonne', 'bons', 'bonnes', 'grand', 'grande', 'grands', 'grandes',
-            'petit', 'petite', 'petits', 'petites', 'haut', 'haute', 'bas',
-            'basse', 'long', 'longue', 'court', 'courte', 'facile', 'difficile',
-            'possible', 'impossible', 'simple', 'complexe', 'important', 'importante',
-            'vrai', 'vraie', 'faux', 'fausse', 'dernier', 'dernière', 'prochain',
-            'prochaine', 'premier', 'première', 'deuxième', 'troisième', 'meilleur',
-            'pire', 'différent', 'différente', 'pareil', 'pareille'
-          ];
+          // French-specific characters and patterns
+          const frenchPatterns = {
+            // Accented characters commonly used in French
+            accentedChars: /[àâäéèêëîïôöùûüÿçÀÂÄÉÈÊËÎÏÔÖÙÛÜŸÇ]/g,
+            
+            // French-specific punctuation
+            punctuation: /[«»]/g,
+            
+            // Common French technical terms and their variations
+            technicalTerms: [
+              // Development terms often used in French
+              'développeur', 'développement', 'développé',
+              'paramètre', 'paramétrage',
+              'référence', 'référencement',
+              'implémentation', 'implémenté',
+              'fonctionnalité', 'fonctionnel',
+              'bibliothèque',
+              'récupération', 'récupérer',
+              'génération', 'générer',
+              'sécurité', 'sécurisé',
+              'données', 'donnée',
+              'requête', 'requêtes',
+              'méthode', 'méthodes',
+              'système', 'systèmes',
+              'intégration', 'intégré',
+              'création', 'créer',
+              'suppression', 'supprimer',
+              'modification', 'modifier',
+              'configuration', 'configurer',
+              'initialisation', 'initialiser',
+              'déploiement', 'déployer',
+              'exécution', 'exécuter',
+              'vérification', 'vérifier',
+              'traitement', 'traiter',
+              'utilisateur', 'utilisateurs',
+              'connexion', 'connecter',
+              'déconnexion', 'déconnecter',
+              'erreur', 'erreurs',
+              'fichier', 'fichiers',
+              'dossier', 'dossiers',
+              'répertoire', 'répertoires',
+              'commande', 'commandes',
+              'variable', 'variables',
+              'tableau', 'tableaux',
+              'objet', 'objets',
+              'classe', 'classes',
+              'fonction', 'fonctions',
+              'procédure', 'procédures',
+              'boucle', 'boucles',
+              'condition', 'conditions',
+              'valeur', 'valeurs'
+            ]
+          };
           
           // File extensions to check
           const extensions = ['.js', '.ts', '.lua', '.json', '.yml', '.md'];
@@ -70,19 +91,43 @@ jobs:
           // Directories to ignore
           const ignoreDirs = ['node_modules', '.git', 'dist', 'build'];
           
-          // Function to check if a word is French
-          function containsFrenchWord(text) {
+          // Function to check for French patterns
+          function checkForFrenchPatterns(text) {
             const matches = [];
-            for (const word of frenchWords) {
-              const regex = new RegExp(`\\b${word}\\b`, 'gi');
-              let match;
-              while ((match = regex.exec(text)) !== null) {
+            
+            // Check for accented characters
+            const accentMatches = [...text.matchAll(frenchPatterns.accentedChars)];
+            for (const match of accentMatches) {
+              matches.push({
+                type: 'accent',
+                char: match[0],
+                index: match.index
+              });
+            }
+            
+            // Check for French punctuation
+            const punctMatches = [...text.matchAll(frenchPatterns.punctuation)];
+            for (const match of punctMatches) {
+              matches.push({
+                type: 'punctuation',
+                char: match[0],
+                index: match.index
+              });
+            }
+            
+            // Check for technical terms
+            for (const term of frenchPatterns.technicalTerms) {
+              const regex = new RegExp(`\\b${term}\\b`, 'gi');
+              let termMatch;
+              while ((termMatch = regex.exec(text)) !== null) {
                 matches.push({
-                  word: match[0],
-                  index: match.index
+                  type: 'technical',
+                  word: termMatch[0],
+                  index: termMatch.index
                 });
               }
             }
+            
             return matches;
           }
           
@@ -108,29 +153,69 @@ jobs:
             
             return results;
           }
+
+          // Function to check commit messages
+          function checkCommitMessages() {
+            try {
+              const commitMessages = execSync('git log --pretty=format:"%s"').toString().split('\n');
+              let hasFrenchPatterns = false;
+              
+              for (const message of commitMessages) {
+                const matches = checkForFrenchPatterns(message);
+                if (matches.length > 0) {
+                  console.log(`\nFrench patterns found in commit message: "${message}"`);
+                  for (const match of matches) {
+                    if (match.type === 'accent') {
+                      console.log(`- Accented character "${match.char}" at position ${match.index}`);
+                    } else if (match.type === 'punctuation') {
+                      console.log(`- French punctuation "${match.char}" at position ${match.index}`);
+                    } else if (match.type === 'technical') {
+                      console.log(`- French technical term "${match.word}" at position ${match.index}`);
+                    }
+                    hasFrenchPatterns = true;
+                  }
+                }
+              }
+              return hasFrenchPatterns;
+            } catch (error) {
+              console.error('Error checking commit messages:', error);
+              return false;
+            }
+          }
           
           // Main execution
-          let hasFrenchWords = false;
-          const files = walkDir('.');
+          let hasFrenchPatterns = false;
           
+          // Check files
+          const files = walkDir('.');
           for (const file of files) {
             const content = fs.readFileSync(file, 'utf8');
-            const matches = containsFrenchWord(content);
+            const matches = checkForFrenchPatterns(content);
             
             if (matches.length > 0) {
-              console.log(`\nFrench words found in ${file}:`);
+              console.log(`\nFrench patterns found in ${file}:`);
               for (const match of matches) {
-                console.log(`- "${match.word}" at position ${match.index}`);
-                hasFrenchWords = true;
+                if (match.type === 'accent') {
+                  console.log(`- Accented character "${match.char}" at position ${match.index}`);
+                } else if (match.type === 'punctuation') {
+                  console.log(`- French punctuation "${match.char}" at position ${match.index}`);
+                } else if (match.type === 'technical') {
+                  console.log(`- French technical term "${match.word}" at position ${match.index}`);
+                }
+                hasFrenchPatterns = true;
               }
             }
           }
           
-          if (hasFrenchWords) {
-            console.error('\nError: French words were found in the codebase');
+          // Check commit messages
+          const hasFrenchInCommits = checkCommitMessages();
+          hasFrenchPatterns = hasFrenchPatterns || hasFrenchInCommits;
+          
+          if (hasFrenchPatterns) {
+            console.error('\nError: French patterns (accents, punctuation, or technical terms) were found in the codebase or commit messages');
             process.exit(1);
           } else {
-            console.log('\nSuccess: No French words were found in the codebase');
+            console.log('\nSuccess: No French patterns were found in the codebase or commit messages');
           }
           EOL
           
