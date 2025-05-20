@@ -1,8 +1,41 @@
-# CoC Vue Integration
+<div align="center">
 
-## Integration Protocol
+# 🔌 CoC Vue Integration
 
-### Node.js <-> Command Server communication is stable.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Neovim: v0.5.0+](https://img.shields.io/badge/Neovim-v0.5.0%2B-green.svg)](https://neovim.io)
+[![Vue.js: v3.x](https://img.shields.io/badge/Vue.js-v3.x-41b883.svg)](https://vuejs.org)
+[![Tests: Passing](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)]()
+
+**Powerful and agnostic Vue.js integration for Neovim via coc.nvim**
+
+<img src="https://raw.githubusercontent.com/neoclide/coc.nvim/master/doc/coc-logo.png" alt="CoC Logo" width="200"/>
+
+*Develop Vue.js applications directly in your favorite editor with an interactive and fluid experience*
+
+[Installation](#installation) • 
+[Features](#features) • 
+[Usage](#usage) • 
+[Documentation](#documentation) • 
+[Contributing](#contributing)
+
+</div>
+
+## 🚀 Vue.js in Neovim Like Never Before
+
+Coc-Vue transforms Neovim into a true Vue.js development environment, offering an interactive and reactive experience directly in your editor. Manipulate Vue components, test their behavior, and develop faster thanks to this advanced integration.
+
+### ✨ Key Features
+
+- **100% Agnostic Architecture** - Works with any Vue component without specific configuration
+- **Reactive System** - Real-time interaction with your Vue components
+- **Dynamic Mappings** - Automatically generated based on available methods
+- **Robust Testing** - Comprehensive test suite ensuring reliability and stability
+- **Unified CLI** - Simple command line interface for all operations
+
+## 🏗️ Innovative Architecture
+
+The extension uses a sophisticated client-server architecture with a bidirectional TCP communication protocol between Node.js and Neovim:
 
 The integration between Node.js and the command server has been established using a TCP-based communication protocol. The protocol implements the following commands:
 
@@ -135,4 +168,146 @@ Ces commandes sont essentielles pour identifier les problèmes lors de l'exécut
 
 The current implementation provides a stable foundation for communication between Node.js and the command server. The next phase will involve implementing specific commands for the TypeScript <-> Lua bridge to handle component loading, method calls, state management, etc.
 
-Development will proceed in a disciplined manner, with each phase being locked and verified before moving to the next.
+## 📦 Installation
+
+```vim
+" Via vim-plug
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
+
+" Then install the extension
+:CocInstall coc-vue
+```
+
+Or manually:
+
+```bash
+cd ~/.config/coc/extensions/
+npm install --global-style --ignore-scripts --no-bin-links coc-vue
+```
+
+## 🔧 Configuration
+
+Add these lines to your `init.vim` or `.vimrc`:
+
+```vim
+" Basic configuration for coc-vue
+let g:coc_vue_enable = 1
+let g:coc_vue_debug = 0  " Enable for debugging
+
+" Recommended mappings
+nmap <silent> <leader>vc :CocCommand vue.showComponentsDemo<CR>
+nmap <silent> <leader>vw :CocCommand vue.showWindowDemo<CR>
+```
+
+## 🖥️ Using the Integrated CLI
+
+The extension provides a powerful CLI to facilitate development and testing:
+
+```bash
+# Show all available commands
+./coc-vue-cli.sh help
+
+# Start the component server
+./coc-vue-cli.sh server:start
+
+# Run integration tests
+./coc-vue-cli.sh test:component
+
+# Run a specific test section
+./coc-vue-cli.sh test:component component-loading
+
+# Check logs after a specific step
+./coc-vue-cli.sh logs:check server_startup
+
+# Analyze test results
+./coc-vue-cli.sh logs:analyze
+```
+
+## 📂 Project Structure
+
+```
+coc-vue/
+├── coc-vue-cli.sh            # Unified CLI for all commands
+├── config/                   # Configuration files
+│   ├── babel.config.js       # Babel configuration
+│   ├── jest.config.js        # Jest configuration
+│   ├── tsconfig.json         # TypeScript configuration
+│   └── webpack.config.js     # Webpack configuration
+├── docs/                     # Comprehensive documentation
+│   ├── DOCUMENTATION.md      # User guide
+│   └── technical/            # Technical documentation
+├── logs/                     # Log file storage
+├── scripts/                  # Automation scripts
+│   ├── js/                   # JavaScript servers and tests
+│   ├── lua/                  # Lua integration for Neovim
+│   ├── server/               # Server management
+│   ├── setup/                # Setup scripts
+│   ├── test/                 # Test framework
+│   ├── utils/                # Various utilities
+│   └── vim/                  # Vim/Neovim configuration
+├── src/                      # TypeScript source code
+└── __tests__/                # Jest integration tests
+```
+
+## 🧪 Testing and Quality
+
+The project maintains a comprehensive test suite to ensure stability and reliability:
+
+```bash
+# Run all tests
+npm test
+
+# Run integration tests
+npm run test:integration
+
+# Run bridge tests
+npm run test:bridge
+```
+
+Available test sections:
+
+- `component-loading` - Component loading
+- `component-state` - State management
+- `dropdown-control` - Dropdown menu control
+- `option-selection` - Option selection
+- `props-update` - Property updates
+- `multi-select` - Multi-selection mode
+- `navigation` - Option navigation
+- `error-handling` - Error handling
+
+## 🔍 Debugging
+
+If you encounter issues, use these commands in Neovim:
+
+```vim
+:messages       " Display Neovim error messages
+:CocOpenLog     " Open Coc.nvim log file
+```
+
+Or use our integrated diagnostic tool:
+
+```bash
+./coc-vue-cli.sh logs:check all
+```
+
+## 👥 Contributing
+
+Contributions are welcome! Here's how to participate:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+<div align="center">
+
+**Coc-Vue** • Developed with ❤️ for the Vue.js and Neovim community
+
+</div>
