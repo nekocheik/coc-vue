@@ -1,0 +1,190 @@
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+
+// French-specific characters and patterns
+const frenchPatterns = {
+  // Accented characters commonly used in French
+  accentedChars: /[àâäéèêëîïôöùûüÿçÀÂÄÉÈÊËÎÏÔÖÙÛÜŸÇ]/g,
+  
+  // French-specific punctuation
+  punctuation: /[«»]/g,
+  
+  // Common French technical terms and their variations
+  technicalTerms: [
+    // Development terms often used in French
+    'développeur', 'développement', 'développé',
+    'paramètre', 'paramétrage',
+    'référence', 'référencement',
+    'implémentation', 'implémenté',
+    'fonctionnalité', 'fonctionnel',
+    'bibliothèque',
+    'récupération', 'récupérer',
+    'génération', 'générer',
+    'sécurité', 'sécurisé',
+    'données', 'donnée',
+    'requête', 'requêtes',
+    'méthode', 'méthodes',
+    'système', 'systèmes',
+    'intégration', 'intégré',
+    'création', 'créer',
+    'suppression', 'supprimer',
+    'modification', 'modifier',
+    'configuration', 'configurer',
+    'initialisation', 'initialiser',
+    'déploiement', 'déployer',
+    'exécution', 'exécuter',
+    'vérification', 'vérifier',
+    'traitement', 'traiter',
+    'utilisateur', 'utilisateurs',
+    'connexion', 'connecter',
+    'déconnexion', 'déconnecter',
+    'erreur', 'erreurs',
+    'fichier', 'fichiers',
+    'dossier', 'dossiers',
+    'répertoire', 'répertoires',
+    'commande', 'commandes',
+    'variable', 'variables',
+    'tableau', 'tableaux',
+    'objet', 'objets',
+    'classe', 'classes',
+    'fonction', 'fonctions',
+    'procédure', 'procédures',
+    'boucle', 'boucles',
+    'condition', 'conditions',
+    'valeur', 'valeurs'
+  ]
+};
+
+// File extensions to check
+const extensions = ['.js', '.ts', '.lua', '.json', '.yml', '.md'];
+
+// Directories to ignore
+const ignoreDirs = ['node_modules', '.git', 'dist', 'build'];
+
+// Function to check for French patterns
+function checkForFrenchPatterns(text) {
+  const matches = [];
+  
+  // Check for accented characters
+  const accentMatches = [...text.matchAll(frenchPatterns.accentedChars)];
+  for (const match of accentMatches) {
+    matches.push({
+      type: 'accent',
+      char: match[0],
+      index: match.index
+    });
+  }
+  
+  // Check for French punctuation
+  const punctMatches = [...text.matchAll(frenchPatterns.punctuation)];
+  for (const match of punctMatches) {
+    matches.push({
+      type: 'punctuation',
+      char: match[0],
+      index: match.index
+    });
+  }
+  
+  // Check for technical terms
+  for (const term of frenchPatterns.technicalTerms) {
+    const regex = new RegExp(`\\b${term}\\b`, 'gi');
+    let termMatch;
+    while ((termMatch = regex.exec(text)) !== null) {
+      matches.push({
+        type: 'technical',
+        word: termMatch[0],
+        index: termMatch.index
+      });
+    }
+  }
+  
+  return matches;
+}
+
+// Function to walk through directory
+function walkDir(dir) {
+  let results = [];
+  const list = fs.readdirSync(dir);
+  
+  for (const file of list) {
+    const filePath = path.join(dir, file);
+    const stat = fs.statSync(filePath);
+    
+    if (stat.isDirectory()) {
+      if (!ignoreDirs.includes(file)) {
+        results = results.concat(walkDir(filePath));
+      }
+    } else {
+      if (extensions.includes(path.extname(file))) {
+        results.push(filePath);
+      }
+    }
+  }
+  
+  return results;
+}
+
+// Function to check commit messages
+function checkCommitMessages() {
+  try {
+    const commitMessages = execSync('git log --pretty=format:"%s"').toString().split('\n');
+    let hasFrenchPatterns = false;
+    
+    for (const message of commitMessages) {
+      const matches = checkForFrenchPatterns(message);
+      if (matches.length > 0) {
+        console.log(`\nFrench patterns found in commit message: "${message}"`);
+        for (const match of matches) {
+          if (match.type === 'accent') {
+            console.log(`- Accented character "${match.char}" at position ${match.index}`);
+          } else if (match.type === 'punctuation') {
+            console.log(`- French punctuation "${match.char}" at position ${match.index}`);
+          } else if (match.type === 'technical') {
+            console.log(`- French technical term "${match.word}" at position ${match.index}`);
+          }
+          hasFrenchPatterns = true;
+        }
+      }
+    }
+    return hasFrenchPatterns;
+  } catch (error) {
+    console.error('Error checking commit messages:', error);
+    return false;
+  }
+}
+
+// Main execution
+let hasFrenchPatterns = false;
+
+// Check files
+const files = walkDir('.');
+for (const file of files) {
+  const content = fs.readFileSync(file, 'utf8');
+  const matches = checkForFrenchPatterns(content);
+  
+  if (matches.length > 0) {
+    console.log(`\nFrench patterns found in ${file}:`);
+    for (const match of matches) {
+      if (match.type === 'accent') {
+        console.log(`- Accented character "${match.char}" at position ${match.index}`);
+      } else if (match.type === 'punctuation') {
+        console.log(`- French punctuation "${match.char}" at position ${match.index}`);
+      } else if (match.type === 'technical') {
+        console.log(`- French technical term "${match.word}" at position ${match.index}`);
+      }
+      hasFrenchPatterns = true;
+    }
+  }
+}
+
+// Check commit messages
+const hasFrenchInCommits = checkCommitMessages();
+hasFrenchPatterns = hasFrenchPatterns || hasFrenchInCommits;
+
+if (hasFrenchPatterns) {
+  console.error('\nError: French patterns (accents, punctuation, or technical terms) were found in the codebase or commit messages');
+  process.exit(1);
+} else {
+  console.log('\nSuccess: No French patterns were found in the codebase or commit messages');
+} 
