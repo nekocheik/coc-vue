@@ -82,14 +82,14 @@ The project includes a robust testing framework that ensures reliability and sta
 ### Selective Test Execution
 
 ```bash
-# Run all tests
-./scripts/run_component_tests.sh
+# Run all component tests
+make test-component
 
 # Run a specific test section
-./scripts/run_component_tests.sh component-loading
+./scripts/test/runners/run-component-tests.sh --section component-loading
 
-# Run multiple test sections
-./scripts/run_component_tests.sh "component-loading,option-selection"
+# Run tests progressively (section by section)
+./scripts/test/runners/run-component-tests.sh --progressive
 ```
 
 ### Available Test Sections
@@ -137,7 +137,7 @@ The extension uses a command server to handle communication between TypeScript a
 
 ```bash
 # Start the Node.js command server
-./scripts/run_command_server.sh
+./scripts/test/runners/run-command-tests.sh --node
 ```
 
 The server will start on `127.0.0.1:9999` and log all commands and responses for monitoring and debugging purposes.
@@ -148,7 +148,10 @@ To verify that the command server is functioning correctly, you can run the comm
 
 ```bash
 # Run the command tests against the server
-./scripts/run_node_command_tests.sh
+make test-command
+
+# Or directly using the script
+./scripts/test/runners/run-command-tests.sh
 ```
 
 This script performs the following operations:
@@ -304,12 +307,15 @@ coc-vue/
 │   ├─ DOCUMENTATION.md      # User guide
 │   └─ technical/            # Technical documentation
 ├─ logs/                     # Log file storage
-├─ scripts/                  # Automation scripts
+├─ scripts/                   # Shell scripts
 │   ├─ js/                   # JavaScript utilities
 │   ├─ lua/                  # Lua integration for Neovim
 │   ├─ server/               # Server management
 │   ├─ setup/                # Setup scripts
 │   ├─ test/                 # Test framework
+│   │   ├─ core/             # Core test utilities
+│   │   ├─ runners/          # Test runner scripts
+│   │   └─ utils/            # Test utilities
 │   ├─ utils/                # Various utilities
 │   └─ vim/                  # Vim/Neovim configuration
 ├─ src/                      # TypeScript source code
@@ -334,18 +340,43 @@ The project maintains a comprehensive test suite to ensure stability, reliabilit
 
 ### Running Tests
 
+You can run tests using the Makefile for a more streamlined experience:
+
 ```bash
-# Run all tests with Jest
-npm test
+# Run unit and integration tests
+make test
 
-# Run with watch mode for development
-npm run test:watch
+# Run all tests (unit, integration, component, command, ping)
+make test-all
 
-# Run integration tests
-npm run test:integration
+# Run specific test categories
+make test-unit
+make test-integration
+make test-component
+make test-command
+make test-ping
 
-# Run bridge communication tests
-npm run test:bridge
+# Run tests with verbose output
+make test VERBOSE=true
+
+# Run tests with custom timeout
+make test TIMEOUT=600
+
+# Clean up test resources
+make clean
+```
+
+Alternatively, you can use the test scripts directly:
+
+```bash
+# Run all tests
+./scripts/test/run-all-tests.sh
+
+# Run unit tests only
+./scripts/test/run-all-tests.sh --unit-only
+
+# Run with verbose logging
+VERBOSE_LOGS=true ./scripts/test/run-all-tests.sh
 ```
 
 ### Test Categories
@@ -394,6 +425,9 @@ The extension provides comprehensive diagnostic tools:
 
 # Generate diagnostic report
 ./coc-vue-cli.sh diagnostics:report
+
+# Clean up test ports and processes
+make clean
 ```
 
 ### Troubleshooting Common Issues
