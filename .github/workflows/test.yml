@@ -1,0 +1,50 @@
+name: Docker Tests
+
+on:
+  push: # Run on every push to any branch
+  pull_request: # Run on all pull requests
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Docker
+        run: |
+          docker --version
+      
+      - name: Build Docker image
+        run: |
+          docker build -t coc-vue-test .
+      
+      - name: Run tests in Docker
+        run: |
+          mkdir -p test-results
+          docker run --rm coc-vue-test ./scripts/docker-run-tests.sh | tee test-output.log
+          echo "Test execution completed with exit code ${PIPESTATUS[0]}"
+        env:
+          MOCK_NEOVIM: true
+          NODE_ENV: test
+          CI: true
+      
+      # Create test summary
+      - name: Create test summary
+        if: always()
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          if [ -f test-output.log ]; then
+            if grep -q "Tous les tests ont réussi" test-output.log || grep -q "All tests passed" test-output.log; then
+              echo "✅ All tests passed successfully!" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❌ Some tests failed. See logs for details." >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "\n### Test Output" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat test-output.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ No test output log found." >> $GITHUB_STEP_SUMMARY
+          fi

@@ -1,7 +1,11 @@
 // __tests__/integration/select-bridge-integration.test.ts
-import { NeovimTestClient } from '../utils/neovim-test-client';
+import getNeovimClient from '../utils/neovim-client-factory';
 import { Select } from '../../src/components/select';
 import { MessageType } from '../../src/bridge/core';
+
+// Utiliser la factory pour obtenir le client approprié (mock ou réel)
+const client = getNeovimClient();
+type NeovimTestClientType = typeof client;
 
 /**
  * Bridge integration tests for the Select component

@@ -9,9 +9,30 @@ lib/
 coverage/
 coverage-bridge/
 coverage-renderer/
+test-results/
 
 # Node dependencies
 node_modules/
 
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Docker volumes
+docker-volumes/
+
 # Lock file (optional: keep it if you want deterministic installs)
 package-lock.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# IDE specific files
+.idea/
+.vscode/
+*.sublime-*
