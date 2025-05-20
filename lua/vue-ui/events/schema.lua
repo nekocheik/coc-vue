@@ -107,7 +107,7 @@ M.EVENT_SCHEMAS = {
     id = { type = "string", required = true }
   },
   
-  -- Schéma pour les événements de modal
+  -- Schema for modal events
   [M.EVENT_TYPES.MODAL_OPENED] = {
     id = { type = "string", required = true },
     title = { type = "string" },
@@ -154,7 +154,7 @@ M.EVENT_SCHEMAS = {
   
   -- Schema for select events
   -- Schema for select:opened event
-  -- @field id ID du composant Select
+  -- @field id ID of the Select component
   -- @field config Configuration of the Select component
   [M.EVENT_TYPES.SELECT_OPENED] = {
     id = { type = "string", required = true },
@@ -162,7 +162,7 @@ M.EVENT_SCHEMAS = {
   },
   
   -- Schema for select:closed event
-  -- @field id ID du composant Select
+  -- @field id ID of the Select component
   [M.EVENT_TYPES.SELECT_CLOSED] = {
     id = { type = "string", required = true }
   },
@@ -207,7 +207,7 @@ M.EVENT_SCHEMAS = {
     reason = { type = "string" }
   },
   
-  -- Schéma pour les événements de modale
+  -- Schema for modal events
   [M.EVENT_TYPES.MODAL_OPENED] = {
     id = { type = "string", required = true },
     title = { type = "string" }
@@ -226,7 +226,7 @@ M.EVENT_SCHEMAS = {
     id = { type = "string", required = true }
   },
   
-  -- Schéma pour les événements de notification
+  -- Schema for notification events
   [M.EVENT_TYPES.NOTIFICATION_SHOWN] = {
     id = { type = "string", required = true },
     type = { type = "string", required = true },
@@ -252,7 +252,7 @@ M.EVENT_SCHEMAS = {
 function M.validate_event(event_type, data)
   local schema = M.EVENT_SCHEMAS[event_type]
   if not schema then
-    return false, "Schéma non défini pour l'événement: " .. event_type
+    return false, "Schema not defined for event: " .. event_type
   end
   
   local validation = require('vue-ui.utils.validation')

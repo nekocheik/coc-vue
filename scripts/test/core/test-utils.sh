@@ -1,261 +1,240 @@
 #!/bin/bash
 # test-utils.sh
-# Fonctions utilitaires communes pour les scripts de test
+# Common utility functions for test scripts
 
-# Chemin vers la racine du projet
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-
-# Couleurs pour une meilleure lisibilité
-GREEN='\033[0;32m'
+# Colors for output
 RED='\033[0;31m'
+GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Fonction pour afficher un message d'en-tête
+# Function to display header message
 print_header() {
-  local title="$1"
-  echo -e "\n${BLUE}=========================================${NC}"
-  echo -e "${BLUE}   ${title}   ${NC}"
-  echo -e "${BLUE}=========================================${NC}\n"
+  echo -e "${BLUE}$1${NC}"
 }
 
-# Fonction pour afficher un message d'information
+# Function to display information message
 print_info() {
   echo -e "${YELLOW}$1${NC}"
 }
 
-# Fonction pour afficher un message de succès
+# Function to display success message
 print_success() {
   echo -e "${GREEN}$1${NC}"
 }
 
-# Fonction pour afficher un message d'erreur
+# Function to display error message
 print_error() {
   echo -e "${RED}$1${NC}"
 }
 
-# Fonction pour afficher un message de débogage (uniquement si VERBOSE=true)
+# Function to display debug message (only if VERBOSE=true)
 print_debug() {
-  if [ "${VERBOSE:-false}" = "true" ]; then
-    echo -e "${CYAN}[DEBUG] $1${NC}"
+  if [ "$VERBOSE" = "true" ]; then
+    echo -e "$1"
   fi
 }
 
-# Fonction pour nettoyer les processus sur un port spécifique
+# Function to clean up processes on a specific port
 cleanup_port() {
-  local port="$1"
-  print_info "Nettoyage des processus sur le port $port..."
+  local port=$1
+  print_info "Cleaning up processes on port $port..."
   
-  if lsof -i ":$port" > /dev/null 2>&1; then
-    lsof -i ":$port" -t | xargs kill -9 2>/dev/null
-    sleep 1
-    
-    if ! lsof -i ":$port" > /dev/null 2>&1; then
-      print_success "Port $port libéré avec succès."
+  if command -v lsof >/dev/null 2>&1; then
+    local pids=$(lsof -t -i:$port 2>/dev/null)
+    if [ -n "$pids" ]; then
+      echo "$pids" | xargs kill -9 2>/dev/null
+      print_success "Processes on port $port terminated."
     else
-      print_error "Impossible de libérer le port $port."
+      print_info "No processes using port $port."
     fi
-  else
-    print_info "Aucun processus n'utilise le port $port."
   fi
 }
 
-# Fonction pour nettoyer tous les ports dans une plage
+# Function to clean up all ports in a range
 cleanup_port_range() {
-  local start_port="$1"
-  local end_port="$2"
-  print_info "Nettoyage des ports dans la plage $start_port-$end_port..."
+  local start_port=$1
+  local end_port=$2
   
-  # Utiliser le gestionnaire de ports si disponible
-  if [ -f "$PROJECT_ROOT/test/utils/port-manager.js" ]; then
-    node -e "require('$PROJECT_ROOT/test/utils/port-manager').cleanupAllPorts()"
-  else
-    # Fallback manuel
-    local ports=$(lsof -i ":$start_port-$end_port" -t 2>/dev/null)
-    if [ -n "$ports" ]; then
-      echo "$ports" | xargs kill -9 2>/dev/null
-      print_success "Ports dans la plage $start_port-$end_port libérés."
-    else
-      print_info "Aucun processus n'utilise de ports dans la plage $start_port-$end_port."
+  print_info "Cleaning up ports in range $start_port-$end_port..."
+  
+  local found=false
+  for port in $(seq $start_port $end_port); do
+    if command -v lsof >/dev/null 2>&1; then
+      local pids=$(lsof -t -i:$port 2>/dev/null)
+      if [ -n "$pids" ]; then
+        echo "$pids" | xargs kill -9 2>/dev/null
+        found=true
+      fi
     fi
+  done
+  
+  if [ "$found" = true ]; then
+    print_success "All processes in port range terminated."
+  else
+    print_info "No processes using ports in range $start_port-$end_port."
   fi
 }
 
-# Fonction pour attendre qu'un port soit disponible
+# Function to wait for a port to be available
 wait_for_port() {
-  local port="$1"
-  local timeout="${2:-30}"  # Timeout par défaut: 30 secondes
-  local interval="${3:-1}"  # Intervalle par défaut: 1 seconde
+  local port=$1
+  local timeout=${2:-30}
+  local start_time=$(date +%s)
   
-  print_info "Attente de la disponibilité du port $port (timeout: ${timeout}s)..."
+  print_info "Waiting for port $port to be available (timeout: ${timeout}s)..."
   
-  local elapsed=0
-  while [ $elapsed -lt $timeout ]; do
-    if lsof -i ":$port" > /dev/null 2>&1; then
-      print_success "Port $port est disponible."
+  while true; do
+    if ! lsof -i :$port >/dev/null 2>&1; then
+      print_success "Port $port is now available."
       return 0
     fi
     
-    sleep $interval
-    elapsed=$((elapsed + interval))
-    echo -n "."
+    if [ $(($(date +%s) - start_time)) -ge $timeout ]; then
+      print_error "Timeout waiting for port $port to be available."
+      return 1
+    fi
+    
+    sleep 1
   done
-  
-  print_error "Timeout atteint en attendant que le port $port soit disponible."
-  return 1
 }
 
-# Fonction pour attendre qu'un fichier existe
+# Function to wait for a file to exist
 wait_for_file() {
-  local file_path="$1"
-  local timeout="${2:-30}"  # Timeout par défaut: 30 secondes
-  local interval="${3:-1}"  # Intervalle par défaut: 1 seconde
+  local file_path=$1
+  local timeout=${2:-30}
+  local start_time=$(date +%s)
   
-  print_info "Attente de la création du fichier $file_path (timeout: ${timeout}s)..."
+  print_info "Waiting for file $file_path to exist (timeout: ${timeout}s)..."
   
-  local elapsed=0
-  while [ $elapsed -lt $timeout ]; do
+  while true; do
     if [ -f "$file_path" ]; then
-      print_success "Fichier $file_path créé."
+      print_success "File $file_path exists."
       return 0
     fi
     
-    sleep $interval
-    elapsed=$((elapsed + interval))
-    echo -n "."
+    if [ $(($(date +%s) - start_time)) -ge $timeout ]; then
+      print_error "Timeout waiting for file $file_path to exist."
+      return 1
+    fi
+    
+    sleep 1
   done
-  
-  print_error "Timeout atteint en attendant la création du fichier $file_path."
-  return 1
 }
 
-# Fonction pour démarrer un serveur en arrière-plan et capturer son PID
-start_server() {
-  local command="$1"
-  local log_file="${2:-/tmp/server.log}"
+# Function to start a background server and capture its PID
+start_background_server() {
+  local command=$1
+  local log_file=${2:-/dev/null}
   
-  print_info "Démarrage du serveur en arrière-plan..."
-  print_debug "Commande: $command"
-  print_debug "Logs: $log_file"
+  print_info "Starting server in background..."
   
-  eval "$command > $log_file 2>&1 &"
+  eval "$command" > "$log_file" 2>&1 &
   local server_pid=$!
   
-  print_success "Serveur démarré avec PID: $server_pid"
   echo $server_pid
 }
 
-# Fonction pour tuer un processus proprement
+# Function to gracefully kill a process
 kill_process() {
-  local pid="$1"
-  local force="${2:-false}"
+  local pid=$1
+  local timeout=${2:-5}
+  local force=${3:-false}
   
-  if [ -z "$pid" ]; then
-    print_error "PID non spécifié."
-    return 1
-  fi
-  
-  if ! ps -p $pid > /dev/null; then
-    print_info "Le processus $pid n'existe pas ou a déjà été arrêté."
+  # Check if process exists
+  if ! kill -0 $pid 2>/dev/null; then
+    print_info "Process $pid does not exist or has already been terminated."
     return 0
   fi
   
-  print_info "Arrêt du processus $pid..."
+  print_info "Stopping process $pid..."
   
-  if [ "$force" = "true" ]; then
-    kill -9 $pid 2>/dev/null
-  else
-    kill $pid 2>/dev/null
+  # Try graceful shutdown first
+  kill $pid 2>/dev/null
+  
+  # Wait for process to terminate
+  local start_time=$(date +%s)
+  while kill -0 $pid 2>/dev/null; do
+    if [ $(($(date +%s) - start_time)) -ge $timeout ]; then
+      # If process still exists, use SIGKILL
+      if [ "$force" = true ]; then
+        print_info "Process $pid not responding, forcing termination..."
+        kill -9 $pid 2>/dev/null
+        sleep 1
+      fi
+      break
+    fi
     sleep 1
-    
-    # Si le processus existe toujours, utiliser kill -9
-    if ps -p $pid > /dev/null; then
-      print_info "Le processus $pid ne répond pas, arrêt forcé..."
-      kill -9 $pid 2>/dev/null
-    fi
-  fi
-  
-  if ! ps -p $pid > /dev/null; then
-    print_success "Processus $pid arrêté avec succès."
-    return 0
-  else
-    print_error "Impossible d'arrêter le processus $pid."
-    return 1
-  fi
-}
-
-# Fonction pour exécuter une commande avec timeout
-run_with_timeout() {
-  local command="$1"
-  local timeout="${2:-60}"  # Timeout par défaut: 60 secondes
-  local description="${3:-Commande}"
-  
-  print_info "Exécution de: $description (timeout: ${timeout}s)..."
-  print_debug "Commande complète: $command"
-  
-  # Démarrer la commande en arrière-plan
-  eval "$command" &
-  local cmd_pid=$!
-  
-  # Surveiller le processus avec un timeout
-  local elapsed=0
-  local interval=1
-  while kill -0 $cmd_pid 2>/dev/null; do
-    if [ $elapsed -ge $timeout ]; then
-      print_error "Timeout atteint pour: $description"
-      kill_process $cmd_pid true
-      return 124  # Code de sortie standard pour timeout
-    fi
-    
-    sleep $interval
-    elapsed=$((elapsed + interval))
-    
-    # Afficher un point toutes les 5 secondes pour montrer que le script est toujours actif
-    if [ $((elapsed % 5)) -eq 0 ]; then
-      echo -n "."
-    fi
   done
   
-  # Récupérer le code de sortie
-  wait $cmd_pid
-  local exit_code=$?
-  
-  if [ $exit_code -eq 0 ]; then
-    print_success "$description terminé avec succès."
+  # Verify process termination
+  if ! kill -0 $pid 2>/dev/null; then
+    print_success "Process $pid terminated successfully."
+    return 0
   else
-    print_error "$description a échoué avec le code de sortie: $exit_code"
+    print_error "Unable to terminate process $pid."
+    return 1
   fi
-  
-  return $exit_code
 }
 
-# Fonction pour vérifier les prérequis
+# Function to run command with timeout
+run_with_timeout() {
+  local command=$1
+  local timeout=${2:-30}
+  local description=${3:-"command"}
+  
+  # Monitor process with timeout
+  local start_time=$(date +%s)
+  
+  # Run command in background
+  eval "$command" &
+  local command_pid=$!
+  
+  # Wait for command to finish or timeout
+  while kill -0 $command_pid 2>/dev/null; do
+    if [ $(($(date +%s) - start_time)) -ge $timeout ]; then
+      kill -9 $command_pid 2>/dev/null
+      print_error "Timeout reached for $description"
+      return 1
+    fi
+    sleep 1
+  done
+  
+  wait $command_pid
+  return $?
+}
+
+# Function to check prerequisites
 check_prerequisites() {
   local missing=false
   
-  # Vérifier les commandes requises
+  # Check for required commands
   for cmd in "$@"; do
-    if ! command -v $cmd &> /dev/null; then
-      print_error "Commande requise non trouvée: $cmd"
+    if ! command -v $cmd >/dev/null 2>&1; then
+      print_error "Required command not found: $cmd"
       missing=true
     fi
   done
   
-  if [ "$missing" = "true" ]; then
-    print_error "Certains prérequis sont manquants. Veuillez les installer avant de continuer."
+  if [ "$missing" = true ]; then
     return 1
   fi
   
-  print_success "Tous les prérequis sont installés."
   return 0
 }
 
-# Exporter les fonctions et variables
-export PROJECT_ROOT
-export GREEN RED YELLOW BLUE CYAN BOLD NC
-export -f print_header print_info print_success print_error print_debug
-export -f cleanup_port cleanup_port_range wait_for_port wait_for_file
-export -f start_server kill_process run_with_timeout check_prerequisites
+# Export functions and variables
+export -f print_header
+export -f print_info
+export -f print_success
+export -f print_error
+export -f print_debug
+export -f cleanup_port
+export -f cleanup_port_range
+export -f wait_for_port
+export -f wait_for_file
+export -f start_background_server
+export -f kill_process
+export -f run_with_timeout
+export -f check_prerequisites
