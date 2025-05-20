@@ -26,6 +26,7 @@ jobs:
       
       - name: Add test summary to GitHub Actions output
         if: always()
+        continue-on-error: true
         run: |
           echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
           
