@@ -30,7 +30,7 @@ function getServerInfo(): { host: string, port: number } {
   };
 }
 
-// Types pour améliorer la lisibilité et la maintenance
+// Types to improve readability and maintenance
 export interface ComponentConfig {
   id: string;
   [key: string]: any;
@@ -184,7 +184,7 @@ export class NeovimClient {
               }
             } catch (err) {
               const errorMsg = err instanceof Error ? err.message : String(err);
-              console.error('Erreur lors du traitement de la réponse:', errorMsg);
+              console.error('Error while processing response:', errorMsg);
             }
           });
           
@@ -284,16 +284,16 @@ export class NeovimClient {
       // Définir un timeout pour éviter les attentes infinies (15 secondes)
       const timeout = setTimeout(() => {
         if (process.env.VERBOSE_LOGS === 'true') {
-          console.log(`TIMEOUT: Aucune réponse reçue pour la commande ${commandType} (ID: ${id}) après 15 secondes`);
+          console.log(`TIMEOUT: No response received for command ${commandType} (ID: ${id}) after 15 seconds`);
         }
         this.responseCallbacks.delete(id);
-        reject(new Error(`Timeout lors de l'attente de la réponse à la commande: ${commandType}`));
+        reject(new Error(`Timeout while waiting for response to command: ${commandType}`));
       }, 15000);
       
       this.responseCallbacks.set(id, (response) => {
         clearTimeout(timeout);
         if (process.env.VERBOSE_LOGS === 'true') {
-          console.log(`Réponse reçue pour la commande ${commandType} (ID: ${id}): ${response.success ? 'succès' : 'échec'}`);
+          console.log(`Response received for command ${commandType} (ID: ${id}): ${response.success ? 'success' : 'failure'}`);
         }
         
         if (response.success) {

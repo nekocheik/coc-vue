@@ -1,9 +1,8 @@
 /**
- * Mock robuste pour bridge-core
- * Ce mock simule le comportement du pont entre Neovim et les composants Vue
+ * This mock simulates the behavior of the bridge between Neovim and Vue components
  */
 
-// Types pour améliorer la lisibilité et la maintenance
+// Types to improve readability and maintenance
 export enum MessageType {
   REQUEST = 'request',
   RESPONSE = 'response',
@@ -30,7 +29,7 @@ const bridgeCore = {
   sendMessage: jest.fn(async (message: Message): Promise<void> => {
     messages.push(message);
     
-    // Si c'est une réponse, appeler le handler correspondant
+    // If it's a response, call the corresponding handler
     if (message.type === MessageType.RESPONSE && message.correlationId) {
       const handler = responseHandlers[message.correlationId];
       if (handler) {
@@ -39,7 +38,7 @@ const bridgeCore = {
       }
     }
     
-    // Si c'est un événement, notifier les listeners
+    // If it's an event, notify listeners
     if (message.type === MessageType.EVENT) {
       const listeners = eventListeners[message.action] || [];
       for (const listener of listeners) {
@@ -75,7 +74,7 @@ const bridgeCore = {
     messages.push(message);
     
     return new Promise((resolve, reject) => {
-      // Enregistrer le handler pour la réponse
+      // Register handler for response
       responseHandlers[id] = (response: Message) => {
         if (response.type === MessageType.ERROR) {
           reject(new Error(response.payload?.error || 'Unknown error'));
@@ -84,9 +83,9 @@ const bridgeCore = {
         }
       };
       
-      // Simuler une réponse après un court délai
+      // Simulate response after short delay
       setTimeout(() => {
-        // Créer une réponse simulée
+        // Create simulated response
         const responseMessage: Message = {
           id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
           type: MessageType.RESPONSE,
@@ -95,7 +94,7 @@ const bridgeCore = {
           payload: { success: true, ...payload }
         };
         
-        // Envoyer la réponse
+        // Send response
         bridgeCore.sendMessage(responseMessage);
       }, 10);
     });

@@ -71,16 +71,16 @@ function M.emit_test_event(event_type, data)
   return true
 end
 
---- Récupère les événements de test
--- @return table Liste des événements de test
+--- Get test events
+-- @return table List of test events
 function M.get_test_events()
   return test_events
 end
 
---- Vérifie si un événement spécifique a été émis
--- @param event_type string Type d'événement à rechercher
+--- Check if a specific event was emitted
+-- @param event_type string Event type to search for
 -- @param criteria table|nil Critères de recherche optionnels
--- @return boolean True si l'événement a été trouvé
+-- @return boolean True if event was found
 function M.has_event(event_type, criteria)
   validation.validate_not_empty(event_type, "Event type cannot be empty")
   criteria = criteria or {}
@@ -106,12 +106,12 @@ function M.has_event(event_type, criteria)
   return false
 end
 
---- Réinitialise les événements de test
+--- Reset test events
 function M.reset_test_events()
   test_events = {}
 end
 
---- Simule la création d'un buffer
+--- Simulate buffer creation
 -- @param lines table Lignes du buffer
 -- @param options table Options du buffer
 -- @return number ID du buffer
@@ -130,7 +130,7 @@ function M.create_test_buffer(lines, options)
   return buffer_id
 end
 
---- Simule la création d'une fenêtre
+--- Simulate window creation
 -- @param buffer_id number ID du buffer
 -- @param options table Options de la fenêtre
 -- @return number ID de la fenêtre
@@ -208,10 +208,10 @@ function M.cleanup_test_env()
   return true
 end
 
---- Simule une saisie clavier
--- @param key string Touche à simuler ("<Up>", "<Down>", "<Left>", "<Right>", "<Enter>", "<Esc>", etc.)
+--- Simulate keyboard input
+-- @param key string Key to simulate ("<Up>", "<Down>", "<Left>", "<Right>", "<Enter>", "<Esc>", etc.)
 -- @param component table Composant cible (optionnel)
--- @return boolean True si la simulation a réussi
+-- @return boolean True if the simulation was successful
 function M.simulate_key_input(key, component)
   validation.validate_not_empty(key, "La touche ne peut pas être vide")
   
@@ -259,15 +259,15 @@ function M.get_key_inputs()
   return test_key_inputs
 end
 
---- Réinitialise les entrées clavier simulées
+--- Reset key inputs
 function M.reset_key_inputs()
   test_key_inputs = {}
 end
 
---- Simule une séquence de touches
--- @param keys table Liste des touches à simuler
+--- Simulate key sequence
+-- @param keys table List of keys to simulate
 -- @param component table Composant cible (optionnel)
--- @return boolean True si toutes les simulations ont réussi
+-- @return boolean True if all simulations were successful
 function M.simulate_key_sequence(keys, component)
   validation.validate_table(keys, "La séquence de touches doit être une table")
   
@@ -282,12 +282,12 @@ function M.simulate_key_sequence(keys, component)
   return success
 end
 
---- Simule un clic de souris
+--- Simulate mouse click
 -- @param row number Ligne du clic (0-indexé)
 -- @param col number Colonne du clic (0-indexé)
 -- @param button string Bouton de la souris ("left", "right", "middle")
 -- @param component table Composant cible (optionnel)
--- @return boolean True si la simulation a réussi
+-- @return boolean True if the simulation was successful
 function M.simulate_mouse_click(row, col, button, component)
   validation.validate_number(row, "La ligne doit être un nombre")
   validation.validate_number(col, "La colonne doit être un nombre")
@@ -316,9 +316,9 @@ function M.simulate_mouse_click(row, col, button, component)
   return false
 end
 
---- Sauvegarde les événements de test dans un fichier JSON
+--- Save test events to JSON file
 -- @param prefix string Préfixe du nom de fichier
--- @return boolean True si la sauvegarde a réussi
+-- @return boolean True if the save was successful
 function M.save_test_events(prefix)
   prefix = prefix or 'test'
   local log_path = vim.fn.stdpath('data') .. '/vue-ui-test-events_' .. prefix .. '.json'
@@ -333,7 +333,7 @@ function M.save_test_events(prefix)
     file:close()
     
     if _G.test_config and _G.test_config.debug then
-      print(string.format("[TEST] Événements sauvegardés dans: %s", log_path))
+      print(string.format("[TEST] Events saved to: %s", log_path))
     end
     
     return true

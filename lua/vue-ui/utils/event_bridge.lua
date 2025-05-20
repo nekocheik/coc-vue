@@ -1,28 +1,27 @@
--- event_bridge.lua
--- Pont d'événements entre Lua et TypeScript pour les composants UI Vue
+-- Event bridge between Lua and TypeScript for Vue UI components
 
 local schema = require('vue-ui.events.schema')
 local test_helpers = require('vue-ui.utils.test_helpers')
 
 local M = {}
 
--- Configuration par défaut
+-- Configuration by default
 local config = {
   debug = true,
   log_events = true,
   log_path = vim.fn.stdpath('data') .. '/vue-ui-events.json'
 }
 
--- Table pour stocker les composants
+-- Table to store components
 local components = {}
 
--- Table pour stocker les événements en mode test
+-- Table to store events in test mode
 local test_events = {}
 
--- Registre des événements pour les tests
+-- Event registry for tests
 local event_log = {}
 
--- Fonction pour récupérer les événements enregistrés (utilisée par les tests)
+-- Function to get registered events (used by tests)
 function M._get_events_for_test()
   return test_events
 end
@@ -52,18 +51,18 @@ local config = {
   log_path = vim.fn.stdpath('data') .. '/vue-ui-events.json'
 }
 
--- Enregistre un composant dans le registre global
+-- Enregistre a component in the global registry
 function M.register_component(id, component)
   components[id] = component
   return component
 end
 
--- Récupère un composant du registre global
+-- Get a component from the global registry
 function M.get_component(id)
   return components[id]
 end
 
--- Supprime un composant du registre global
+-- Remove a component from the global registry
 function M.unregister_component(id)
   components[id] = nil
 end
@@ -135,13 +134,13 @@ function M.receive(event_name, data)
     })
   end
   
-  -- Dispatcher l'événement au gestionnaire approprié
+  -- Dispatch event to appropriate handler
   local handlers = require('vue-ui.events.handlers')
   if handlers[event_name] then
     return handlers[event_name](data)
   else
     if config.debug then
-      vim.api.nvim_echo({{"[VueUI] Aucun gestionnaire pour l'événement: " .. event_name, "ErrorMsg"}}, false, {})
+      vim.api.nvim_echo({{"[VueUI] No handler for event: " .. event_name, "ErrorMsg"}}, false, {})
     end
     return false
   end
@@ -149,7 +148,7 @@ end
 
 -- Saves the event log to a JSON file
 function M.save_event_log(component_name)
-  -- En mode test, on simule la sauvegarde
+  -- In test mode, simulate saving
   if test_helpers.is_test_env() then
     if config.debug then
       vim.api.nvim_echo({{'[VueUI] Event log saved: ' .. vim.fn.stdpath('data') .. '/ui_events_' .. (component_name or 'ui') .. '.json', 'WarningMsg'}}, false, {})
@@ -161,22 +160,22 @@ function M.save_event_log(component_name)
     return false
   end
   
-  -- Créer le répertoire de logs s'il n'existe pas
+  -- Create log directory if it doesn't exist
   local log_dir = vim.fn.fnamemodify(config.log_path, ':h')
   if vim.fn.isdirectory(log_dir) == 0 then
     vim.fn.mkdir(log_dir, 'p')
   end
   
-  -- Déterminer le chemin du fichier
+  -- Determine file path
   local file_path = config.log_path
   if component_name then
     file_path = vim.fn.fnamemodify(config.log_path, ':h') .. '/ui_events_' .. component_name .. '.json'
   end
   
-  -- Convertir le journal en JSON
+  -- Convert journal to JSON
   local json = vim.fn.json_encode(event_log)
   
-  -- Écrire dans le fichier
+  -- Write to file
   local file = io.open(file_path, 'w')
   if file then
     file:write(json)
@@ -193,19 +192,19 @@ function M.save_event_log(component_name)
   end
 end
 
--- Récupère les événements de test
+-- Get test events
 function M.get_test_events()
   return test_events
 end
 
--- Réinitialise les événements de test
+-- Reset test events
 function M.reset_test_events()
   test_events = {}
   -- Also reset the event log to ensure consistency
   event_log = {}
 end
 
--- Vérifie si un événement spécifique a été émis
+-- Check if a specific event was emitted
 function M.has_event(event_name, component_id)
   for _, event in ipairs(test_events) do
     if event.event == event_name and (component_id == nil or event.data.id == component_id) then
@@ -220,11 +219,11 @@ function M.clear_event_log()
   event_log = {}
 end
 
--- Configure le pont d'événements
+-- Configure event bridge
 function M.setup(opts)
   config = vim.tbl_deep_extend("force", config, opts or {})
   
-  -- Créer le répertoire de logs s'il n'existe pas
+  -- Create log directory if it doesn't exist
   if config.log_events then
     local log_dir = vim.fn.fnamemodify(config.log_path, ':h')
     if vim.fn.isdirectory(log_dir) == 0 then

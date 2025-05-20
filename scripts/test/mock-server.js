@@ -39,13 +39,13 @@ let events = [];
 
 // Créer le serveur TCP
 const server = net.createServer((socket) => {
-  console.log(`Client connecté: ${socket.remoteAddress}:${socket.remotePort}`);
+  console.log(`Client connected: ${socket.remoteAddress}:${socket.remotePort}`);
   
   // Gérer les données reçues
   socket.on('data', (data) => {
     try {
       const command = JSON.parse(data.toString());
-      console.log(`Commande reçue: ${command.type} (ID: ${command.id})`);
+      console.log(`Command received: ${command.type} (ID: ${command.id})`);
       
       // Traiter la commande
       let response = {
@@ -218,7 +218,7 @@ const server = net.createServer((socket) => {
       
       // Envoyer la réponse
       socket.write(JSON.stringify(response));
-      console.log(`Réponse envoyée: ${response.success ? 'succès' : 'échec'}`);
+      console.log(`Response sent: ${response.success ? 'success' : 'failure'}`);
       
     } catch (err) {
       console.error(`Erreur lors du traitement de la commande: ${err.message}`);
@@ -232,7 +232,7 @@ const server = net.createServer((socket) => {
   
   // Gérer la déconnexion
   socket.on('close', () => {
-    console.log(`Client déconnecté: ${socket.remoteAddress}:${socket.remotePort}`);
+    console.log(`Client disconnected: ${socket.remoteAddress}:${socket.remotePort}`);
   });
   
   // Gérer les erreurs
