@@ -60,8 +60,22 @@ jobs:
             
             for file in .ci-artifacts/vader-reports/*_results.json; do
               if [ -f "$file" ]; then
-                FILE_TOTAL=$(jq '.total' "$file")
-                FILE_SUCCESS=$(jq '.success' "$file")
+                # Utiliser grep au lieu de jq pour être plus tolérant aux erreurs de format
+                FILE_TOTAL=$(grep -o '"total":[[:space:]]*[0-9]\+' "$file" | grep -o '[0-9]\+')
+                FILE_SUCCESS=$(grep -o '"success":[[:space:]]*[0-9]\+' "$file" | grep -o '[0-9]\+')
+                
+                # Si les valeurs sont vides, essayer avec les anciens noms de champs
+                if [ -z "$FILE_TOTAL" ]; then
+                  FILE_TOTAL=$(grep -o '"total_count":[[:space:]]*[0-9]\+' "$file" | grep -o '[0-9]\+')
+                fi
+                if [ -z "$FILE_SUCCESS" ]; then
+                  FILE_SUCCESS=$(grep -o '"success_count":[[:space:]]*[0-9]\+' "$file" | grep -o '[0-9]\+')
+                fi
+                
+                # Si toujours vide, utiliser des valeurs par défaut
+                FILE_TOTAL=${FILE_TOTAL:-0}
+                FILE_SUCCESS=${FILE_SUCCESS:-0}
+                
                 TOTAL_TESTS=$((TOTAL_TESTS + FILE_TOTAL))
                 PASSED_TESTS=$((PASSED_TESTS + FILE_SUCCESS))
                 
