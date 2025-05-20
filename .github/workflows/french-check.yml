@@ -1,0 +1,138 @@
+name: French Language Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  french-check:
+    name: Check for French Words
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Create French words check script
+        run: |
+          cat > scripts/check-french-words.js << 'EOL'
+          const fs = require('fs');
+          const path = require('path');
+          
+          // Common French words to check (200 most common words)
+          const frenchWords = [
+            'le', 'la', 'les', 'un', 'une', 'des', 'ce', 'cette', 'ces',
+            'mon', 'ton', 'son', 'notre', 'votre', 'leur', 'mes', 'tes', 'ses',
+            'être', 'avoir', 'faire', 'dire', 'aller', 'voir', 'savoir', 'pouvoir',
+            'falloir', 'vouloir', 'venir', 'prendre', 'devoir', 'parler', 'trouver',
+            'donner', 'regarder', 'aimer', 'croire', 'passer', 'attendre', 'partir',
+            'mettre', 'rester', 'demander', 'répondre', 'entendre', 'penser', 'sortir',
+            'connaître', 'sembler', 'tenir', 'comprendre', 'rendre', 'devenir', 'sentir',
+            'recevoir', 'revenir', 'rappeler', 'permettre', 'porter', 'montrer', 'jouer',
+            'ouvrir', 'arrêter', 'chercher', 'commencer', 'écrire', 'appeler', 'marcher',
+            'vivre', 'espérer', 'asseoir', 'rentrer', 'reprendre', 'servir', 'décider',
+            'réussir', 'essayer', 'finir', 'perdre', 'expliquer', 'occuper', 'accepter',
+            'changer', 'présenter', 'agir', 'poser', 'garder', 'quitter', 'suivre',
+            'manger', 'arriver', 'utiliser', 'laisser', 'travailler', 'créer',
+            'très', 'aussi', 'plus', 'moins', 'bien', 'mal', 'vite', 'tard',
+            'tôt', 'loin', 'près', 'maintenant', 'toujours', 'jamais', 'parfois',
+            'souvent', 'aujourd\'hui', 'demain', 'hier', 'ici', 'là', 'donc',
+            'alors', 'voilà', 'déjà', 'encore', 'enfin', 'pendant', 'depuis',
+            'vers', 'chez', 'dans', 'sur', 'sous', 'avec', 'sans', 'pour',
+            'par', 'mais', 'ou', 'et', 'donc', 'car', 'bonjour', 'merci',
+            'oui', 'non', 'peut-être', 'pourquoi', 'comment', 'quand', 'où',
+            'qui', 'que', 'quoi', 'quel', 'quelle', 'lequel', 'laquelle',
+            'ceci', 'cela', 'celui', 'celle', 'ceux', 'celles', 'chaque',
+            'tout', 'toute', 'tous', 'toutes', 'aucun', 'aucune', 'plusieurs',
+            'certains', 'certaines', 'même', 'autre', 'autres', 'quelque',
+            'quelques', 'nouveau', 'nouvelle', 'nouveaux', 'nouvelles', 'bon',
+            'bonne', 'bons', 'bonnes', 'grand', 'grande', 'grands', 'grandes',
+            'petit', 'petite', 'petits', 'petites', 'haut', 'haute', 'bas',
+            'basse', 'long', 'longue', 'court', 'courte', 'facile', 'difficile',
+            'possible', 'impossible', 'simple', 'complexe', 'important', 'importante',
+            'vrai', 'vraie', 'faux', 'fausse', 'dernier', 'dernière', 'prochain',
+            'prochaine', 'premier', 'première', 'deuxième', 'troisième', 'meilleur',
+            'pire', 'différent', 'différente', 'pareil', 'pareille'
+          ];
+          
+          // File extensions to check
+          const extensions = ['.js', '.ts', '.lua', '.json', '.yml', '.md'];
+          
+          // Directories to ignore
+          const ignoreDirs = ['node_modules', '.git', 'dist', 'build'];
+          
+          // Function to check if a word is French
+          function containsFrenchWord(text) {
+            const matches = [];
+            for (const word of frenchWords) {
+              const regex = new RegExp(`\\b${word}\\b`, 'gi');
+              let match;
+              while ((match = regex.exec(text)) !== null) {
+                matches.push({
+                  word: match[0],
+                  index: match.index
+                });
+              }
+            }
+            return matches;
+          }
+          
+          // Function to walk through directory
+          function walkDir(dir) {
+            let results = [];
+            const list = fs.readdirSync(dir);
+            
+            for (const file of list) {
+              const filePath = path.join(dir, file);
+              const stat = fs.statSync(filePath);
+              
+              if (stat.isDirectory()) {
+                if (!ignoreDirs.includes(file)) {
+                  results = results.concat(walkDir(filePath));
+                }
+              } else {
+                if (extensions.includes(path.extname(file))) {
+                  results.push(filePath);
+                }
+              }
+            }
+            
+            return results;
+          }
+          
+          // Main execution
+          let hasFrenchWords = false;
+          const files = walkDir('.');
+          
+          for (const file of files) {
+            const content = fs.readFileSync(file, 'utf8');
+            const matches = containsFrenchWord(content);
+            
+            if (matches.length > 0) {
+              console.log(`\nFrench words found in ${file}:`);
+              for (const match of matches) {
+                console.log(`- "${match.word}" at position ${match.index}`);
+                hasFrenchWords = true;
+              }
+            }
+          }
+          
+          if (hasFrenchWords) {
+            console.error('\nError: French words were found in the codebase');
+            process.exit(1);
+          } else {
+            console.log('\nSuccess: No French words were found in the codebase');
+          }
+          EOL
+          
+      - name: Run French words check
+        run: node scripts/check-french-words.js 

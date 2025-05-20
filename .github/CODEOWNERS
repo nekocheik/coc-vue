@@ -1,0 +1,17 @@
+# Global code owners
+* @cheikkone
+
+# Specific directories
+/src/ @cheikkone
+/lua/ @cheikkone
+/test/ @cheikkone
+/scripts/ @cheikkone
+
+# Configuration files
+*.json @cheikkone
+*.yml @cheikkone
+*.lua @cheikkone
+
+# Documentation
+/docs/ @cheikkone
+*.md @cheikkone 
