@@ -112,6 +112,25 @@ This script will:
 3. Display the test results and server logs
 4. Clean up the server process
 
+## Debugging
+
+### Checking Errors in Neovim
+
+Lorsque vous rencontrez des problèmes avec l'extension, il est important de vérifier les erreurs dans Neovim. Utilisez les commandes suivantes :
+
+```vim
+:messages       " Affiche les messages d'erreur de Neovim
+:CocOpenLog     " Ouvre le fichier de log de Coc.nvim
+```
+
+Ces commandes sont essentielles pour identifier les problèmes lors de l'exécution des tests ou pendant le développement. Vérifiez toujours ces logs si vous rencontrez des comportements inattendus.
+
+### Dépannage courant
+
+- **Erreur "Component not found"** : Assurez-vous que le composant a été correctement chargé avant d'essayer d'interagir avec lui.
+- **Problèmes de connexion au serveur** : Vérifiez que le port 9999 n'est pas déjà utilisé par un autre processus.
+- **Erreurs asynchrones** : Si des opérations asynchrones ne se terminent pas correctement, utilisez l'option `--detectOpenHandles` avec Jest pour identifier les problèmes.
+
 ## Development
 
 The current implementation provides a stable foundation for communication between Node.js and the command server. The next phase will involve implementing specific commands for the TypeScript <-> Lua bridge to handle component loading, method calls, state management, etc.

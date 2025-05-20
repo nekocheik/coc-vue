@@ -18,8 +18,15 @@
 #   cleanup             - Tests for unloading components
 
 # Set the path to the project root
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$PROJECT_ROOT"
+
+# Fonction pour vérifier les logs après chaque étape
+check_logs() {
+  local step_name=$1
+  echo -e "${YELLOW}Vérification des logs après l'étape: ${step_name}${NC}"
+  "$PROJECT_ROOT/scripts/utils/check_neovim_logs.sh" "$step_name"
+}
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -42,8 +49,12 @@ fi
 
 # Start the component server in the background
 echo -e "${YELLOW}Starting component server...${NC}"
-"$PROJECT_ROOT/scripts/run_component_server.sh" &
+echo -e "${GREEN}TIP: Pour vérifier les erreurs dans Neovim, utilisez :messages et :CocOpenLog${NC}"
+"$PROJECT_ROOT/scripts/server/run_component_server.sh" &
 SERVER_PID=$!
+
+# Vérifier les logs après le démarrage du serveur
+check_logs "server_startup"
 
 # Wait for the server to start
 echo -e "${YELLOW}Waiting for component server to start...${NC}"
@@ -64,6 +75,9 @@ fi
 
 echo -e "${GREEN}Server is ready!${NC}"
 sleep 2 # Attendre un peu plus pour s'assurer que le serveur est stable
+
+# Vérifier les logs après que le serveur est prêt
+check_logs "server_ready"
 
 # Function to clean up when the script exits
 function cleanup {
@@ -90,8 +104,14 @@ else
   TEST_SECTION="$TEST_SECTION" npx jest --verbose --runInBand --testTimeout=40000 --forceExit __tests__/integration/select-component-integration.test.ts
 fi
 
+# Vérifier les logs après l'exécution des tests
+check_logs "tests_execution"
+
 # The exit code will be the exit code of the jest command
 EXIT_CODE=$?
+
+# Vérifier les logs après le nettoyage
+check_logs "cleanup"
 
 # Exit with the same code as the tests
 exit $EXIT_CODE
