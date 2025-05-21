@@ -103,17 +103,14 @@ function M.emit(event_name, data)
     return true
   end
   
-  -- Appel à la fonction TypeScript via le pont COC
-  local coc_vue
-  local status, err = pcall(function()
-    coc_vue = vim.fn['coc#rpc#request']('coc-vue', 'handleLuaEvent', {event_name, data})
-  end)
-  
-  if not status and config.debug then
-    vim.api.nvim_echo({{'[VueUI] Erreur lors de l\'appel à coc#rpc#request: ' .. tostring(err), 'ErrorMsg'}}, false, {})
+  -- Call TypeScript function via COC bridge
+  local result, err = vim.fn['coc#rpc#request'](0, 'vueui.callMethod', {event_name, data})
+  if err then
+    vim.api.nvim_echo({{'[VueUI] Error calling coc#rpc#request: ' .. tostring(err), 'ErrorMsg'}}, false, {})
+    return nil
   end
   
-  return coc_vue
+  return result
 end
 
 -- Receives an event from TypeScript
@@ -186,7 +183,7 @@ function M.save_event_log(component_name)
     return true
   else
     if config.debug then
-      vim.api.nvim_echo({{'[VueUI] Impossible de sauvegarder le journal: ' .. file_path, 'ErrorMsg'}}, false, {})
+      vim.api.nvim_echo({{'[VueUI] Unable to save log: ' .. file_path, 'ErrorMsg'}}, false, {})
     end
     return false
   end

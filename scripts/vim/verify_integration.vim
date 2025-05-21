@@ -1,104 +1,104 @@
-" Script de vérification de l'intégration réelle du composant Select
-" Ce script vérifie que le composant Select est correctement intégré
-" dans un environnement Neovim+COC réel (non headless)
+" Integration verification script for the Select component
+" This script verifies that the Select component is correctly integrated
+" in a real Neovim+COC environment (non headless)
 
-" Fonction pour journaliser les résultats
+" Function to log results
 function! LogResult(test, result, details)
   echohl Title | echo "TEST: " . a:test | echohl None
   if a:result ==# "SUCCESS"
-    echohl String | echo "RÉSULTAT: " . a:result | echohl None
+    echohl String | echo "RESULT: " . a:result | echohl None
   else
-    echohl ErrorMsg | echo "RÉSULTAT: " . a:result | echohl None
+    echohl ErrorMsg | echo "RESULT: " . a:result | echohl None
   endif
-  echo "DÉTAILS: " . a:details
+  echo "DETAILS: " . a:details
   echo ""
 endfunction
 
-" Vérifier si la commande VueUISelect est enregistrée
+" Check if VueUISelect command is registered
 function! TestCommandRegistration()
   let l:cmd_output = execute('command VueUISelect')
   if l:cmd_output =~# 'VueUISelect'
-    call LogResult("Enregistrement de la commande", "SUCCESS", "La commande VueUISelect est correctement enregistrée")
+    call LogResult("Command registration", "SUCCESS", "VueUISelect command is correctly registered")
     return 1
   else
-    call LogResult("Enregistrement de la commande", "FAILURE", "La commande VueUISelect n'est pas enregistrée")
+    call LogResult("Command registration", "FAILURE", "VueUISelect command is not registered")
     return 0
   endif
 endfunction
 
-" Vérifier le chemin d'exécution
+" Check runtime path
 function! TestRuntimePath()
   let l:rtp = &runtimepath
   let l:extension_path = expand('%:p:h')
   
   if l:rtp =~# l:extension_path
-    call LogResult("Chemin d'exécution", "SUCCESS", "L'extension est dans le chemin d'exécution")
+    call LogResult("Runtime path", "SUCCESS", "Extension is in runtime path")
     return 1
   else
-    call LogResult("Chemin d'exécution", "FAILURE", "L'extension n'est pas dans le chemin d'exécution")
+    call LogResult("Runtime path", "FAILURE", "Extension is not in runtime path")
     return 0
   endif
 endfunction
 
-" Vérifier les scripts chargés
+" Check loaded scripts
 function! TestLoadedScripts()
   let l:scripts = execute('scriptnames')
   
   if l:scripts =~# 'vue-ui/init.lua'
-    call LogResult("Scripts chargés", "SUCCESS", "Le module vue-ui/init.lua est chargé")
+    call LogResult("Loaded scripts", "SUCCESS", "vue-ui/init.lua module is loaded")
     return 1
   else
-    call LogResult("Scripts chargés", "FAILURE", "Le module vue-ui/init.lua n'est pas chargé")
+    call LogResult("Loaded scripts", "FAILURE", "vue-ui/init.lua module is not loaded")
     return 0
   endif
 endfunction
 
-" Exécuter la commande VueUISelect
+" Execute VueUISelect command
 function! TestVueUISelectExecution()
   try
     execute 'VueUISelect test_direct "Test Direct" {"multi":false,"options":[{"id":"option1","text":"Option 1","value":"value1"},{"id":"option2","text":"Option 2","value":"value2"},{"id":"option3","text":"Option 3","value":"value3"}]}'
-    call LogResult("Exécution VueUISelect", "SUCCESS", "La commande VueUISelect a été exécutée avec succès")
+    call LogResult("VueUISelect execution", "SUCCESS", "VueUISelect command executed successfully")
     return 1
   catch
-    call LogResult("Exécution VueUISelect", "FAILURE", "Erreur lors de l'exécution de VueUISelect: " . v:exception)
+    call LogResult("VueUISelect execution", "FAILURE", "Error executing VueUISelect: " . v:exception)
     return 0
   endtry
 endfunction
 
-" Exécuter la commande CocCommand vue.selectDemo
+" Execute CocCommand vue.selectDemo
 function! TestCocCommandExecution()
   try
     execute 'CocCommand vue.selectDemo'
-    call LogResult("Exécution CocCommand", "SUCCESS", "La commande CocCommand vue.selectDemo a été exécutée avec succès")
+    call LogResult("CocCommand execution", "SUCCESS", "CocCommand vue.selectDemo executed successfully")
     return 1
   catch
-    call LogResult("Exécution CocCommand", "FAILURE", "Erreur lors de l'exécution de CocCommand vue.selectDemo: " . v:exception)
+    call LogResult("CocCommand execution", "FAILURE", "Error executing CocCommand vue.selectDemo: " . v:exception)
     return 0
   endtry
 endfunction
 
-" Afficher les informations de diagnostic
+" Display diagnostic information
 function! ShowDiagnosticInfo()
-  echohl Title | echo "=== INFORMATIONS DE DIAGNOSTIC ===" | echohl None
+  echohl Title | echo "=== DIAGNOSTIC INFORMATION ===" | echohl None
   echo "Runtime Path: " . &runtimepath
   echo ""
-  echo "Scripts chargés:"
+  echo "Loaded scripts:"
   echo execute('scriptnames')
   echo ""
-  echo "Commandes disponibles:"
+  echo "Available commands:"
   echo execute('command')
   echo ""
-  echo "Logs COC:"
+  echo "COC logs:"
   try
     echo execute('CocCommand workspace.showOutput')
   catch
-    echo "Impossible d'afficher les logs COC: " . v:exception
+    echo "Unable to display COC logs: " . v:exception
   endtry
 endfunction
 
-" Exécuter tous les tests
+" Run all tests
 function! RunAllTests()
-  echo "=== VÉRIFICATION DE L'INTÉGRATION DU COMPOSANT SELECT ==="
+  echo "=== SELECT COMPONENT INTEGRATION VERIFICATION ==="
   echo "Date: " . strftime("%Y-%m-%d %H:%M:%S")
   echo ""
   
@@ -106,52 +106,52 @@ function! RunAllTests()
   let l:rtp_test = TestRuntimePath()
   let l:scripts_test = TestLoadedScripts()
   
-  " Si les tests de base échouent, afficher les informations de diagnostic
+  " If basic tests fail, display diagnostic information
   if !l:cmd_test || !l:rtp_test || !l:scripts_test
     call ShowDiagnosticInfo()
-    echo "Certains tests de base ont échoué. Correction des problèmes..."
+    echo "Some basic tests failed. Fixing issues..."
     
-    " Tentative de correction: charger explicitement le module
-    echo "Tentative de chargement explicite du module vue-ui..."
+    " Fix attempt: explicitly load the module
+    echo "Attempting to explicitly load vue-ui module..."
     try
       execute 'lua require("vue-ui.init")'
-      echo "Module chargé avec succès"
+      echo "Module loaded successfully"
       
-      " Vérifier à nouveau l'enregistrement de la commande
+      " Check command registration again
       let l:cmd_test = TestCommandRegistration()
     catch
-      echo "Erreur lors du chargement du module: " . v:exception
+      echo "Error loading module: " . v:exception
     endtry
   endif
   
-  " Exécuter les tests d'exécution si les tests de base réussissent
+  " Run execution tests if basic tests pass
   if l:cmd_test
     let l:direct_test = TestVueUISelectExecution()
     let l:coc_test = TestCocCommandExecution()
     
-    " Résumé des tests
+    " Test summary
     let l:success_count = l:cmd_test + l:rtp_test + l:scripts_test + l:direct_test + l:coc_test
     let l:total_tests = 5
     
     echohl Title
-    echo "=== RÉSUMÉ DES TESTS ==="
+    echo "=== TEST SUMMARY ==="
     echohl None
-    echo "Tests réussis: " . l:success_count . "/" . l:total_tests
+    echo "Tests passed: " . l:success_count . "/" . l:total_tests
     
     if l:success_count == l:total_tests
-      echohl String | echo "INTÉGRATION RÉUSSIE: Le composant Select est correctement intégré!" | echohl None
+      echohl String | echo "INTEGRATION SUCCESSFUL: Select component is correctly integrated!" | echohl None
     else
-      echohl WarningMsg | echo "INTÉGRATION PARTIELLE: Certains tests ont échoué." | echohl None
+      echohl WarningMsg | echo "PARTIAL INTEGRATION: Some tests failed." | echohl None
       call ShowDiagnosticInfo()
     endif
   else
     echohl ErrorMsg
-    echo "INTÉGRATION ÉCHOUÉE: Les tests de base ont échoué."
-    echo "Veuillez vérifier que l'extension est correctement installée et que le chemin d'exécution est configuré."
+    echo "INTEGRATION FAILED: Basic tests failed."
+    echo "Please verify that the extension is properly installed and the runtime path is configured."
     echohl None
     call ShowDiagnosticInfo()
   endif
 endfunction
 
-" Exécuter les tests
+" Run tests
 call RunAllTests()

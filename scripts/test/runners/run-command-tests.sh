@@ -1,105 +1,105 @@
 #!/bin/bash
 # run-command-tests.sh
-# Script pour exécuter les tests de commandes (mode Neovim ou Node)
+# Script for running command tests (Neovim or Node)
 #
 # Usage:
-#   ./scripts/test/runners/run-command-tests.sh              # Mode Neovim par défaut
-#   ./scripts/test/runners/run-command-tests.sh --node       # Mode Node.js
-#   ./scripts/test/runners/run-command-tests.sh --test <nom> # Exécuter un test spécifique
+#   ./scripts/test/runners/run-command-tests.sh              # Default Neovim mode
+#   ./scripts/test/runners/run-command-tests.sh --node       # Node.js mode
+#   ./scripts/test/runners/run-command-tests.sh --test <name> # Run a specific test
 
-# Importer les utilitaires communs
+# Import common utilities
 source "$(dirname "${BASH_SOURCE[0]}")/../core/test-utils.sh"
 
-# Définir le timeout global (en secondes)
-MAX_TIMEOUT=${MAX_TIMEOUT:-180}  # 3 minutes par défaut
+# Define global timeout (in seconds)
+MAX_TIMEOUT=${MAX_TIMEOUT:-180}  # Default 3 minutes
 
-# Variables globales
-MODE="neovim"  # Mode par défaut: neovim
+# Global variables
+MODE="neovim"  # Default mode: neovim
 TEST_PATTERN=""
 
-# Fonction de nettoyage à la sortie
+# Cleanup function on exit
 cleanup() {
-  print_info "Nettoyage des ressources..."
+  print_info "Cleaning up resources..."
   
-  # Arrêter le serveur de commandes
+  # Stop command server
   if [ -n "$SERVER_PID" ]; then
-    kill_process $SERVER_PID
+    kill -9 "$SERVER_PID" 2>/dev/null || true
   fi
   
-  # Nettoyer les processus Neovim
+  # Clean up Neovim processes
   if [ "$MODE" = "neovim" ]; then
     pkill -f "nvim --headless" || true
   fi
   
-  # Nettoyer les ports utilisés
+  # Clean up used ports
   cleanup_port 9999
   
-  print_success "Nettoyage terminé."
+  print_success "Cleanup completed."
 }
 
-# Fonction pour démarrer le serveur de commandes en mode Neovim
+# Function to start command server in Neovim mode
 start_neovim_server() {
-  print_info "Démarrage du serveur de commandes Neovim..."
+  print_info "Starting Neovim command server..."
   
-  # Nettoyer les processus Neovim existants
-  print_info "Nettoyage des processus Neovim existants..."
+  # Clean up existing Neovim processes
+  print_info "Cleaning up existing Neovim processes..."
   pkill -f "nvim --headless" || true
   
-  # Vérifier si le port 9999 est déjà utilisé
+  # Check if port 9999 is already used
   if lsof -i :9999 > /dev/null 2>&1; then
-    print_error "Le port 9999 est déjà utilisé. Nettoyage des processus existants..."
+    print_error "Port 9999 is already used. Cleaning up existing processes..."
     cleanup_port 9999
     sleep 2
   fi
   
-  # Démarrer le serveur de commandes Neovim
+  # Start Neovim command server
   SERVER_PID=$(start_server "$PROJECT_ROOT/scripts/server/run_command_server.sh" "/tmp/command-server.log")
   
-  # Attendre que le serveur soit prêt
-  print_info "Attente du démarrage du serveur Neovim..."
+  # Wait for server to be ready
+  print_info "Waiting for Neovim server to start..."
   sleep 5
   
-  # Vérifier si le serveur est en cours d'exécution
+  # Check if server is running
   if ! ps -p $SERVER_PID > /dev/null; then
-    print_error "Le serveur Neovim n'a pas démarré correctement."
-    print_info "Consultez les logs dans /tmp/command-server.log pour plus de détails."
+    print_error "Neovim server did not start correctly."
+    print_info "Check logs in /tmp/command-server.log for more details."
     return 1
   fi
   
-  print_success "Serveur Neovim démarré avec succès (PID: $SERVER_PID)."
+  print_success "Neovim server started successfully (PID: $SERVER_PID)."
   return 0
 }
 
-# Fonction pour démarrer le serveur de commandes en mode Node
+# Function to start command server in Node mode
 start_node_server() {
-  print_info "Démarrage du serveur de commandes Node.js..."
+  print_info "Starting Node.js command server..."
   
-  # Vérifier si le port 9999 est déjà utilisé
+  # Check if port 9999 is already used
   if lsof -i :9999 > /dev/null 2>&1; then
-    print_error "Le port 9999 est déjà utilisé. Nettoyage des processus existants..."
+    print_error "Port 9999 is already used. Cleaning up existing processes..."
     cleanup_port 9999
     sleep 2
   fi
   
-  # Démarrer le serveur de commandes Node
+  # Start Node command server
   SERVER_PID=$(start_server "node $PROJECT_ROOT/scripts/server/command_server.js" "/tmp/node-command-server.log")
   
-  # Attendre que le serveur soit prêt
-  print_info "Attente du démarrage du serveur Node.js..."
+  # Wait for server to be ready
+  print_info "Waiting for Node.js server to start..."
   sleep 3
   
-  # Vérifier si le serveur est en cours d'exécution
+  # Check if server is running
   if ! ps -p $SERVER_PID > /dev/null; then
-    print_error "Le serveur Node.js n'a pas démarré correctement."
-    print_info "Consultez les logs dans /tmp/node-command-server.log pour plus de détails."
+    print_error "Node.js server did not start correctly."
+    print_info "Check logs in /tmp/node-command-server.log for more details."
     return 1
   fi
   
-  print_success "Serveur Node.js démarré avec succès (PID: $SERVER_PID)."
+  print_success "Node.js server started successfully (PID: $SERVER_PID)."
   return 0
 }
 
-# Fonction pour exécuter les tests de commandes
+# Function to run command tests
 run_command_tests() {
   local test_pattern=$1
   local mode_desc="Neovim"
@@ -108,32 +108,32 @@ run_command_tests() {
     mode_desc="Node.js"
   fi
   
-  print_header "Tests de commandes - Mode: $mode_desc"
+  print_header "Command Tests - Mode: $mode_desc"
   
-  # Construire le pattern de test
+  # Build test pattern
   local jest_pattern="command"
   if [ -n "$test_pattern" ]; then
     jest_pattern="${jest_pattern}.*${test_pattern}"
   fi
   
-  print_info "Exécution des tests de commandes (pattern: $jest_pattern)..."
+  print_info "Running command tests (pattern: $jest_pattern)..."
   
-  # Exécuter les tests avec Jest
+  # Run tests with Jest
   VERBOSE_LOGS=${VERBOSE_LOGS:-false} npx jest --config ./test/jest.config.js --testPathPattern="$jest_pattern"
   local result=$?
   
   if [ $result -eq 0 ]; then
-    print_success "✓ Tous les tests de commandes ont réussi !"
+    print_success "✓ All command tests passed!"
   else
-    print_error "✗ Certains tests de commandes ont échoué."
-    print_info "Pour voir les logs détaillés, exécutez avec VERBOSE_LOGS=true :"
+    print_error "✗ Some command tests failed."
+    print_info "To see detailed logs, run with VERBOSE_LOGS=true :"
     print_info "VERBOSE_LOGS=true ./scripts/test/runners/run-command-tests.sh"
   fi
   
   return $result
 }
 
-# Fonction pour analyser les arguments
+# Function to parse arguments
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -150,7 +150,7 @@ parse_args() {
         shift 2
         ;;
       *)
-        # Si l'argument ne commence pas par --, considérer comme un pattern de test
+        # If argument does not start with --, consider it as a test pattern
         if [[ ! $1 == --* && -n $1 ]]; then
           TEST_PATTERN="$1"
         fi
@@ -160,23 +160,23 @@ parse_args() {
   done
 }
 
-# Fonction principale
+# Main function
 main() {
-  # Analyser les arguments
+  # Parse arguments
   parse_args "$@"
   
-  # Vérifier les prérequis
+  # Check prerequisites
   check_prerequisites "node" "npx" "jest" "lsof"
   
-  # Vérifier les prérequis spécifiques au mode
+  # Check specific prerequisites for mode
   if [ "$MODE" = "neovim" ]; then
     check_prerequisites "nvim"
   fi
   
-  # Configurer le trap pour nettoyer en cas d'interruption
+  # Configure trap to clean up on interruption
   trap cleanup EXIT INT TERM
   
-  # Démarrer le serveur selon le mode
+  # Start server based on mode
   if [ "$MODE" = "node" ]; then
     if ! start_node_server; then
       return 1
@@ -187,11 +187,12 @@ main() {
     fi
   fi
   
-  # Exécuter les tests de commandes
+  # Run command tests
   run_command_tests "$TEST_PATTERN"
   
   return $?
 }
 
-# Exécuter la fonction principale avec les arguments
-main "$@"
+# Run main function with arguments
+parse_args "$@"
+main

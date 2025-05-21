@@ -1,9 +1,9 @@
 -- render.lua
--- Fonctions de rendu partagées pour les composants UI Vue
+-- Shared rendering functions for Vue UI components
 
 local M = {}
 
--- Styles de couleurs pour les composants
+-- Color styles for components
 local styles = {
   default = {
     fg = "Normal",
@@ -35,11 +35,11 @@ local styles = {
   }
 }
 
--- Crée un buffer flottant
+-- Create a floating buffer
 function M.create_float(opts)
   opts = opts or {}
   
-  -- Options par défaut
+  -- Default options
   local default_opts = {
     relative = "editor",
     width = 40,
@@ -52,21 +52,21 @@ function M.create_float(opts)
     title_pos = "center"
   }
   
-  -- Fusionner les options
+  -- Merge options
   for k, v in pairs(opts) do
     default_opts[k] = v
   end
   
-  -- Créer le buffer
+  -- Create buffer
   local buf = vim.api.nvim_create_buf(false, true)
   
-  -- Configurer le buffer
+  -- Configure buffer
   vim.api.nvim_buf_set_option(buf, 'bufhidden', 'wipe')
   
-  -- Créer la fenêtre flottante
+  -- Create floating window
   local win = vim.api.nvim_open_win(buf, true, default_opts)
   
-  -- Configurer la fenêtre
+  -- Configure window
   vim.api.nvim_win_set_option(win, 'winblend', 0)
   vim.api.nvim_win_set_option(win, 'cursorline', true)
   
@@ -76,11 +76,11 @@ function M.create_float(opts)
   }
 end
 
--- Crée un buffer flottant avec contenu
+-- Create a floating buffer with content
 function M.create_floating_buffer(lines, opts)
   opts = opts or {}
   
-  -- Calculer la position centrée si demandé
+  -- Calculate centered position if requested
   if opts.centered then
     local uis = vim.api.nvim_list_uis()
     if #uis > 0 then
@@ -88,13 +88,13 @@ function M.create_floating_buffer(lines, opts)
       opts.row = math.floor((ui.height - opts.height) / 2)
       opts.col = math.floor((ui.width - opts.width) / 2)
     else
-      -- Valeurs par défaut pour les tests headless
+      -- Default values for headless tests
       opts.row = 5
       opts.col = 10
     end
   end
   
-  -- Créer le buffer flottant
+  -- Create floating buffer
   local float = M.create_float({
     relative = "editor",
     width = opts.width,
@@ -107,13 +107,13 @@ function M.create_floating_buffer(lines, opts)
     title_pos = "center"
   })
   
-  -- Remplir le buffer avec les lignes
+  -- Fill buffer with lines
   vim.api.nvim_buf_set_lines(float.buf, 0, -1, false, lines)
   
   return float.buf, float.win
 end
 
--- Applique un style à une ligne de texte
+-- Apply style to a line of text
 function M.apply_style(text, style_name)
   local style = styles[style_name] or styles.default
   return {
@@ -121,24 +121,24 @@ function M.apply_style(text, style_name)
   }
 end
 
--- Applique un style à un texte (pour les boutons, titres, etc.)
+-- Apply style to text (for buttons, titles, etc.)
 function M.style_text(text, style_name)
   local style = styles[style_name] or styles.default
   
-  -- Ajouter des attributs spéciaux selon le style
+  -- Add special attributes based on style
   if style_name == 'primary' or style_name == 'primary_focused' then
     return text
   elseif style_name == 'secondary' or style_name == 'secondary_focused' then
     return text
   elseif style_name:find('_focused') then
-    -- Ajouter un indicateur pour les éléments focusés
+    -- Add indicator for focused elements
     return '> ' .. text .. ' <'
   else
     return text
   end
 end
 
--- Dessine un cadre autour d'un texte
+-- Draw a border around text
 function M.draw_border(text, width, style_name)
   local style = styles[style_name] or styles.default
   local top = "┌" .. string.rep("─", width - 2) .. "┐"
@@ -152,13 +152,13 @@ function M.draw_border(text, width, style_name)
   }
 end
 
--- Centre un texte dans une largeur donnée
+-- Center text in a given width
 function M.center_text(text, width)
   local padding = math.floor((width - vim.fn.strdisplaywidth(text)) / 2)
   return string.rep(" ", padding) .. text .. string.rep(" ", width - padding - vim.fn.strdisplaywidth(text))
 end
 
--- Crée une ligne de bordure (haut, milieu ou bas)
+-- Create a border line (top, middle, or bottom)
 function M.create_border_line(width, position, style_name)
   local style = styles[style_name] or styles.default
   local line = ""
@@ -176,28 +176,28 @@ function M.create_border_line(width, position, style_name)
   return line
 end
 
--- Crée une ligne de titre
+-- Create a title line
 function M.create_title_line(width, title, style_name)
   local style = styles[style_name] or styles.default
   local centered_title = M.center_text(title, width - 4)
   return "│ " .. centered_title .. " │"
 end
 
--- Crée une ligne de contenu
+-- Create a content line
 function M.create_content_line(width, content, style_name)
   local style = styles[style_name] or styles.default
   local padded_content = content .. string.rep(" ", width - vim.fn.strdisplaywidth(content) - 4)
   return "│ " .. padded_content .. " │"
 end
 
--- Crée une ligne de saisie (input)
+-- Create an input line
 function M.create_input_line(width, content, style_name)
   local style = styles[style_name] or styles.default
   local padded_content = content .. string.rep(" ", width - vim.fn.strdisplaywidth(content) - 4)
   return "│ " .. padded_content .. " │"
 end
 
--- Crée une ligne de boutons
+-- Create a buttons line
 function M.create_buttons_line(width, buttons, style_name)
   local style = styles[style_name] or styles.default
   local buttons_text = table.concat(buttons, "  ")
@@ -206,17 +206,17 @@ function M.create_buttons_line(width, buttons, style_name)
   return "│ " .. padded_buttons .. " │"
 end
 
--- Aligne un texte à gauche dans une largeur donnée
+-- Left align text in a given width
 function M.left_align(text, width)
   return text .. string.rep(" ", width - vim.fn.strdisplaywidth(text))
 end
 
--- Aligne un texte à droite dans une largeur donnée
+-- Right align text in a given width
 function M.right_align(text, width)
   return string.rep(" ", width - vim.fn.strdisplaywidth(text)) .. text
 end
 
--- Tronque un texte s'il dépasse une largeur donnée
+-- Truncate text if it exceeds a given width
 function M.truncate(text, width)
   if vim.fn.strdisplaywidth(text) <= width then
     return text
@@ -225,37 +225,37 @@ function M.truncate(text, width)
   return string.sub(text, 1, width - 3) .. "..."
 end
 
--- Dessine un composant dans un buffer
+-- Draw a component in a buffer
 function M.draw_component(buf, component, start_line)
   start_line = start_line or 0
   
-  -- Vérifier que le composant a une méthode de rendu
+  -- Check that the component has a render method
   if not component.render then
-    vim.api.nvim_echo({{"[VueUI] Le composant n'a pas de méthode de rendu", "ErrorMsg"}}, false, {})
+    vim.api.nvim_echo({{"[VueUI] Component does not have a render method", "ErrorMsg"}}, false, {})
     return false
   end
   
-  -- Obtenir le rendu du composant
+  -- Get component rendering
   local rendered = component:render()
   
-  -- Vérifier que le rendu est valide
+  -- Check that the rendering is valid
   if not rendered or not rendered.lines then
-    vim.api.nvim_echo({{"[VueUI] Rendu du composant invalide", "ErrorMsg"}}, false, {})
+    vim.api.nvim_echo({{"[VueUI] Invalid component rendering", "ErrorMsg"}}, false, {})
     return false
   end
   
-  -- Dessiner les lignes dans le buffer
+  -- Draw lines in the buffer
   vim.api.nvim_buf_set_option(buf, 'modifiable', true)
   
-  -- Effacer les lignes existantes si nécessaire
+  -- Clear existing lines if necessary
   if start_line == 0 then
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, {})
   end
   
-  -- Ajouter les nouvelles lignes
+  -- Add new lines
   vim.api.nvim_buf_set_lines(buf, start_line, start_line + #rendered.lines, false, rendered.lines)
   
-  -- Appliquer les styles si présents
+  -- Apply styles if present
   if rendered.highlights then
     for _, hl in ipairs(rendered.highlights) do
       vim.api.nvim_buf_add_highlight(buf, -1, hl.group, hl.line, hl.col_start, hl.col_end)
@@ -267,7 +267,7 @@ function M.draw_component(buf, component, start_line)
   return true
 end
 
--- Enregistre les styles personnalisés
+-- Register custom styles
 function M.register_style(name, fg, bg)
   styles[name] = {
     fg = fg,
@@ -275,7 +275,7 @@ function M.register_style(name, fg, bg)
   }
 end
 
--- Récupère un style par son nom
+-- Get a style by its name
 function M.get_style(name)
   return styles[name] or styles.default
 end

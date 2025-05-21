@@ -1,4 +1,4 @@
---- Utilitaires pour les tests
+--- Test utilities
 -- @module test_helpers
 -- @author Cheik Kone
 -- @license MIT
@@ -9,36 +9,36 @@ local schema = require('vue-ui.events.schema')
 
 local M = {}
 
--- Variables globales pour les tests
+-- Global variables for tests
 local test_events = {}
 local test_buffers = {}
 local test_windows = {}
 local test_components = {}
 local test_key_inputs = {}
 
---- Détecte si nous sommes dans un environnement de test
--- @return boolean True si nous sommes dans un environnement de test
+--- Detect if we are in a test environment
+-- @return boolean True if we are in a test environment
 function M.is_test_env()
-  -- Vérifie si nous sommes dans un environnement headless ou sans UI
+  -- Check if we are in a headless or UI-less environment
   local has_ui = (vim.fn.has('nvim-0.5') == 1) and (#vim.api.nvim_list_uis() > 0)
   return not has_ui
 end
 
---- Configure l'environnement de test
--- @param config table Configuration optionnelle
+--- Set up test environment
+-- @param config table Optional configuration
 function M.setup_test_env(config)
   config = config or {}
   
-  -- Réinitialiser les événements
+  -- Reset events
   test_events = {}
   test_buffers = {}
   test_windows = {}
   test_components = {}
   
-  -- Générer un timestamp unique pour les tests
+  -- Generate unique timestamp for tests
   _G.test_timestamp = os.time()
   
-  -- Enregistrer la configuration
+  -- Store configuration
   _G.test_config = config
   
   return true
@@ -79,7 +79,7 @@ end
 
 --- Check if a specific event was emitted
 -- @param event_type string Event type to search for
--- @param criteria table|nil Critères de recherche optionnels
+-- @param criteria table|nil Optional search criteria
 -- @return boolean True if event was found
 function M.has_event(event_type, criteria)
   validation.validate_not_empty(event_type, "Event type cannot be empty")
@@ -89,7 +89,7 @@ function M.has_event(event_type, criteria)
     if event.event == event_type then
       local match = true
       
-      -- Vérifier les critères
+      -- Check criteria
       for key, value in pairs(criteria) do
         if event.data[key] ~= value then
           match = false
@@ -112,9 +112,9 @@ function M.reset_test_events()
 end
 
 --- Simulate buffer creation
--- @param lines table Lignes du buffer
--- @param options table Options du buffer
--- @return number ID du buffer
+-- @param lines table Buffer lines
+-- @param options table Buffer options
+-- @return number Buffer ID
 function M.create_test_buffer(lines, options)
   lines = lines or {}
   options = options or {}
@@ -131,9 +131,9 @@ function M.create_test_buffer(lines, options)
 end
 
 --- Simulate window creation
--- @param buffer_id number ID du buffer
--- @param options table Options de la fenêtre
--- @return number ID de la fenêtre
+-- @param buffer_id number Buffer ID
+-- @param options table Window options
+-- @return number Window ID
 function M.create_test_window(buffer_id, options)
   options = options or {}
   
@@ -148,41 +148,41 @@ function M.create_test_window(buffer_id, options)
   return window_id
 end
 
---- Vérifie si un buffer est valide
--- @param buffer_id number ID du buffer
--- @return boolean True si le buffer est valide
+--- Check if a buffer is valid
+-- @param buffer_id number Buffer ID
+-- @return boolean True if buffer is valid
 function M.is_buffer_valid(buffer_id)
   return test_buffers[buffer_id] ~= nil and test_buffers[buffer_id].valid
 end
 
---- Vérifie si une fenêtre est valide
--- @param window_id number ID de la fenêtre
--- @return boolean True si la fenêtre est valide
+--- Check if a window is valid
+-- @param window_id number Window ID
+-- @return boolean True if window is valid
 function M.is_window_valid(window_id)
   return test_windows[window_id] ~= nil and test_windows[window_id].valid
 end
 
---- Enregistre un composant pour les tests
--- @param id string ID du composant
--- @param component table Instance du composant
+--- Register a component for testing
+-- @param id string Component ID
+-- @param component table Component instance
 function M.register_test_component(id, component)
-  validation.validate_not_empty(id, "L'ID du composant ne peut pas être vide")
+  validation.validate_not_empty(id, "Component ID cannot be empty")
   test_components[id] = component
 end
 
---- Récupère un composant de test
--- @param id string ID du composant
--- @return table|nil Instance du composant ou nil
+--- Get a test component
+-- @param id string Component ID
+-- @return table|nil Component instance or nil
 function M.get_test_component(id)
   return test_components[id]
 end
 
---- Nettoie l'environnement de test
+--- Clean up test environment
 function M.cleanup_test_env()
-  -- Réinitialiser les événements
+  -- Reset events
   test_events = {}
   
-  -- Fermer les buffers et fenêtres
+  -- Close buffers and windows
   for id, _ in pairs(test_buffers) do
     test_buffers[id].valid = false
   end
@@ -191,10 +191,10 @@ function M.cleanup_test_env()
     test_windows[id].valid = false
   end
   
-  -- Nettoyer les composants
+  -- Clean up components
   test_components = {}
   
-  -- Nettoyer les variables globales
+  -- Clean up global variables
   _G.test_modal = nil
   _G.test_select = nil
   _G.test_listview = nil
@@ -210,12 +210,12 @@ end
 
 --- Simulate keyboard input
 -- @param key string Key to simulate ("<Up>", "<Down>", "<Left>", "<Right>", "<Enter>", "<Esc>", etc.)
--- @param component table Composant cible (optionnel)
+-- @param component table Target component (optional)
 -- @return boolean True if the simulation was successful
 function M.simulate_key_input(key, component)
-  validation.validate_not_empty(key, "La touche ne peut pas être vide")
+  validation.validate_not_empty(key, "Key cannot be empty")
   
-  -- Ajouter l'entrée clavier à la liste
+  -- Add keyboard input to the list
   table.insert(test_key_inputs, {
     key = key,
     component_id = component and component.id or nil,
@@ -253,8 +253,8 @@ function M.simulate_key_input(key, component)
   return false
 end
 
---- Récupère les entrées clavier simulées
--- @return table Liste des entrées clavier simulées
+--- Get simulated keyboard inputs
+-- @return table List of simulated keyboard inputs
 function M.get_key_inputs()
   return test_key_inputs
 end
@@ -266,10 +266,10 @@ end
 
 --- Simulate key sequence
 -- @param keys table List of keys to simulate
--- @param component table Composant cible (optionnel)
+-- @param component table Target component (optional)
 -- @return boolean True if all simulations were successful
 function M.simulate_key_sequence(keys, component)
-  validation.validate_table(keys, "La séquence de touches doit être une table")
+  validation.validate_table(keys, "Key sequence must be a table")
   
   local success = true
   for _, key in ipairs(keys) do
@@ -283,17 +283,17 @@ function M.simulate_key_sequence(keys, component)
 end
 
 --- Simulate mouse click
--- @param row number Ligne du clic (0-indexé)
--- @param col number Colonne du clic (0-indexé)
--- @param button string Bouton de la souris ("left", "right", "middle")
--- @param component table Composant cible (optionnel)
+-- @param row number Click row (0-indexed)
+-- @param col number Click column (0-indexed)
+-- @param button string Mouse button ("left", "right", "middle")
+-- @param component table Target component (optional)
 -- @return boolean True if the simulation was successful
 function M.simulate_mouse_click(row, col, button, component)
-  validation.validate_number(row, "La ligne doit être un nombre")
-  validation.validate_number(col, "La colonne doit être un nombre")
+  validation.validate_number(row, "Row must be a number")
+  validation.validate_number(col, "Column must be a number")
   button = button or "left"
   
-  -- Ajouter le clic de souris à la liste
+  -- Add mouse click to the list
   table.insert(test_key_inputs, {
     type = "mouse",
     button = button,
@@ -317,16 +317,16 @@ function M.simulate_mouse_click(row, col, button, component)
 end
 
 --- Save test events to JSON file
--- @param prefix string Préfixe du nom de fichier
+-- @param prefix string Filename prefix
 -- @return boolean True if the save was successful
 function M.save_test_events(prefix)
   prefix = prefix or 'test'
   local log_path = vim.fn.stdpath('data') .. '/vue-ui-test-events_' .. prefix .. '.json'
   
-  -- Convertir les événements en JSON
+  -- Convert events to JSON
   local json = vim.fn.json_encode(test_events)
   
-  -- Écrire dans le fichier
+  -- Write to file
   local file = io.open(log_path, 'w')
   if file then
     file:write(json)

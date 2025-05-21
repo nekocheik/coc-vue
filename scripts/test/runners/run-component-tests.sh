@@ -3,7 +3,7 @@
 
 # Usage:
 #   ./scripts/test/runners/run-component-tests.sh                  # Run all tests
-#   ./scripts/test/runners/run-component-tests.sh --section <name> # Run a specific section
+#   ./scripts/test/runners/run-component-tests.sh --section <n> # Run a specific section
 #   ./scripts/test/runners/run-component-tests.sh --progressive    # Run tests progressively
 
 # Test sections:
@@ -18,58 +18,58 @@
 #   performance      - Performance tests
 #   integration      - Integration tests
 
-# Importer les utilitaires communs
+# Import common utilities
 source "$(dirname "${BASH_SOURCE[0]}")/../core/test-utils.sh"
 
-# Définir le timeout global (en secondes)
-MAX_TIMEOUT=${MAX_TIMEOUT:-300}  # 5 minutes par défaut
+# Set global timeout (in seconds)
+MAX_TIMEOUT=${MAX_TIMEOUT:-300}  # 5 minutes by default
 
-# Variables globales
+# Global variables
 PROGRESSIVE_MODE=false
 SECTION=""
 
-# Fonction de nettoyage à la sortie
+# Cleanup function on exit
 cleanup() {
-  print_info "Nettoyage des ressources..."
+  print_info "Cleaning up resources..."
   
-  # Arrêter le serveur de composants
+  # Stop the component server
   if [ -n "$SERVER_PID" ]; then
     kill_process $SERVER_PID
   fi
   
-  # Nettoyer les processus Neovim
+  # Clean up Neovim processes
   pkill -f "nvim --headless" || true
   
-  # Nettoyer le port 9999
+  # Clean up port 9999
   cleanup_port 9999
   
-  print_success "Nettoyage terminé."
+  print_success "Cleanup completed."
 }
 
-# Fonction pour exécuter un test spécifique ou un pattern de test
+# Function to run a specific test or test pattern
 run_test() {
   local test_pattern=$1
   local description=$2
   
-  print_info "Exécution du test: $description"
-  print_debug "Pattern de test: $test_pattern"
+  print_info "Running test: $description"
+  print_debug "Test pattern: $test_pattern"
   
-  # Exécuter le test avec Jest
+  # Run the test with Jest
   VERBOSE_LOGS=${VERBOSE_LOGS:-false} npx jest --config ./test/jest.config.js --testPathPattern="$test_pattern"
   local result=$?
   
   if [ $result -eq 0 ]; then
-    print_success "✓ Test réussi: $description"
+    print_success "✓ Test passed: $description"
   else
-    print_error "✗ Test échoué: $description"
+    print_error "✗ Test failed: $description"
   fi
   
   return $result
 }
 
-# Fonction pour exécuter les tests en mode progressif
+# Function to run tests in progressive mode
 run_progressive_tests() {
-  print_header "Tests de composants en mode progressif"
+  print_header "Component tests in progressive mode"
   
   local all_passed=true
   local sections=(
@@ -92,100 +92,100 @@ run_progressive_tests() {
     
     if ! run_test "$section_name" "$section_desc"; then
       all_passed=false
-      print_error "La section '$section_desc' a échoué. Voulez-vous continuer avec les sections suivantes? (y/n)"
+      print_error "Section '$section_desc' failed. Do you want to continue with the next sections? (y/n)"
       read -r continue_tests
       
       if [[ ! $continue_tests =~ ^[Yy]$ ]]; then
-        print_info "Tests interrompus par l'utilisateur."
+        print_info "Tests interrupted by user."
         return 1
       fi
     fi
     
-    # Pause entre les sections
-    print_info "Pause de 2 secondes avant la prochaine section..."
+    # Pause between sections
+    print_info "2 second pause before next section..."
     sleep 2
   done
   
   if [ "$all_passed" = true ]; then
-    print_success "✓ Tous les tests de composants ont réussi !"
+    print_success "✓ All component tests passed!"
     return 0
   else
-    print_error "✗ Certains tests de composants ont échoué."
+    print_error "✗ Some component tests failed."
     return 1
   fi
 }
 
-# Fonction pour exécuter une section spécifique de tests
+# Function to run a specific test section
 run_section_tests() {
   local section=$1
   
-  print_header "Tests de composants - Section: $section"
+  print_header "Component tests - Section: $section"
   
   if ! run_test "$section" "Section $section"; then
-    print_error "✗ La section '$section' a échoué."
+    print_error "✗ Section '$section' failed."
     return 1
   fi
   
-  print_success "✓ La section '$section' a réussi !"
+  print_success "✓ Section '$section' passed!"
   return 0
 }
 
-# Fonction pour exécuter tous les tests de composants
+# Function to run all component tests
 run_all_tests() {
-  print_header "Tests de composants - Tous les tests"
+  print_header "Component tests - All tests"
   
-  # Exécuter tous les tests de composants
+  # Run all component tests
   VERBOSE_LOGS=${VERBOSE_LOGS:-false} npx jest --config ./test/jest.config.js --testPathPattern="components"
   local result=$?
   
   if [ $result -eq 0 ]; then
-    print_success "✓ Tous les tests de composants ont réussi !"
+    print_success "✓ All component tests passed!"
   else
-    print_error "✗ Certains tests de composants ont échoué."
+    print_error "✗ Some component tests failed."
   fi
   
   return $result
 }
 
-# Fonction pour démarrer le serveur de composants
+# Function to start the component server
 start_component_server() {
-  print_info "Démarrage du serveur de composants..."
+  print_info "Starting component server..."
   
-  # Nettoyer les processus Neovim existants
-  print_info "Nettoyage des processus Neovim existants..."
+  # Clean up existing Neovim processes
+  print_info "Cleaning up existing Neovim processes..."
   pkill -f "nvim --headless" || true
   
-  # Vérifier si le port 9999 est déjà utilisé
+  # Check if port 9999 is already in use
   if lsof -i :9999 > /dev/null 2>&1; then
-    print_error "Le port 9999 est déjà utilisé. Nettoyage des processus existants..."
+    print_error "Port 9999 is already in use. Cleaning up existing processes..."
     cleanup_port 9999
     sleep 2
   fi
   
-  # Créer un fichier de log pour le serveur
+  # Create a log file for the server
   LOG_FILE="/tmp/component-server.log"
   touch "$LOG_FILE"
   chmod 666 "$LOG_FILE" 2>/dev/null || true
   
-  # Démarrer le serveur de composants directement (sans utiliser start_server)
-  print_info "Démarrage du serveur Neovim avec le component server..."
+  # Start the component server directly (without using start_server)
+  print_info "Starting Neovim with component server..."
   "$PROJECT_ROOT/scripts/server/run_component_server.sh" > "$LOG_FILE" 2>&1 &
   SERVER_PID=$!
   
-  # Attendre que le serveur soit prêt
-  print_info "Attente du démarrage du serveur de composants..."
+  # Wait for the server to be ready
+  print_info "Waiting for component server to start..."
   
-  # Attendre jusqu'à 15 secondes pour que le serveur démarre
+  # Wait up to 15 seconds for the server to start
   for i in {1..15}; do
     if grep -q "Component server running on 127.0.0.1:9999" "$LOG_FILE" 2>/dev/null; then
-      print_success "Serveur de composants démarré avec succès!"
+      print_success "Component server started successfully!"
       break
     fi
     
-    # Vérifier si le processus est toujours en cours d'exécution
+    # Check if the process is still running
     if ! ps -p $SERVER_PID > /dev/null; then
-      print_error "Le processus du serveur de composants s'est arrêté de manière inattendue."
-      print_info "Contenu du log:"
+      print_error "Component server process stopped unexpectedly."
+      print_info "Log contents:"
       cat "$LOG_FILE"
       return 1
     fi
@@ -194,19 +194,19 @@ start_component_server() {
     sleep 1
   done
   
-  # Vérifier si le serveur écoute sur le port 9999
+  # Check if the server is listening on port 9999
   if ! lsof -i :9999 > /dev/null 2>&1; then
-    print_error "Le serveur de composants n'écoute pas sur le port 9999."
-    print_info "Contenu du log:"
+    print_error "Component server is not listening on port 9999."
+    print_info "Log contents:"
     cat "$LOG_FILE"
     return 1
   fi
   
-  print_success "Serveur de composants démarré avec succès (PID: $SERVER_PID)."
+  print_success "Component server started successfully (PID: $SERVER_PID)."
   return 0
 }
 
-# Fonction pour analyser les arguments
+# Function to parse arguments
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case $1 in
@@ -219,7 +219,7 @@ parse_args() {
         shift 2
         ;;
       *)
-        # Si l'argument ne commence pas par --, considérer comme une section
+        # If argument doesn't start with --, consider it as a section
         if [[ ! $1 == --* && -n $1 ]]; then
           SECTION="$1"
         fi
@@ -229,23 +229,23 @@ parse_args() {
   done
 }
 
-# Fonction principale
+# Main function
 main() {
-  # Analyser les arguments
+  # Parse arguments
   parse_args "$@"
   
-  # Vérifier les prérequis
+  # Check prerequisites
   check_prerequisites "node" "npx" "jest" "lsof"
   
-  # Configurer le trap pour nettoyer en cas d'interruption
+  # Set up trap for cleanup on interruption
   trap cleanup EXIT INT TERM
   
-  # Démarrer le serveur de composants
+  # Start the component server
   if ! start_component_server; then
     return 1
   fi
   
-  # Exécuter les tests selon le mode
+  # Run tests according to mode
   if [ "$PROGRESSIVE_MODE" = true ]; then
     run_progressive_tests
   elif [ -n "$SECTION" ]; then
@@ -257,5 +257,5 @@ main() {
   return $?
 }
 
-# Exécuter la fonction principale avec les arguments
+# Execute main function with arguments
 main "$@"

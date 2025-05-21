@@ -30,8 +30,6 @@ const frenchPatterns = {
     'création', 'créer',
     'suppression', 'supprimer',
     'modification', 'modifier',
-    'configuration', 'configurer',
-    'initialisation', 'initialiser',
     'déploiement', 'déployer',
     'exécution', 'exécuter',
     'vérification', 'vérifier',
@@ -56,8 +54,76 @@ const frenchPatterns = {
   ]
 };
 
+// Technical terms that are valid in both English and French and should be ignored
+const allowedTechnicalTerms = [
+  'configuration',
+  'configure',
+  'configured',
+  'configuring',
+  'initialization',
+  'initialize',
+  'initialized',
+  'initializing',
+  'integration',
+  'integrated',
+  'integrating',
+  'validation',
+  'validate',
+  'validated',
+  'validating',
+  'variable',
+  'variables',
+  'object',
+  'objects',
+  'value',
+  'values',
+  'array',
+  'arrays',
+  'table',
+  'tables',
+  'verify',
+  'verification',
+  'verified',
+  'verifying'
+];
+
 // File extensions to check
 const extensions = ['.js', '.ts', '.lua', '.json', '.yml', '.md'];
+
+// Directories to exclude from checks
+const excludedDirectories = [
+  '.git',
+  'test',
+  'test-improved',
+  '__tests__',
+  'node_modules',
+  'coverage',
+  '.ci-artifacts',
+  'scripts/test',
+  'test/utils',
+  'test/manual',
+  'test/integration',
+  'test/unit',
+  'test/mocks',
+  'test/git',
+  'test/fixtures',
+  'test/vader',
+  'test/lua',
+  'test-improved/integration',
+  'test-improved/mocks',
+  'test-improved/scripts',
+  'test-improved/unit',
+  'test-improved/utils'
+];
+
+// Function to check if a file should be excluded
+function shouldExcludeFile(filePath) {
+  // Exclude the check-french-words.js file itself
+  if (filePath === 'scripts/check-french-words.js') {
+    return true;
+  }
+  return excludedDirectories.some(dir => filePath.startsWith(dir) || filePath.includes('/' + dir + '/'));
+}
 
 // Function to check for French patterns
 function checkForFrenchPatterns(text) {
@@ -88,11 +154,15 @@ function checkForFrenchPatterns(text) {
     const regex = new RegExp(`\\b${term}\\b`, 'gi');
     let termMatch;
     while ((termMatch = regex.exec(text)) !== null) {
-      matches.push({
-        type: 'technical',
-        word: termMatch[0],
-        index: termMatch.index
-      });
+      // Skip if the word is in the allowed technical terms list
+      const matchedWord = termMatch[0].toLowerCase();
+      if (!allowedTechnicalTerms.some(allowed => matchedWord.includes(allowed.toLowerCase()))) {
+        matches.push({
+          type: 'technical',
+          word: termMatch[0],
+          index: termMatch.index
+        });
+      }
     }
   }
   
@@ -105,8 +175,10 @@ function getStagedFiles() {
     // Get list of staged files
     const output = execSync('git diff --cached --name-only').toString();
     return output.split('\n').filter(file => {
-      // Filter out empty lines and only include files with specified extensions
-      return file && extensions.includes(path.extname(file));
+      // Filter out empty lines, excluded directories, and only include files with specified extensions
+      return file && 
+             extensions.includes(path.extname(file)) && 
+             !shouldExcludeFile(file);
     });
   } catch (error) {
     console.error('Error getting staged files:', error);

@@ -3,7 +3,7 @@ import getNeovimClient from '../utils/neovim-client-factory';
 import { Select } from '../../src/components/select';
 import { MessageType } from '../../src/bridge/core';
 
-// Utiliser la factory pour obtenir le client approprié (mock ou réel)
+// Use the factory to get the appropriate client (mock or real)
 const client = getNeovimClient();
 type NeovimTestClientType = typeof client;
 

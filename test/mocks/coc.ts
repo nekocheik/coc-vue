@@ -1,14 +1,14 @@
 /**
- * Mock robuste pour coc.nvim
+ * Mock robuste for coc.nvim
  * Ce mock simule le comportement de coc.nvim pour les tests
  */
 
-// Mock pour les événements
+// Mock for events
 const mockEvents: Record<string, Function[]> = {};
 
-// Mock pour l'espace de travail
+// Mock for workspace
 const mockWorkspace = {
-  // Gestionnaire d'événements
+  // Event handler
   onDidOpenTextDocument: jest.fn((callback) => {
     if (!mockEvents['openTextDocument']) {
       mockEvents['openTextDocument'] = [];
@@ -33,7 +33,7 @@ const mockWorkspace = {
     return { dispose: () => {} };
   }),
   
-  // Méthodes pour manipuler les documents
+  // Methods for manipulating documents
   getDocument: jest.fn(() => ({
     uri: 'file:///test/document.vue',
     getLines: jest.fn(() => ['<template>', '  <div>', '  </div>', '</template>']),
@@ -48,7 +48,7 @@ const mockWorkspace = {
     }
   })),
   
-  // Méthodes pour créer des documents
+  // Methods for creating documents
   createDocument: jest.fn(async (uri) => ({
     uri,
     getLines: jest.fn(() => []),
@@ -63,7 +63,7 @@ const mockWorkspace = {
     }
   })),
   
-  // Méthodes pour travailler avec Neovim
+  // Methods for working with Neovim
   nvim: {
     call: jest.fn(),
     command: jest.fn(),
@@ -75,17 +75,17 @@ const mockWorkspace = {
     unsubscribe: jest.fn()
   },
   
-  // Méthodes pour les notifications
+  // Methods for notifications
   showMessage: jest.fn(),
   showErrorMessage: jest.fn(),
   showWarningMessage: jest.fn(),
   showInformationMessage: jest.fn(),
   
-  // Méthodes pour les commandes
+  // Methods for commands
   registerCommand: jest.fn(() => ({ dispose: () => {} })),
   executeCommand: jest.fn(),
   
-  // Méthodes pour les configurations
+  // Methods for configurations
   getConfiguration: jest.fn((section) => ({
     get: jest.fn((key, defaultValue) => defaultValue),
     update: jest.fn(),
@@ -93,18 +93,18 @@ const mockWorkspace = {
   }))
 };
 
-// Méthodes utilitaires pour les tests
+// Utility methods for tests
 const clearAllMocks = () => {
-  // Réinitialiser tous les mocks
+  // Reset all mocks
   jest.clearAllMocks();
   
-  // Réinitialiser les événements
+  // Reset events
   Object.keys(mockEvents).forEach(key => {
     mockEvents[key] = [];
   });
 };
 
-// Méthodes pour déclencher des événements
+// Methods for triggering events
 const triggerEvent = (eventName: string, ...args: any[]) => {
   if (mockEvents[eventName]) {
     mockEvents[eventName].forEach(callback => {
@@ -113,7 +113,7 @@ const triggerEvent = (eventName: string, ...args: any[]) => {
   }
 };
 
-// Exposer le mock
+// Expose the mock
 export default {
   workspace: mockWorkspace,
   Disposable: class Disposable {
@@ -154,7 +154,7 @@ export default {
       this.end = { line: endLine, character: endCharacter };
     }
   },
-  // Méthodes utilitaires pour les tests
+  // Utility methods for tests
   __clearAllMocks: clearAllMocks,
   __triggerEvent: triggerEvent
 };

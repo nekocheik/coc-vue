@@ -1,6 +1,6 @@
 FROM node:18-slim
 
-# Installer les dépendances nécessaires
+# Install required dependencies
 RUN apt-get update && apt-get install -y \
     git \
     curl \
@@ -8,22 +8,22 @@ RUN apt-get update && apt-get install -y \
     procps \
     && rm -rf /var/lib/apt/lists/*
 
-# Définir le répertoire de travail
+# Set the working directory
 WORKDIR /app
 
-# Copier les fichiers de dépendances (package.json est obligatoire)
+# Copy dependency files (package.json is required)
 COPY package.json ./
-# Copier les fichiers de verrou s'ils existent
+# Copy lock files if they exist
 COPY package-lock.json* bun.lock* ./
 
-# Installer les dépendances
+# Install dependencies
 RUN npm install --legacy-peer-deps
 
-# Copier le reste du code source
+# Copy the rest of the source code
 COPY . .
 
-# Rendre les scripts exécutables
+# Make scripts executable
 RUN chmod +x scripts/docker-run-tests.sh
 
-# Définir la commande par défaut
+# Set the default command
 CMD ["./scripts/docker-run-tests.sh"]

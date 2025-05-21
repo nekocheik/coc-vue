@@ -1,60 +1,60 @@
 /**
- * Mock robuste pour VimComponent
- * Ce mock simule le comportement de base du composant Vim
+ * Robust mock for VimComponent
+ * This mock simulates the basic behavior of the Vim component
  */
 import bridgeCore, { MessageType } from './bridge-core';
 
-// Classe de base pour les composants Vim
+// Base class for Vim components
 export default class VimComponent {
-  // Propriétés du composant
+  // Component properties
   id: string;
   type: string;
   options: Record<string, any>;
   state: Record<string, any>;
   mounted: boolean = false;
   
-  // Constructeur
+  // Constructor
   constructor(id: string, type: string, options: Record<string, any> = {}) {
     this.id = id;
     this.type = type;
     this.options = { ...options };
     this.state = { ...options };
     
-    // Configurer le gestionnaire de messages
+    // Set up message handler
     this.setupMessageHandler();
   }
   
-  // Configurer le gestionnaire de messages
+  // Set up message handler
   private setupMessageHandler() {
     bridgeCore.onMessage((message) => {
-      // Traiter uniquement les messages destinés à ce composant
+      // Process only messages intended for this component
       if (message.payload?.id !== this.id) {
         return;
       }
       
-      // Traiter les requêtes de méthode
+      // Process method requests
       if (message.type === MessageType.REQUEST && message.action === 'callMethod') {
         this.handleMethodCall(message);
       }
       
-      // Traiter les requêtes d'état
+      // Process state requests
       if (message.type === MessageType.REQUEST && message.action === 'getState') {
         this.handleGetState(message);
       }
     });
   }
   
-  // Gérer les appels de méthode
+  // Handle method calls
   private async handleMethodCall(message: any) {
     const { method, args = [] } = message.payload || {};
     
-    // Vérifier si la méthode existe
+    // Check if method exists
     if (typeof (this as any)[method] === 'function') {
       try {
-        // Appeler la méthode
+        // Call method
         const result = await (this as any)[method](...args);
         
-        // Envoyer la réponse
+        // Send response
         await bridgeCore.sendMessage({
           id: Date.now().toString(),
           type: MessageType.RESPONSE,
@@ -63,7 +63,7 @@ export default class VimComponent {
           payload: { result }
         });
       } catch (error) {
-        // Envoyer l'erreur
+        // Send error
         await bridgeCore.sendMessage({
           id: Date.now().toString(),
           type: MessageType.ERROR,
@@ -73,7 +73,7 @@ export default class VimComponent {
         });
       }
     } else {
-      // Méthode non trouvée
+      // Method not found
       await bridgeCore.sendMessage({
         id: Date.now().toString(),
         type: MessageType.ERROR,
@@ -84,9 +84,9 @@ export default class VimComponent {
     }
   }
   
-  // Gérer les requêtes d'état
+  // Handle state requests
   private async handleGetState(message: any) {
-    // Envoyer l'état actuel
+    // Send current state
     await bridgeCore.sendMessage({
       id: Date.now().toString(),
       type: MessageType.RESPONSE,
@@ -96,18 +96,18 @@ export default class VimComponent {
     });
   }
   
-  // Mettre à jour l'état et émettre un événement
+  // Update state and emit event
   protected updateState(newState: Partial<Record<string, any>>, eventName?: string) {
-    // Mettre à jour l'état
+    // Update state
     this.state = { ...this.state, ...newState };
     
-    // Émettre un événement si nécessaire
+    // Emit event if needed
     if (eventName) {
       this.emitEvent(eventName, newState);
     }
   }
   
-  // Émettre un événement
+  // Emit event
   protected emitEvent(eventName: string, payload: any = {}) {
     bridgeCore.sendMessage({
       id: Date.now().toString(),
@@ -120,21 +120,21 @@ export default class VimComponent {
     });
   }
   
-  // Méthode pour monter le composant
+  // Method to mount component
   async mount() {
     this.mounted = true;
     this.updateState({ mounted: true }, `${this.type}:mounted`);
     return true;
   }
   
-  // Méthode pour démonter le composant
+  // Method to unmount component
   async unmount() {
     this.mounted = false;
     this.updateState({ mounted: false }, `${this.type}:unmounted`);
     return true;
   }
   
-  // Méthode pour mettre à jour les options
+  // Method to update options
   async updateOptions(options: Record<string, any>) {
     this.options = { ...this.options, ...options };
     this.updateState(options, `${this.type}:optionsUpdated`);

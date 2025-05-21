@@ -45,7 +45,7 @@ export const mockWindow = {
 const cocMock = {
   workspace: mockWorkspace,
   window: mockWindow,
-  // Ajouter d'autres propriétés si nécessaire
+  // Add other properties if needed
   commands: {
     registerCommand: jest.fn().mockReturnValue({ dispose: jest.fn() }),
     executeCommand: jest.fn().mockResolvedValue(null),

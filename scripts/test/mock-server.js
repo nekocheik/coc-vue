@@ -1,7 +1,7 @@
 /**
- * Serveur mock robuste pour les tests d'intégration
- * Ce serveur simule le comportement du serveur Neovim pour les tests
- * Utilise des ports dynamiques pour éviter les conflits
+ * Robust mock server for integration tests
+ * This server simulates Neovim server behavior for tests
+ * Uses dynamic ports to avoid conflicts
  */
 const net = require('net');
 const fs = require('fs');
@@ -9,45 +9,44 @@ const path = require('path');
 const { execSync } = require('child_process');
 const portManager = require('../../test/utils/port-manager');
 
-// Configuration du serveur
+// Server configuration
 const HOST = '127.0.0.1';
 let PORT = null;
 let serverInfo = null;
 let isShuttingDown = false;
 
-// Chemin vers le fichier d'information du serveur
+// Path to server information file
 const SERVER_INFO_PATH = path.join(__dirname, '../../test/.server-info.json');
 
-// Activer le mode verbeux si la variable d'environnement est définie
+// Enable verbose mode if environment variable is set
 const VERBOSE = process.env.VERBOSE_LOGS === 'true';
 
-// Fonction pour journaliser avec horodatage
-function log(message, isError = false) {
+// Function to log with timestamp
+const log = (message, isError = false) => {
   const timestamp = new Date().toISOString();
   const logMessage = `[${timestamp}] ${message}`;
-  
   if (isError) {
     console.error(logMessage);
-  } else if (VERBOSE) {
+  } else {
     console.log(logMessage);
   }
-}
+};
 
-// Stockage pour les composants et les événements
+// Storage for components and events
 const components = new Map();
-let events = [];
+const events = [];
 
-// Créer le serveur TCP
+// Create TCP server
 const server = net.createServer((socket) => {
   console.log(`Client connected: ${socket.remoteAddress}:${socket.remotePort}`);
   
-  // Gérer les données reçues
+  // Handle received data
   socket.on('data', (data) => {
     try {
       const command = JSON.parse(data.toString());
       console.log(`Command received: ${command.type} (ID: ${command.id})`);
       
-      // Traiter la commande
+      // Process command
       let response = {
         id: command.id,
         success: true
@@ -73,11 +72,11 @@ const server = net.createServer((socket) => {
           const component = components.get(command.id);
           if (!component) {
             response.success = false;
-            response.error = `Composant non trouvé: ${command.id}`;
+            response.error = `Component not found: ${command.id}`;
             break;
           }
           
-          // Simuler différentes méthodes
+          // Simulate different methods
           switch (command.method) {
             case 'mount':
               component.state.mounted = true;
@@ -110,24 +109,24 @@ const server = net.createServer((socket) => {
                 component.state.selected_value = component.state.options[index].value;
                 component.state.selected_text = component.state.options[index].text;
                 
-                // En mode multi-sélection, gérer les options sélectionnées
+                // Handle multi-select mode
                 if (component.state.multi) {
                   component.state.selected_options = component.state.selected_options || [];
                   
-                  // Vérifier si l'option est déjà sélectionnée
+                  // Check if option is already selected
                   const existingIndex = component.state.selected_options.findIndex(
                     opt => opt.value === component.state.options[index].value
                   );
                   
                   if (existingIndex >= 0) {
-                    // Désélectionner l'option
+                    // Deselect option
                     component.state.selected_options.splice(existingIndex, 1);
                   } else {
-                    // Sélectionner l'option
+                    // Select option
                     component.state.selected_options.push(component.state.options[index]);
                   }
                 } else {
-                  // En mode simple, fermer le menu après la sélection
+                  // In single-select mode, close menu after selection
                   component.state.is_open = false;
                 }
                 
@@ -193,7 +192,7 @@ const server = net.createServer((socket) => {
               
             default:
               response.success = false;
-              response.error = `Méthode non supportée: ${command.method}`;
+              response.error = `Method not supported: ${command.method}`;
           }
           break;
           
@@ -201,7 +200,7 @@ const server = net.createServer((socket) => {
           const comp = components.get(command.id);
           if (!comp) {
             response.success = false;
-            response.error = `Composant non trouvé: ${command.id}`;
+            response.error = `Component not found: ${command.id}`;
             break;
           }
           response.state = comp.state;
@@ -213,15 +212,15 @@ const server = net.createServer((socket) => {
           
         default:
           response.success = false;
-          response.error = `Type de commande non supporté: ${command.type}`;
+          response.error = `Command type not supported: ${command.type}`;
       }
       
-      // Envoyer la réponse
+      // Send response
       socket.write(JSON.stringify(response));
       console.log(`Response sent: ${response.success ? 'success' : 'failure'}`);
       
     } catch (err) {
-      console.error(`Erreur lors du traitement de la commande: ${err.message}`);
+      console.error(`Error processing command: ${err.message}`);
       socket.write(JSON.stringify({
         id: 'error',
         success: false,
@@ -230,94 +229,94 @@ const server = net.createServer((socket) => {
     }
   });
   
-  // Gérer la déconnexion
+  // Handle disconnection
   socket.on('close', () => {
     console.log(`Client disconnected: ${socket.remoteAddress}:${socket.remotePort}`);
   });
   
-  // Gérer les erreurs
+  // Handle errors
   socket.on('error', (err) => {
-    console.error(`Erreur de socket: ${err.message}`);
+    console.error(`Socket error: ${err.message}`);
   });
 });
 
-// Gérer les erreurs du serveur
+// Handle server errors
 server.on('error', (err) => {
-  console.error(`Erreur du serveur: ${err.message}`);
+  console.error(`Server error: ${err.message}`);
   if (err.code === 'EADDRINUSE') {
-    console.error(`Le port ${PORT} est déjà utilisé. Arrêtez tout processus existant sur ce port.`);
+    console.error(`Port ${PORT} is already in use. Stop any existing process on this port.`);
     process.exit(1);
   }
 });
 
-// Fonction pour réinitialiser l'état du serveur
-function resetServer() {
+// Function to reset server state
+const resetServer = () => {
   components.clear();
-  events = [];
-  console.log('État du serveur réinitialisé');
-}
+  events.length = 0;
+  console.log('Server state reset');
+};
 
-// Fonction pour démarrer le serveur avec un port dynamique
-async function startServer() {
+// Function to start server with dynamic port
+const startServer = async (port) => {
   try {
-    // Vérifier si un serveur est déjà en cours d'exécution
+    // Check if a server is already running
     if (fs.existsSync(SERVER_INFO_PATH)) {
       try {
         const existingInfo = JSON.parse(fs.readFileSync(SERVER_INFO_PATH, 'utf8'));
         const existingPid = existingInfo.pid;
         
-        // Vérifier si le processus est toujours en cours d'exécution
+        // Check if process is still running
         try {
-          process.kill(existingPid, 0); // Vérifie si le processus existe sans l'arrêter
-          log(`Un serveur mock est déjà en cours d'exécution avec PID ${existingPid} sur le port ${existingInfo.port}`);
+          process.kill(existingPid, 0); // Check if process exists without killing it
+          log(`A mock server is already running with PID ${existingPid} on port ${existingInfo.port}`);
           
-          // Tenter de tuer le processus existant
+          // Try to kill existing process
           try {
-            log(`Tentative d'arrêt du serveur existant (PID: ${existingPid})...`);
+            log(`Attempting to stop existing server (PID: ${existingPid})...`);
             process.kill(existingPid, 'SIGTERM');
             
-            // Attendre un peu pour s'assurer que le processus est terminé
+            // Wait a bit to ensure process is terminated
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            // Vérifier si le processus est toujours en cours d'exécution
+            // Check if process is still running
             try {
               process.kill(existingPid, 0);
-              log(`Le serveur existant n'a pas pu être arrêté proprement, tentative d'arrêt forcé...`, true);
+              log(`Existing server could not be stopped gracefully, attempting force stop...`, true);
               process.kill(existingPid, 'SIGKILL');
               await new Promise(resolve => setTimeout(resolve, 1000));
             } catch (e) {
-              // Le processus a été arrêté avec succès
-              log(`Serveur existant arrêté avec succès`);
+              // Process was successfully stopped
+              log(`Existing server stopped successfully`);
             }
           } catch (killErr) {
-            log(`Erreur lors de la tentative d'arrêt du serveur existant: ${killErr.message}`, true);
+            log(`Error stopping existing server: ${killErr.message}`, true);
           }
         } catch (e) {
-          // Le processus n'existe plus, mais le fichier d'information existe toujours
-          log(`Le fichier d'information du serveur existe, mais le processus ${existingPid} n'est plus en cours d'exécution`);
+          // Process no longer exists but info file still does
+          log(`Server info file exists but process ${existingPid} is no longer running`);
         }
       } catch (parseErr) {
-        log(`Erreur lors de la lecture du fichier d'information du serveur: ${parseErr.message}`, true);
+        log(`Error reading server info file: ${parseErr.message}`, true);
       }
       
-      // Supprimer le fichier d'information existant
+      // Delete existing info file
       try {
         fs.unlinkSync(SERVER_INFO_PATH);
-        log(`Fichier d'information du serveur supprimé`);
+        log(`Server info file deleted`);
       } catch (unlinkErr) {
-        log(`Erreur lors de la suppression du fichier d'information du serveur: ${unlinkErr.message}`, true);
+        log(`Error deleting server info file: ${unlinkErr.message}`, true);
       }
     }
     
-    // Allouer un port dynamique
+    // Allocate dynamic port
     PORT = await portManager.allocatePort('mock-server');
-    log(`Port ${PORT} alloué pour le serveur mock`);
+    log(`Port ${PORT} allocated for mock server`);
     
-    // Démarrer le serveur
+    // Start server
     server.listen(PORT, HOST, () => {
-      log(`Serveur mock démarré sur ${HOST}:${PORT}`);
+      log(`Mock server started on ${HOST}:${PORT}`);
       
-      // Enregistrer les informations du serveur dans un fichier
+      // Record server information
       serverInfo = {
         host: HOST,
         port: PORT,
@@ -328,21 +327,21 @@ async function startServer() {
         status: 'running'
       };
       
-      // Écrire les informations du serveur dans un fichier
+      // Write server information to file
       fs.writeFileSync(SERVER_INFO_PATH, JSON.stringify(serverInfo, null, 2));
-      log(`Informations du serveur enregistrées dans ${SERVER_INFO_PATH}`);
+      log(`Server information saved to ${SERVER_INFO_PATH}`);
       
-      // Mettre à jour périodiquement les informations du serveur
+      // Update server information periodically
       setInterval(updateServerInfo, 5000);
     });
   } catch (err) {
-    log(`Erreur lors du démarrage du serveur: ${err.message}`, true);
+    log(`Error starting server: ${err.message}`, true);
     process.exit(1);
   }
-}
+};
 
-// Fonction pour mettre à jour les informations du serveur
-function updateServerInfo() {
+// Function to update server information
+const updateServerInfo = async () => {
   if (isShuttingDown) return;
   
   try {
@@ -353,81 +352,81 @@ function updateServerInfo() {
       
       fs.writeFileSync(SERVER_INFO_PATH, JSON.stringify(serverInfo, null, 2));
       if (VERBOSE) {
-        log(`Informations du serveur mises à jour (${components.size} composants actifs)`);
+        log(`Server information updated (${components.size} active components)`);
       }
     }
   } catch (err) {
-    log(`Erreur lors de la mise à jour des informations du serveur: ${err.message}`, true);
+    log(`Error updating server information: ${err.message}`, true);
   }
-}
+};
 
-// Démarrer le serveur
+// Start server
 startServer();
 
-// Fonction pour arrêter proprement le serveur
-function shutdownServer(signal) {
+// Function to gracefully stop server
+const stopServer = async (signal) => {
   if (isShuttingDown) return;
   isShuttingDown = true;
   
-  log(`Reçu signal ${signal}, arrêt du serveur mock...`);
+  log(`Received signal ${signal}, stopping mock server...`);
   
-  // Mettre à jour le statut du serveur
+  // Update server status
   if (serverInfo) {
     serverInfo.status = 'shutting_down';
     try {
       fs.writeFileSync(SERVER_INFO_PATH, JSON.stringify(serverInfo, null, 2));
     } catch (err) {
-      // Ignorer les erreurs lors de la mise à jour du statut
+      // Ignore errors when updating status
     }
   }
   
-  // Fermer le serveur
+  // Close server
   server.close(() => {
-    // Libérer le port
+    // Release port
     if (PORT) {
       portManager.releasePort(PORT);
-      log(`Port ${PORT} libéré`);
+      log(`Port ${PORT} released`);
     }
     
-    // Supprimer le fichier d'information du serveur
+    // Delete server info file
     try {
       if (fs.existsSync(SERVER_INFO_PATH)) {
         fs.unlinkSync(SERVER_INFO_PATH);
-        log(`Fichier d'information du serveur supprimé`);
+        log(`Server info file deleted`);
       }
     } catch (err) {
-      log(`Erreur lors de la suppression du fichier d'information du serveur: ${err.message}`, true);
+      log(`Error deleting server info file: ${err.message}`, true);
     }
     
-    log('Serveur mock arrêté proprement.');
+    log('Mock server stopped gracefully.');
     process.exit(0);
   });
   
-  // S'assurer que le processus se termine même si server.close() est bloqué
+  // Ensure process exits even if server.close() is blocked
   setTimeout(() => {
-    log('Arrêt forcé du serveur après timeout...', true);
+    log('Force stopping server after timeout...', true);
     process.exit(1);
   }, 5000);
-}
+};
 
-// Gérer les signaux de sortie
-process.on('SIGINT', () => shutdownServer('SIGINT'));
-process.on('SIGTERM', () => shutdownServer('SIGTERM'));
+// Handle exit signals
+process.on('SIGINT', () => stopServer('SIGINT'));
+process.on('SIGTERM', () => stopServer('SIGTERM'));
 
-// Gérer la sortie en cas d'erreur
+// Handle uncaught errors
 process.on('uncaughtException', (err) => {
-  log(`Erreur non gérée: ${err.message}`, true);
-  shutdownServer('uncaughtException');
+  log(`Unhandled error: ${err.message}`, true);
+  stopServer('uncaughtException');
 });
 
-// Gérer la sortie en cas de promesse rejetée non gérée
+// Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
-  log('Promesse rejetée non gérée:', true);
+  log('Unhandled promise rejection:', true);
   log(reason instanceof Error ? reason.stack : String(reason), true);
-  shutdownServer('unhandledRejection');
+  stopServer('unhandledRejection');
 });
 
-// Vérifier l'état du serveur
+// Check server health
 function checkServerHealth() {
   return {
     status: 'healthy',
@@ -438,12 +437,12 @@ function checkServerHealth() {
   };
 }
 
-// Exposer une API pour les tests
+// Export API for tests
 module.exports = {
   resetServer,
   getServerInfo: () => serverInfo,
   checkServerHealth
 };
 
-// Journaliser un message de démarrage
-log('Serveur mock en cours de démarrage...');
+// Log startup message
+log('Mock server starting...');

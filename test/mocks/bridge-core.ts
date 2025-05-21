@@ -18,14 +18,14 @@ export interface Message {
   payload?: any;
 }
 
-// Stockage des messages et des callbacks
+// Message and callback storage
 const messages: Message[] = [];
 const eventListeners: Record<string, Function[]> = {};
 const responseHandlers: Record<string, (response: Message) => void> = {};
 
-// Créer un mock pour le bridge-core
+// Create a mock for bridge-core
 const bridgeCore = {
-  // Méthode pour envoyer un message
+  // Method to send a message
   sendMessage: jest.fn(async (message: Message): Promise<void> => {
     messages.push(message);
     
@@ -49,7 +49,7 @@ const bridgeCore = {
     return Promise.resolve();
   }),
   
-  // Méthode pour recevoir un message
+  // Method to receive a message
   onMessage: jest.fn((callback: (message: Message) => void) => {
     const id = Date.now().toString();
     eventListeners['message'] = eventListeners['message'] || [];
@@ -61,7 +61,7 @@ const bridgeCore = {
     };
   }),
   
-  // Méthode pour envoyer une requête et attendre la réponse
+  // Method to send a request and wait for response
   sendRequest: jest.fn(async (action: string, payload?: any): Promise<any> => {
     const id = Date.now().toString() + Math.random().toString(36).substring(2, 9);
     const message: Message = {
@@ -100,7 +100,7 @@ const bridgeCore = {
     });
   }),
   
-  // Méthode pour écouter un événement spécifique
+  // Method to listen for a specific event
   onEvent: jest.fn((eventName: string, callback: (payload: any) => void) => {
     eventListeners[eventName] = eventListeners[eventName] || [];
     eventListeners[eventName].push(callback);
@@ -111,7 +111,7 @@ const bridgeCore = {
     };
   }),
   
-  // Méthode pour déclencher un événement (utile pour les tests)
+  // Method to trigger an event (useful for tests)
   triggerEvent: (eventName: string, payload: any) => {
     const message: Message = {
       id: Date.now().toString() + Math.random().toString(36).substring(2, 9),
@@ -123,7 +123,7 @@ const bridgeCore = {
     bridgeCore.sendMessage(message);
   },
   
-  // Méthode pour réinitialiser l'état (utile pour les tests)
+  // Method to reset state (useful for tests)
   reset: () => {
     messages.length = 0;
     Object.keys(eventListeners).forEach(key => {

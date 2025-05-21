@@ -1080,7 +1080,7 @@ function Select:get_selected_options_count()
   return #self.selected_options
 end
 
--- Conserver les fonctions de l'API pour la compatibilité
+-- Keep API functions for compatibility
 Select.create = M.create or function(id, title, config)
   config = config or {}
   config.id = id

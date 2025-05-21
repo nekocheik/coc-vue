@@ -79,7 +79,7 @@ local function get_component_state(component)
   
   -- Select-specific properties
   if component.component_type == 'select' then
-    -- Accéder à is_open comme une propriété et non comme une méthode
+    -- Access is_open as a property, not as a method
     state.is_open = component.is_open
     state.disabled = component.disabled
     state.required = component.required
