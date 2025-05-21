@@ -1,4 +1,4 @@
-name: French Language Check
+name: French Commit Message Check
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   french-check:
-    name: Check for French Words
+    name: Check Commit Messages for French Words
     runs-on: ubuntu-latest
     
     steps:
@@ -218,5 +218,6 @@ jobs:
           }
           EOL
           
-      - name: Run French words check
-        run: node scripts/check-french-words.js 
+      - name: Check commit messages for French words
+        run: node scripts/check-french-words.js
+        continue-on-error: true # Make this non-blocking

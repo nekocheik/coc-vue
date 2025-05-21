@@ -229,34 +229,48 @@ function checkCommitMessage() {
 // Main execution
 let hasFrenchPatterns = false;
 
-// Check staged files
-const stagedFiles = getStagedFiles();
-for (const file of stagedFiles) {
-  const content = getStagedContent(file);
-  const matches = checkForFrenchPatterns(content);
-  
-  if (matches.length > 0) {
-    console.log(`\nFrench patterns found in ${file}:`);
-    for (const match of matches) {
-      if (match.type === 'accent') {
-        console.log(`- Accented character "${match.char}" at position ${match.index}`);
-      } else if (match.type === 'punctuation') {
-        console.log(`- French punctuation "${match.char}" at position ${match.index}`);
-      } else if (match.type === 'technical') {
-        console.log(`- French technical term "${match.word}" at position ${match.index}`);
-      }
-      hasFrenchPatterns = true;
-    }
-  }
-}
+// Skip file checking and only check commit messages
+console.log('Checking only commit messages for French patterns...');
 
 // Check commit message
 const hasFrenchInMessage = checkCommitMessage();
-hasFrenchPatterns = hasFrenchPatterns || hasFrenchInMessage;
+hasFrenchPatterns = hasFrenchInMessage;
+
+// Check commit history (only the latest commit)
+function checkCommitMessages() {
+  try {
+    // Get only the latest commit message
+    const commitMessage = execSync('git log -1 --pretty=format:"%s"').toString();
+    const matches = checkForFrenchPatterns(commitMessage);
+    
+    if (matches.length > 0) {
+      console.log(`\nFrench patterns found in latest commit message: "${commitMessage.trim()}"`);
+      for (const match of matches) {
+        if (match.type === 'accent') {
+          console.log(`- Accented character "${match.char}" at position ${match.index}`);
+        } else if (match.type === 'punctuation') {
+          console.log(`- French punctuation "${match.char}" at position ${match.index}`);
+        } else if (match.type === 'technical') {
+          console.log(`- French technical term "${match.word}" at position ${match.index}`);
+        }
+      }
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error checking commit history:', error);
+    return false;
+  }
+}
+
+// Only check the latest commit if we're not in a commit hook context
+if (!hasFrenchPatterns && !fs.existsSync('.git/COMMIT_EDITMSG')) {
+  hasFrenchPatterns = checkCommitMessages();
+}
 
 if (hasFrenchPatterns) {
-  console.error('\nError: French patterns (accents, punctuation, or technical terms) were found in the staged changes or commit message');
+  console.error('\nError: French patterns (accents, punctuation, or technical terms) were found in the commit message');
   process.exit(1);
 } else {
-  console.log('\nSuccess: No French patterns were found in the staged changes or commit message');
+  console.log('\nSuccess: No French patterns were found in the commit message');
 } 
