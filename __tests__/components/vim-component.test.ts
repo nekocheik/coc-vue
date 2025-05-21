@@ -33,7 +33,7 @@ jest.mock('../../src/bridge/core', () => ({
 }));
 
 // Mock the reactivity module
-jest.mock('../reactivity', () => {
+jest.mock('../../src/reactivity/index', () => {
   // Create a simple reactive implementation for testing
   const reactiveObjects = new Map();
   

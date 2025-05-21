@@ -57,7 +57,7 @@ const mockSendMessage = jest.fn().mockResolvedValue({});
 const mockRegisterHandler = jest.fn();
 const mockUnregisterHandler = jest.fn();
 
-jest.mock('../bridge/core', () => ({
+jest.mock('../../src/bridge/core', () => ({
   bridgeCore: {
     sendMessage: mockSendMessage,
     registerHandler: mockRegisterHandler,

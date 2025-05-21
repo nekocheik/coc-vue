@@ -122,9 +122,44 @@ All source files now have their corresponding test files in the mirrored `__test
 | `src/index.ts` | `__tests__/index.test.ts` |
 | `src/reactivity/index.ts` | `__tests__/reactivity/index.test.ts` |
 
+## Step 3: Cleanup of Old Test Files (Completed)
+
+After successfully moving all test files to the mirrored structure in `__tests__/`, we have removed the original test files from the `src/` directory to avoid confusion and maintain a clean codebase.
+
+### Cleanup Process
+
+- **Date**: 2025-05-21
+- **Command Used**: `find ./src -name "*.test.ts" -type f -exec rm -f {} \;`
+- **Files Removed**: All `.test.ts` files in the `src/` directory and its subdirectories
+- **Reason**: To maintain a single source of truth for tests in the `__tests__/` directory
+
+### Current Status
+
+- All tests are now exclusively located in the `__tests__/` directory
+- The structure in `__tests__/` mirrors the structure in `src/`
+- All helper and mock files are centralized in `helper-test/`
+- Tests continue to pass with the same coverage metrics
+
+### Next Focus: Coverage Improvement
+
+The current coverage metrics are:
+
+| Metric     | Coverage | Target |
+|------------|----------|--------|
+| Statements | 78.49%   | 80%    |
+| Branches   | 61.39%   | 80%    |
+| Functions  | 75%      | 80%    |
+| Lines      | 79.15%   | 80%    |
+
+The main focus now is to improve test coverage to reach at least 80% for all metrics. The primary areas for improvement are:
+
+1. `src/components/select.ts` - Currently at 46.87% statement coverage
+2. Branch coverage in `src/index.ts` - Currently at 60%
+3. Function coverage across the codebase - Currently at 75%
+
 ## New Test Structure Rules
 
-1. **Mirrored Structure**: Each `.ts` source file should have a corresponding `.test.ts` file in the same directory.
+1. **Mirrored Structure in `__tests__/`**: Each `.ts` source file in `src/` should have a corresponding `.test.ts` file in the mirrored `__tests__/` directory.
 2. **Naming Convention**: Test files should be named `<filename>.test.ts`.
 3. **Helper Directory**: All test utilities, mocks, and contexts should be placed in the `helper-test/` directory.
 4. **Test Organization**: Tests should be organized using `describe` blocks for logical grouping.

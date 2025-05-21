@@ -52,7 +52,7 @@ jest.mock('coc.nvim', () => ({
   },
 }));
 
-jest.mock('../events/index', () => ({
+jest.mock('../../src/events/index', () => ({
   EventType: {
     COMPONENT_CREATED: 'component_created',
     COMPONENT_UPDATED: 'component_updated',
