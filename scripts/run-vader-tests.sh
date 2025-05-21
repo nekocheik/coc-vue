@@ -52,13 +52,17 @@ EOF
   local assertions_passed=$(echo "$assertions_line" | sed -E 's/.*assertions: ([0-9]+)\/([0-9]+).*/\1/' || echo 0)
   local execution_time=$(grep "Elapsed time:" "${log_file}" | sed -E 's/.*Elapsed time: ([0-9.]+) sec\..*/\1/' || echo 0)
   
-  # Create JSON report
+  # Create JSON report with multiple field name variants for compatibility
   cat > "${output_file}" << EOF
 {
   "component": "${component_name}",
   "type": "${component_type}",
+  "total": ${assertions_total:-0},
+  "success": ${assertions_passed:-0},
   "total_tests": ${total_tests},
   "success_tests": ${success_tests},
+  "total_count": ${assertions_total:-0},
+  "success_count": ${assertions_passed:-0},
   "assertions_total": ${assertions_total:-0},
   "assertions_passed": ${assertions_passed:-0},
   "execution_time": ${execution_time:-0},
