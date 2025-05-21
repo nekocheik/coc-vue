@@ -46,25 +46,33 @@ All TypeScript test files have been moved to the `.legacy_ts_tests` directory, p
 
 ### Why and How
 
-The legacy test files were moved rather than deleted to:
-1. Preserve all existing test logic and assertions
-2. Provide reference material during the migration
-3. Ensure no test coverage is lost during the transition
+- `/jest.config.js` - Configures Jest to run the new test structure
 
-The migration was performed using the following process:
-1. Created a hidden `.legacy_ts_tests` directory with the same structure as the original test directories
-2. Copied all test files to the new location to ensure no data was lost
-3. Moved the original files to the archive location
-4. Created documentation explaining the original test structure and commands
+## New Test Structure Rules
 
-A detailed README.md file has been added to the `.legacy_ts_tests` directory with complete information about the legacy test structure.
+1. **Mirrored Structure**: Each `.ts` source file should have a corresponding `.test.ts` file in the same directory.
+2. **Naming Convention**: Test files should be named `<filename>.test.ts`.
+3. **Helper Directory**: All test utilities, mocks, and contexts should be placed in the `helper-test/` directory.
+4. **Test Organization**: Tests should be organized using `describe` blocks for logical grouping.
+5. **Test Coverage**: Tests should aim to cover all public methods and edge cases.
+
+## Running Tests
+
+To run the new tests, use the following command:
+
+```bash
+npm test
+```
+
+Or to run tests with coverage:
+
+```bash
+npm run test:coverage
+```
 
 ## Next Steps
 
-The next steps in this overhaul will be:
-
-1. Design a new, clearer TypeScript test structure
-2. Create a template and documentation for the new structure
-3. Implement a mechanism to ensure all TypeScript files have corresponding tests
-
-These steps will be documented in future updates to this file.
+- Update the package.json scripts to use the new Jest configuration.
+- Add more comprehensive tests for remaining TypeScript files.
+- Integrate the new test structure with the CI/CD pipeline.
+- Update the project README.md with the new test structure information.

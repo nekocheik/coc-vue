@@ -21,7 +21,12 @@ export class EventEmitter<T extends Record<string, (...args: any[]) => void>> {
       return;
     }
     this.listeners[event]!.forEach(callback => {
-      callback(...args);
+      try {
+        callback(...args);
+      } catch (error) {
+        // Swallow errors from event listeners to prevent them from crashing the application
+        console.error(`Error in event listener for ${String(event)}:`, error);
+      }
     });
   }
 }
