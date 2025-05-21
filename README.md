@@ -537,7 +537,7 @@ You can customize the Docker environment by modifying these files:
 - `.github/workflows/test.yml`: GitHub CI configuration
 - `.gitlab-ci.yml`: GitLab CI configuration
 
-For detailed documentation on testing with Docker and CI integration, see [TESTS.md](TESTS.md).
+For detailed documentation on testing with Docker and CI integration, see [CI_TESTING.md](docs/CI_TESTING.md) and [TESTS.md](TESTS.md).
 
 ## Test Policy & Commit Enforcement
 
