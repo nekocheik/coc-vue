@@ -1,7 +1,7 @@
 #!/bin/bash
-# Refactored script to run Vader tests and generate a detailed report
-# This script follows a component-by-component approach, ensuring each test passes
-# before moving on to the next one, and tracking coverage for each component.
+# Script to run Vader tests and generate detailed reports
+# This script runs tests component by component, ensuring each test passes
+# before moving to the next one, and tracks coverage for each component.
 
 # Define colors for display
 GREEN='\033[0;32m'
