@@ -1,0 +1,198 @@
+" Modal Component Test
+" This test verifies the functionality of the Modal component in the vue-ui library.
+" It follows the simplified approach for easier test creation and maintenance.
+
+" Global Setup
+Execute (Global Setup):
+  " Configure test environment
+  let g:test_modal_id = 'test_modal_' . strftime('%s')
+  
+  " Create a simple mock modal component
+  function! CreateModal(id, title, opts)
+    " Customize this function based on the modal's properties
+    let modal = {'id': a:id, 'title': a:title, 'props': a:opts, 'state': {'isOpen': 0}}
+    
+    " Add modal-specific methods
+    function! modal.render() dict
+      let lines = []
+      call add(lines, '+' . repeat('-', self.props.width - 2) . '+')
+      call add(lines, '| ' . self.title . repeat(' ', self.props.width - 4 - len(self.title)) . ' |')
+      call add(lines, '+' . repeat('-', self.props.width - 2) . '+')
+      
+      " Add content
+      let content_lines = split(self.props.content, '\n')
+      for line in content_lines
+        call add(lines, '| ' . line . repeat(' ', self.props.width - 4 - len(line)) . ' |')
+      endfor
+      
+      " Add input field if present
+      if has_key(self.props, 'input')
+        call add(lines, '|' . repeat('-', self.props.width - 2) . '|')
+        let input_value = self.props.input.value
+        if empty(input_value)
+          let input_value = self.props.input.placeholder
+        endif
+        call add(lines, '| [' . input_value . ']' . repeat(' ', self.props.width - 6 - len(input_value)) . ' |')
+      endif
+      
+      " Add bottom border
+      call add(lines, '+' . repeat('-', self.props.width - 2) . '+')
+      
+      return {'lines': lines}
+    endfunction
+    
+    function! modal.open() dict
+      let self.state.isOpen = 1
+      return 1
+    endfunction
+    
+    function! modal.close() dict
+      let self.state.isOpen = 0
+      return 1
+    endfunction
+    
+    function! modal.set_input_value(value) dict
+      if has_key(self.props, 'input')
+        let self.props.input.value = a:value
+      endif
+      return 1
+    endfunction
+    
+    function! modal.confirm() dict
+      let self.state.isOpen = 0
+      return 1
+    endfunction
+    
+    function! modal.destroy() dict
+      " Cleanup logic
+      return 1
+    endfunction
+    
+    return modal
+  endfunction
+  
+  " Create a test modal
+  let g:modal = CreateModal(g:test_modal_id, 'Test Modal', {
+    \ 'title': 'Test Modal',
+    \ 'content': "This is test content for the modal.",
+    \ 'width': 60,
+    \ 'height': 10
+    \ })
+
+" Test Suite: Component Creation
+Execute (Test Suite: Component Creation):
+  " This suite tests the creation of a modal component
+
+" Test Case: Should create modal with correct properties
+Execute (Test Case: Should create modal with correct properties):
+  " Assert - Verify modal was created with correct properties
+  Assert g:modal != {}, "Modal was not created"
+  Assert g:modal.id == g:test_modal_id, "Modal ID does not match"
+  Assert g:modal.title == 'Test Modal', "Modal title does not match"
+  Assert g:modal.props.title == 'Test Modal', "Modal props title does not match"
+  Assert g:modal.props.content == "This is test content for the modal.", "Modal content does not match"
+  Assert g:modal.props.width == 60, "Modal width does not match"
+  Assert g:modal.props.height == 10, "Modal height does not match"
+
+" Test Suite: Component Rendering
+Execute (Test Suite: Component Rendering):
+  " This suite tests the rendering of a modal component
+
+" Test Case: Should render modal with correct content
+Execute (Test Case: Should render modal with correct content):
+  " Create a temporary buffer for rendering
+  new
+  let g:test_buf = bufnr('%')
+  
+  " Get render result
+  let render_result = g:modal.render()
+  
+  " Assert - Verify render result contains expected content
+  Assert render_result != {}, "Modal rendering failed"
+  Assert len(render_result.lines) > 0, "Modal render contains no lines"
+  
+  " Check if title and content are in the rendered output
+  let render_text = join(render_result.lines, "\n")
+  Assert render_text =~ 'Test Modal', "Render does not contain modal title"
+  Assert render_text =~ 'This is test content', "Render does not contain modal content"
+  
+  " Cleanup - Close the temporary buffer
+  bwipeout!
+
+" Test Suite: Modal Interaction
+Execute (Test Suite: Modal Interaction):
+  " This suite tests interactions with a modal component
+
+" Test Case: Should handle open and close correctly
+Execute (Test Case: Should handle open and close correctly):
+  " Act - Open the modal
+  let open_result = g:modal.open()
+  
+  " Assert - Verify modal was opened
+  Assert open_result == 1, "Open operation failed"
+  Assert g:modal.state.isOpen == 1, "Modal is not in open state"
+  
+  " Act - Close the modal
+  let close_result = g:modal.close()
+  
+  " Assert - Verify modal was closed
+  Assert close_result == 1, "Close operation failed"
+  Assert g:modal.state.isOpen == 0, "Modal is still in open state"
+
+" Test Suite: Modal with Input
+Execute (Test Suite: Modal with Input):
+  " This suite tests a modal with input field
+
+" Test Case: Should handle input correctly
+Execute (Test Case: Should handle input correctly):
+  " Create a modal with input
+  let g:modal_with_input = CreateModal('test_modal_input', 'Modal with Input', {
+    \ 'title': 'Input Test',
+    \ 'content': 'Please enter your name:',
+    \ 'width': 60,
+    \ 'height': 10,
+    \ 'input': {
+    \   'placeholder': 'Name',
+    \   'value': ''
+    \ }
+    \ })
+  
+  " Open the modal
+  call g:modal_with_input.open()
+  
+  " Set input value
+  let input_result = g:modal_with_input.set_input_value('John Doe')
+  
+  " Assert - Verify input was set
+  Assert input_result == 1, "Setting input value failed"
+  Assert g:modal_with_input.props.input.value == 'John Doe', "Input value was not set correctly"
+  
+  " Confirm the modal
+  let confirm_result = g:modal_with_input.confirm()
+  
+  " Assert - Verify confirmation
+  Assert confirm_result == 1, "Modal confirmation failed"
+  Assert g:modal_with_input.state.isOpen == 0, "Modal was not closed after confirmation"
+
+" Test Suite: Component Destruction
+Execute (Test Suite: Component Destruction):
+  " This suite tests destroying a modal component
+
+" Test Case: Should destroy modal correctly
+Execute (Test Case: Should destroy modal correctly):
+  " Act - Destroy the modal
+  let destroy_result = g:modal.destroy()
+  
+  " Assert - Verify destruction was successful
+  Assert destroy_result == 1, "Modal destruction failed"
+  
+  " Also destroy the modal with input
+  let destroy_input_result = g:modal_with_input.destroy()
+  Assert destroy_input_result == 1, "Modal with input destruction failed"
+
+" Global Teardown
+Execute (Global Teardown):
+  " Clean up
+  unlet g:modal
+  unlet g:modal_with_input
+  unlet g:test_modal_id

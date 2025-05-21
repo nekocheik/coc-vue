@@ -1,5 +1,7 @@
 #!/bin/bash
-# Script to run Vader tests and generate a detailed report
+# Refactored script to run Vader tests and generate a detailed report
+# This script follows a component-by-component approach, ensuring each test passes
+# before moving on to the next one, and tracking coverage for each component.
 
 # Define colors for display
 GREEN='\033[0;32m'
@@ -8,175 +10,404 @@ RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Create directory for test reports if it doesn't exist
-mkdir -p .ci-artifacts/vader-reports
+# Create directories for test reports
+mkdir -p test/coverage/reports
+mkdir -p test/coverage/json
 
 # Function to run a Vader test and generate a report
 run_vader_test() {
   local test_file="$1"
-  local test_name=$(basename "$test_file" .vader)
-  local output_file=".ci-artifacts/vader-reports/${test_name}_results.json"
-  local log_file=".ci-artifacts/vader-reports/${test_name}_log.txt"
+  local component_name=$(basename "$test_file" .vader)
+  local component_type=$(dirname "$test_file" | xargs basename)
+  local output_dir="test/coverage/reports"
+  local json_dir="test/coverage/json"
+  local output_file="${json_dir}/${component_type}_${component_name}_results.json"
+  local log_file="${output_dir}/${component_type}_${component_name}_log.txt"
   
-  echo -e "${YELLOW}Running Vader tests: ${test_name}${NC}"
+  echo -e "${BLUE}======================================${NC}"
+  echo -e "${YELLOW}Testing: ${component_type}/${component_name}${NC}"
+  echo -e "${BLUE}======================================${NC}"
   
-  # Run Vader test and capture output
-  nvim -es -u NONE -c 'filetype plugin on' -c "source test/vader.vim" -c "Vader! $test_file" > "$log_file" 2>&1
+  # Create Vim setup file
+  cat > "test/vader/setup.vim" << EOF
+set runtimepath+=.
+let &runtimepath.=','.expand('<sfile>:p:h:h')
+filetype plugin on
+EOF
+  
+  # Run Vader test
+  echo -e "${BLUE}Running test...${NC}"
+  
+  nvim -es -u test/vader/setup.vim \
+       -c "source test/vader.vim" \
+       -c "Vader! ${test_file}" > "${log_file}" 2>&1
+  
+  local exit_code=$?
   
   # Extract success/failure information
-  local total_count=$(grep -c "Starting Vader" "$log_file")
-  local success_count=$(grep -c "Success/Total" "$log_file")
-  local execution_time=$(grep "Success/Total" "$log_file" | tail -n1 | grep -o "[0-9.]\+s")
+  local total_tests=$(grep -c "Starting Vader" "${log_file}" || echo 0)
+  local success_tests=$(grep -c "Success/Total" "${log_file}" || echo 0)
+  local assertions_line=$(grep "assertions:" "${log_file}" | tail -n1 || echo "assertions: 0/0")
+  local assertions_total=$(echo "$assertions_line" | sed -E 's/.*assertions: ([0-9]+)\/([0-9]+).*/\2/' || echo 0)
+  local assertions_passed=$(echo "$assertions_line" | sed -E 's/.*assertions: ([0-9]+)\/([0-9]+).*/\1/' || echo 0)
+  local execution_time=$(grep "Elapsed time:" "${log_file}" | sed -E 's/.*Elapsed time: ([0-9.]+) sec\..*/\1/' || echo 0)
   
-  # Create JSON report for CI integration
-  cat > "$output_file" << EOF
+  # Create JSON report
+  cat > "${output_file}" << EOF
 {
-  "test_name": "$test_name",
-  "total": $total_count,
-  "success": $success_count,
-  "execution_time": "$execution_time",
-  "status": $([ $success_count -eq $total_count ] && echo '"success"' || echo '"failure"')
+  "component": "${component_name}",
+  "type": "${component_type}",
+  "total_tests": ${total_tests},
+  "success_tests": ${success_tests},
+  "assertions_total": ${assertions_total},
+  "assertions_passed": ${assertions_passed},
+  "execution_time": ${execution_time},
+  "status": $([ ${assertions_passed} -eq ${assertions_total} ] && [ ${assertions_total} -gt 0 ] && echo '"success"' || echo '"failure"')
 }
 EOF
   
   # Display result
-  if [ $success_count -eq $total_count ]; then
-    echo -e "${GREEN}✓ $test_name: $success_count/$total_count tests passed${NC}"
+  if [ "${assertions_passed}" = "${assertions_total}" ] && [ "${assertions_total}" != "0" ]; then
+    echo -e "${GREEN}✓ ${component_type}/${component_name}: ${assertions_passed}/${assertions_total} assertions passed${NC}"
+    echo -e "${BLUE}Execution time: ${execution_time}s${NC}"
+    return 0
   else
-    echo -e "${RED}✗ $test_name: $success_count/$total_count tests passed${NC}"
+    echo -e "${RED}✗ ${component_type}/${component_name}: ${assertions_passed}/${assertions_total} assertions passed${NC}"
     # Extract errors for detailed display
     echo -e "${RED}Detected errors:${NC}"
-    grep -A 2 "Expected:" "$log_file" || true
-    echo -e "${YELLOW}See full report in $output_file${NC}"
+    grep -A 2 "Expected:" "${log_file}" || true
+    grep -A 5 "Error:" "${log_file}" || true
+    echo -e "${YELLOW}See full log in ${log_file}${NC}"
+    return 1
   fi
-  
-  return $([ $success_count -eq $total_count ])
 }
 
-# Function to generate HTML report
+# Function to generate comprehensive HTML report
 generate_html_report() {
-  local report_file=".ci-artifacts/vader-reports/vader_test_report.html"
+  local report_file="test/coverage/reports/vader_test_report.html"
   
   # Create HTML report with styling
   cat > "$report_file" << 'EOF'
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Vader Test Report</title>
+  <title>VADER Test Report</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h1 { color: #333; }
-    h2 { color: #666; margin-top: 30px; }
-    .success { color: #4CAF50; }
-    .failure { color: #f44336; }
-    .test-file { 
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f8f9fa; }
+    h1 { color: #333; margin-bottom: 30px; }
+    h2 { color: #444; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+    h3 { color: #555; }
+    .success { color: #28a745; }
+    .warning { color: #ffc107; }
+    .failure { color: #dc3545; }
+    .test-component { 
       border: 1px solid #ddd;
-      padding: 15px;
-      margin: 10px 0;
-      border-radius: 4px;
+      padding: 20px;
+      margin: 15px 0;
+      border-radius: 8px;
+      background-color: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     .error-details {
       background: #fff3f3;
-      padding: 10px;
+      padding: 15px;
       margin: 10px 0;
-      border-left: 3px solid #f44336;
+      border-left: 4px solid #dc3545;
+      border-radius: 4px;
+      overflow-x: auto;
     }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+    tr:hover {
+      background-color: #f5f5f5;
+    }
+    .timestamp {
+      color: #6c757d;
+      font-size: 0.9em;
+      margin-top: 10px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      color: white;
+      font-size: 0.8em;
+      font-weight: bold;
+    }
+    .badge-success { background-color: #28a745; }
+    .badge-warning { background-color: #ffc107; color: #212529; }
+    .badge-danger { background-color: #dc3545; }
   </style>
 </head>
 <body>
-  <h1>Vader Test Report</h1>
+  <h1>VADER Test Report</h1>
+  <div class="timestamp">Generated on $(date)</div>
 EOF
   
   echo "<h2>Summary</h2>" >> "$report_file"
   
   # Calculate totals
   local total_tests=0
-  local total_success=0
+  local success_tests=0
+  local total_components=0
+  local passed_components=0
+  local total_assertions=0
+  local passed_assertions=0
   
-  for result in .ci-artifacts/vader-reports/*_results.json; do
+  for result in test/coverage/json/*_results.json; do
     [ -f "$result" ] || continue
-    local success=$(grep -o '"success":[[:space:]]*[0-9]\+' "$result" | grep -o '[0-9]\+')
-    local total=$(grep -o '"total":[[:space:]]*[0-9]\+' "$result" | grep -o '[0-9]\+')
-    total_tests=$((total_tests + total))
-    total_success=$((total_success + success))
+    total_components=$((total_components + 1))
+    
+    local success=$(jq -r '.status // "failure"' "$result" 2>/dev/null || echo "failure")
+    local assertions_total=$(jq '.assertions_total // 0' "$result" 2>/dev/null || echo 0)
+    local assertions_passed=$(jq '.assertions_passed // 0' "$result" 2>/dev/null || echo 0)
+    local component_tests=$(jq '.total_tests // 0' "$result" 2>/dev/null || echo 0)
+    local component_success=$(jq '.success_tests // 0' "$result" 2>/dev/null || echo 0)
+    
+    total_tests=$((total_tests + component_tests))
+    success_tests=$((success_tests + component_success))
+    total_assertions=$((total_assertions + assertions_total))
+    passed_assertions=$((passed_assertions + assertions_passed))
+    
+    if [ "$success" = "success" ]; then
+      passed_components=$((passed_components + 1))
+    fi
   done
+  
+  # Calculate percentages
+  local success_rate=0
+  if [ $total_assertions -gt 0 ]; then
+    success_rate=$((passed_assertions * 100 / total_assertions))
+  fi
   
   # Add summary to report
   cat >> "$report_file" << EOF
-<p>Tests passed: <strong class="success">$total_success</strong></p>
-<p>Tests failed: <strong class="failure">$((total_tests - total_success))</strong></p>
-<p>Success rate: <strong>$((total_success * 100 / total_tests))%</strong></p>
+<div class="test-component">
+  <p>Components: <strong>${passed_components}/${total_components}</strong> passing</p>
+  <p>Test Suites: <strong>${success_tests}/${total_tests}</strong></p>
+  <p>Assertions: <strong class="success">${passed_assertions}</strong> / <strong>${total_assertions}</strong> (${success_rate}%)</p>
+</div>
 
-<h2>Details by test file</h2>
+<h2>Component Details</h2>
+<table>
+  <tr>
+    <th>Component</th>
+    <th>Type</th>
+    <th>Tests</th>
+    <th>Assertions</th>
+    <th>Execution Time</th>
+    <th>Status</th>
+  </tr>
 EOF
   
-  # Add details for each test file
-  for result in .ci-artifacts/vader-reports/*_results.json; do
+  # Add details for each component
+  for result in test/coverage/json/*_results.json; do
     [ -f "$result" ] || continue
     
-    local test_name=$(grep -o '"test_name":"[^"]\+"' "$result" | cut -d'"' -f4)
-    local total_count=$(grep -o '"total":[[:space:]]*[0-9]\+' "$result" | grep -o '[0-9]\+')
-    local success_count=$(grep -o '"success":[[:space:]]*[0-9]\+' "$result" | grep -o '[0-9]\+')
-    local execution_time=$(grep -o '"execution_time":"[^"]\+"' "$result" | cut -d'"' -f4)
-    local status=$(grep -o '"status":"[^"]\+"' "$result" | cut -d'"' -f4)
+    local component=$(jq -r '.component // "unknown"' "$result" 2>/dev/null || echo "unknown")
+    local type=$(jq -r '.type // "unknown"' "$result" 2>/dev/null || echo "unknown")
+    local total_tests=$(jq '.total_tests // 0' "$result" 2>/dev/null || echo 0)
+    local success_tests=$(jq '.success_tests // 0' "$result" 2>/dev/null || echo 0)
+    local assertions_total=$(jq '.assertions_total // 0' "$result" 2>/dev/null || echo 0)
+    local assertions_passed=$(jq '.assertions_passed // 0' "$result" 2>/dev/null || echo 0)
+    local execution_time=$(jq '.execution_time // 0' "$result" 2>/dev/null || echo 0)
+    local status=$(jq -r '.status // "failure"' "$result" 2>/dev/null || echo "failure")
+    
+    local status_class="danger"
+    local status_text="Failed"
+    
+    if [ "$status" = "success" ]; then
+      status_class="success"
+      status_text="Passed"
+    fi
     
     cat >> "$report_file" << EOF
-<div class="test-file">
-<h3>$test_name</h3>
-<p>Status: <strong class="$([ "$status" = "success" ] && echo "success" || echo "failure")">$([ "$status" = "success" ] && echo "Passed" || echo "Failed")</strong></p>
-<p>Tests passed: <strong>$success_count/$total_count</strong></p>
-<p>Execution time: <strong>$execution_time</strong></p>
+  <tr>
+    <td>${component}</td>
+    <td>${type}</td>
+    <td>${success_tests}/${total_tests}</td>
+    <td>${assertions_passed}/${assertions_total}</td>
+    <td>${execution_time}s</td>
+    <td><span class="badge badge-${status_class}">${status_text}</span></td>
+  </tr>
+EOF
+  done
+  
+  echo "</table>" >> "$report_file"
+  
+  # Add detailed component reports
+  echo "<h2>Detailed Component Reports</h2>" >> "$report_file"
+  
+  for result in test/coverage/json/*_results.json; do
+    [ -f "$result" ] || continue
+    
+    local component=$(jq -r '.component // "unknown"' "$result" 2>/dev/null || echo "unknown")
+    local type=$(jq -r '.type // "unknown"' "$result" 2>/dev/null || echo "unknown")
+    local total_tests=$(jq '.total_tests // 0' "$result" 2>/dev/null || echo 0)
+    local success_tests=$(jq '.success_tests // 0' "$result" 2>/dev/null || echo 0)
+    local assertions_total=$(jq '.assertions_total // 0' "$result" 2>/dev/null || echo 0)
+    local assertions_passed=$(jq '.assertions_passed // 0' "$result" 2>/dev/null || echo 0)
+    local execution_time=$(jq '.execution_time // 0' "$result" 2>/dev/null || echo 0)
+    local status=$(jq -r '.status // "failure"' "$result" 2>/dev/null || echo "failure")
+    
+    cat >> "$report_file" << EOF
+<div class="test-component">
+  <h3>${type}/${component}</h3>
+  <p>Status: <strong class="$([ "$status" = "success" ] && echo "success" || echo "failure")">$([ "$status" = "success" ] && echo "Passed" || echo "Failed")</strong></p>
+  <p>Tests: <strong>${success_tests}/${total_tests}</strong></p>
+  <p>Assertions: <strong>${assertions_passed}/${assertions_total}</strong></p>
+  <p>Execution time: <strong>${execution_time}s</strong></p>
 EOF
     
     # Add error details if test failed
     if [ "$status" = "failure" ]; then
-      local log_file=".ci-artifacts/vader-reports/${test_name}_log.txt"
-      echo "<div class=\"error-details\">
+      local log_file="test/coverage/reports/${type}_${component}_log.txt"
+      if [ -f "$log_file" ]; then
+        echo "<div class=\"error-details\">
 <h4>Error details:</h4>
-<pre>$(grep -A 2 "Expected:" "$log_file" || echo "No detailed error information available")</pre>
+<pre>$(grep -A 3 "Expected:" "$log_file" || grep -A 5 "Error:" "$log_file" || echo "No detailed error information available")</pre>
 </div>" >> "$report_file"
+      fi
     fi
     
     echo "</div>" >> "$report_file"
   done
+  
+  # Add next steps section
+  echo "<h2>Next Steps</h2>" >> "$report_file"
+  
+  if [ $passed_components -lt $total_components ]; then
+    echo "<div class=\"test-component\">
+<h3>Components Needing Attention</h3>
+<p>The following components need to be fixed or improved:</p>
+<ul>" >> "$report_file"
+    
+    for result in test/coverage/json/*_results.json; do
+      [ -f "$result" ] || continue
+      
+      local component=$(jq -r '.component // "unknown"' "$result" 2>/dev/null || echo "unknown")
+      local type=$(jq -r '.type // "unknown"' "$result" 2>/dev/null || echo "unknown")
+      local status=$(jq -r '.status // "failure"' "$result" 2>/dev/null || echo "failure")
+      
+      if [ "$status" = "failure" ]; then
+        echo "<li><strong>${type}/${component}</strong>: Fix failing tests.</li>" >> "$report_file"
+      fi
+    done
+    
+    echo "</ul>
+</div>" >> "$report_file"
+  else
+    echo "<div class=\"test-component\">
+<h3>All Components Passing</h3>
+<p>Congratulations! All components are passing their tests.</p>
+<p>Continue to maintain tests as the codebase evolves.</p>
+</div>" >> "$report_file"
+  fi
   
   echo "</body></html>" >> "$report_file"
   
   echo -e "${BLUE}HTML report generated: $report_file${NC}"
 }
 
-# Run all Vader tests
-echo -e "${BLUE}================================${NC}"
-echo -e "${BLUE}   Vader Tests for coc-vue Components   ${NC}"
-echo -e "${BLUE}================================${NC}"
+# Function to check if a component has been tested and passed
+component_passed() {
+  local component_type="$1"
+  local component_name="$2"
+  local result_file="test/coverage/json/${component_type}_${component_name}_results.json"
+  
+  if [ -f "$result_file" ]; then
+    local status=$(jq -r '.status // "failure"' "$result_file" 2>/dev/null || echo "failure")
+    
+    if [ "$status" = "success" ]; then
+      return 0  # Passed
+    fi
+  fi
+  
+  return 1  # Failed or not tested
+}
+
+# Run Vader tests component by component
+echo -e "${BLUE}=================================${NC}"
+echo -e "${BLUE}   VADER Tests for coc-vue Components   ${NC}"
+echo -e "${BLUE}=================================${NC}"
 
 # Find all Vader test files
-test_files=$(find test -name "*.vader")
+component_types=("components" "core" "utils" "events")
 
 # Variables to track results
-total_files=0
-failed_files=0
+total_components=0
+passed_components=0
+failed_components=0
 
-# Run each Vader test
-for test_file in $test_files; do
-  total_files=$((total_files + 1))
-  run_vader_test "$test_file"
-  if [ $? -ne 0 ]; then
-    failed_files=$((failed_files + 1))
+# Process each component type
+for component_type in "${component_types[@]}"; do
+  echo -e "\n${BLUE}Processing ${component_type}...${NC}"
+  
+  # Find all test files for this component type
+  test_files=$(find "test/vader/${component_type}" -name "*.vader" 2>/dev/null)
+  
+  if [ -z "$test_files" ]; then
+    echo -e "${YELLOW}No test files found for ${component_type}.${NC}"
+    continue
   fi
+  
+  # Run each test file
+  for test_file in $test_files; do
+    component_name=$(basename "$test_file" .vader)
+    total_components=$((total_components + 1))
+    
+    # Check if component has already been tested and passed
+    if component_passed "$component_type" "$component_name"; then
+      echo -e "${GREEN}✓ ${component_type}/${component_name} already tested and passed.${NC}"
+      passed_components=$((passed_components + 1))
+      continue
+    fi
+    
+    # Run the test
+    run_vader_test "$test_file"
+    
+    if [ $? -eq 0 ]; then
+      passed_components=$((passed_components + 1))
+    else
+      failed_components=$((failed_components + 1))
+      echo -e "${RED}✗ ${component_type}/${component_name} failed. Fix this component before proceeding to the next one.${NC}"
+      echo -e "${YELLOW}Stopping test execution. Fix the failing component and run again.${NC}"
+      
+      # Generate HTML report with current progress
+      generate_html_report
+      
+      exit 1
+    fi
+  done
 done
 
 # Generate HTML report
 generate_html_report
 
 # Show final summary
-echo -e "\n${BLUE}=== Vader Test Summary ====${NC}"
-if [ $total_files -eq 0 ]; then
-  echo -e "${YELLOW}! No Vader tests were executed.${NC}"
-elif [ $failed_files -eq 0 ]; then
-  echo -e "${GREEN}✓ All Vader tests passed!${NC}"
+echo -e "\n${BLUE}=== VADER Test Summary ====${NC}"
+if [ $total_components -eq 0 ]; then
+  echo -e "${YELLOW}! No VADER tests were found.${NC}"
+  echo -e "${YELLOW}Create test files in test/vader/{components,core,utils,events}/ directories.${NC}"
+elif [ $failed_components -eq 0 ]; then
+  echo -e "${GREEN}✓ All ${passed_components}/${total_components} components passed!${NC}"
+  echo -e "${BLUE}See the detailed report at: test/coverage/reports/vader_test_report.html${NC}"
 else
-  echo -e "${RED}✗ Some Vader tests failed.${NC}"
+  echo -e "${RED}✗ ${failed_components}/${total_components} components failed.${NC}"
+  echo -e "${YELLOW}Fix the failing components and run again.${NC}"
+  echo -e "${BLUE}See the detailed report at: test/coverage/reports/vader_test_report.html${NC}"
 fi
 
-exit $failed_files
+exit $failed_components

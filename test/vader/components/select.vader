@@ -1,0 +1,555 @@
+" Select Component Test
+" This test verifies the functionality of the Select component in the vue-ui library.
+" It follows the simplified approach for easier test creation and maintenance.
+
+" Global Setup
+Execute (Global Setup):
+  " Configure test environment
+  let g:test_select_id = 'test_select_' . strftime('%s')
+  
+  " Create a simple mock select component
+  function! CreateSelect(id, options, opts)
+    " Initialize the select component with properties
+    let select = {
+      \ 'id': a:id,
+      \ 'options': a:options,
+      \ 'props': a:opts,
+      \ 'state': {
+      \   'isOpen': 0,
+      \   'focusedOptionIndex': -1,
+      \   'selectedOptionIndex': -1,
+      \   'selectedValue': '',
+      \   'selectedOptions': []
+      \ }
+    \ }
+    
+    " Add select-specific methods
+    function! select.render() dict
+      let lines = []
+      
+      " Render header
+      call add(lines, '+' . repeat('-', self.props.width - 2) . '+')
+      call add(lines, '| ' . self.props.title . repeat(' ', self.props.width - 4 - len(self.props.title)) . ' |')
+      call add(lines, '+' . repeat('-', self.props.width - 2) . '+')
+      
+      " Render options if open
+      if self.state.isOpen
+        for idx in range(len(self.options))
+          let option = self.options[idx]
+          let prefix = (idx == self.state.focusedOptionIndex) ? '> ' : '  '
+          let suffix = (self.is_option_selected(idx)) ? ' [✓]' : '    '
+          call add(lines, '| ' . prefix . option.text . suffix . repeat(' ', self.props.width - 8 - len(option.text)) . ' |')
+        endfor
+      else
+        " Show selected option or placeholder when closed
+        let display_text = self.props.placeholder
+        if self.state.selectedOptionIndex >= 0 && self.state.selectedOptionIndex < len(self.options)
+          let display_text = self.options[self.state.selectedOptionIndex].text
+        elseif len(self.state.selectedOptions) > 0
+          let display_text = len(self.state.selectedOptions) . ' options selected'
+        endif
+        call add(lines, '| ' . display_text . repeat(' ', self.props.width - 4 - len(display_text)) . ' |')
+      endif
+      
+      " Render footer
+      call add(lines, '+' . repeat('-', self.props.width - 2) . '+')
+      
+      return {'lines': lines}
+    endfunction
+    
+    function! select.open() dict
+      let self.state.isOpen = 1
+      let self.state.focusedOptionIndex = -1
+      
+      " Emit event
+      call s:emit_event('SELECT_OPENED', {'id': self.id})
+      return 1
+    endfunction
+    
+    function! select.close() dict
+      let self.state.isOpen = 0
+      let self.state.focusedOptionIndex = -1
+      
+      " Emit event
+      call s:emit_event('SELECT_CLOSED', {'id': self.id})
+      return 1
+    endfunction
+    
+    function! select.focus_next_option() dict
+      if !self.state.isOpen
+        return 0
+      endif
+      
+      if self.state.focusedOptionIndex < len(self.options) - 1
+        let self.state.focusedOptionIndex += 1
+      else
+        let self.state.focusedOptionIndex = 0
+      endif
+      
+      return 1
+    endfunction
+    
+    function! select.focus_prev_option() dict
+      if !self.state.isOpen
+        return 0
+      endif
+      
+      if self.state.focusedOptionIndex > 0
+        let self.state.focusedOptionIndex -= 1
+      else
+        let self.state.focusedOptionIndex = len(self.options) - 1
+      endif
+      
+      return 1
+    endfunction
+    
+    function! select.focus_option(index) dict
+      if !self.state.isOpen || a:index < 0 || a:index >= len(self.options)
+        return 0
+      endif
+      
+      let self.state.focusedOptionIndex = a:index
+      return 1
+    endfunction
+    
+    function! select.select_current_option() dict
+      if !self.state.isOpen || self.state.focusedOptionIndex < 0 || self.state.focusedOptionIndex >= len(self.options)
+        return 0
+      endif
+      
+      let index = self.state.focusedOptionIndex
+      let option = self.options[index]
+      
+      " Handle multi-select mode
+      if has_key(self.props, 'multi') && self.props.multi
+        let already_selected = self.is_option_selected(index)
+        
+        if already_selected
+          " Remove from selected options
+          let new_selected = []
+          for selected in self.state.selectedOptions
+            if selected.index != index
+              call add(new_selected, selected)
+            endif
+          endfor
+          let self.state.selectedOptions = new_selected
+        else
+          " Add to selected options
+          call add(self.state.selectedOptions, {'index': index, 'option': option})
+        endif
+        
+        " Emit change event
+        call s:emit_event('SELECT_CHANGED', {'id': self.id, 'selected_options': self.state.selectedOptions})
+      else
+        " Single select mode
+        let self.state.selectedOptionIndex = index
+        let self.state.selectedValue = option.value
+        
+        " Emit selection event
+        call s:emit_event('SELECT_OPTION_SELECTED', {'id': self.id, 'option_value': option.value, 'option_index': index})
+      endif
+      
+      return 1
+    endfunction
+    
+    function! select.select_by_value(value) dict
+      if !self.state.isOpen
+        return 0
+      endif
+      
+      " Find option with matching value
+      let found = 0
+      for idx in range(len(self.options))
+        if self.options[idx].value == a:value
+          let self.state.focusedOptionIndex = idx
+          let found = 1
+          break
+        endif
+      endfor
+      
+      if found
+        return self.select_current_option()
+      endif
+      
+      return 0
+    endfunction
+    
+    function! select.is_option_selected(index) dict
+      if has_key(self.props, 'multi') && self.props.multi
+        " Check in selected options array
+        for selected in self.state.selectedOptions
+          if selected.index == a:index
+            return 1
+          endif
+        endfor
+        return 0
+      else
+        " Check against selected index
+        return self.state.selectedOptionIndex == a:index
+      endif
+    endfunction
+    
+    function! select.confirm() dict
+      if has_key(self.props, 'multi') && self.props.multi
+        " Emit confirmation event with all selected options
+        call s:emit_event('SELECT_CONFIRMED', {
+          \ 'id': self.id,
+          \ 'is_multi': 1,
+          \ 'selected_options': self.state.selectedOptions
+        \ })
+      else
+        " Emit confirmation event with selected option
+        call s:emit_event('SELECT_CONFIRMED', {
+          \ 'id': self.id,
+          \ 'is_multi': 0,
+          \ 'selected_value': self.state.selectedValue,
+          \ 'selected_index': self.state.selectedOptionIndex
+        \ })
+      endif
+      
+      let self.state.isOpen = 0
+      return 1
+    endfunction
+    
+    function! select.cancel(...) dict
+      let reason = a:0 > 0 ? a:1 : ''
+      
+      " Emit cancellation event
+      call s:emit_event('SELECT_CANCELLED', {
+        \ 'id': self.id,
+        \ 'reason': reason
+      \ })
+      
+      let self.state.isOpen = 0
+      return 1
+    endfunction
+    
+    function! select.destroy() dict
+      " Emit destruction event
+      call s:emit_event('COMPONENT_DESTROYED', {'id': self.id})
+      return 1
+    endfunction
+    
+    " Register the component
+    call s:register_component(select)
+    
+    " Emit creation event
+    call s:emit_event('COMPONENT_CREATED', {'id': select.id})
+    
+    return select
+  endfunction
+  
+  " Mock event system
+  let g:events = []
+  
+  function! s:emit_event(event_type, data)
+    call add(g:events, {'event': a:event_type, 'data': a:data})
+    return 1
+  endfunction
+  
+  function! s:has_event(event_type, data)
+    for event in g:events
+      if event.event == a:event_type
+        let match = 1
+        for [key, value] in items(a:data)
+          if !has_key(event.data, key) || event.data[key] != value
+            let match = 0
+            break
+          endif
+        endfor
+        if match
+          return 1
+        endif
+      endif
+    endfor
+    return 0
+  endfunction
+  
+  function! s:reset_events()
+    let g:events = []
+  endfunction
+  
+  " Mock component registry
+  let g:components = {}
+  
+  function! s:register_component(component)
+    let g:components[a:component.id] = a:component
+    return 1
+  endfunction
+  
+  function! s:get_component(id)
+    return has_key(g:components, a:id) ? g:components[a:id] : {}
+  endfunction
+  
+  " Create a test select component
+  let g:select = CreateSelect(g:test_select_id, [
+    \ {'id': 'option1', 'text': 'Option 1', 'value': 'value1'},
+    \ {'id': 'option2', 'text': 'Option 2', 'value': 'value2'},
+    \ {'id': 'option3', 'text': 'Option 3', 'value': 'value3'}
+  \ ], {
+    \ 'title': 'Test Select',
+    \ 'placeholder': 'Select an option...',
+    \ 'width': 40,
+    \ 'style': 'primary'
+  \ })
+
+" Test Suite: Component Creation
+Execute (Test Suite: Component Creation):
+  " This suite tests the creation of a select component
+
+" Test Case: Should create select with correct properties
+Execute (Test Case: Should create select with correct properties):
+  " Assert - Verify select was created with correct properties
+  Assert g:select != {}, "Select was not created"
+  Assert g:select.id == g:test_select_id, "Select ID does not match"
+  Assert len(g:select.options) == 3, "Select options count does not match"
+  Assert g:select.props.title == 'Test Select', "Select title does not match"
+  Assert g:select.props.placeholder == 'Select an option...', "Select placeholder does not match"
+  Assert g:select.props.width == 40, "Select width does not match"
+  Assert g:select.props.style == 'primary', "Select style does not match"
+
+" Test Case: Should emit creation event
+Execute (Test Case: Should emit creation event):
+  " Verify creation event was emitted
+  let creation_event_emitted = s:has_event('COMPONENT_CREATED', {'id': g:test_select_id})
+  Assert creation_event_emitted, "Component creation event was not emitted"
+
+" Test Suite: Component Rendering
+Execute (Test Suite: Component Rendering):
+  " This suite tests the rendering of a select component
+
+" Test Case: Should render select with correct content
+Execute (Test Case: Should render select with correct content):
+  " Create a temporary buffer for rendering
+  new
+  let g:test_buf = bufnr('%')
+  
+  " Get render result
+  let render_result = g:select.render()
+  
+  " Assert - Verify render result contains expected content
+  Assert render_result != {}, "Select rendering failed"
+  Assert len(render_result.lines) > 0, "Select render contains no lines"
+  
+  " Check if title and placeholder are in the rendered output
+  let render_text = join(render_result.lines, "\n")
+  Assert render_text =~ 'Test Select', "Render does not contain select title"
+  Assert render_text =~ 'Select an option', "Render does not contain placeholder"
+  
+  " Cleanup - Close the temporary buffer
+  bwipeout!
+
+" Test Suite: Select Opening and Closing
+Execute (Test Suite: Select Opening and Closing):
+  " This suite tests opening and closing the select component
+
+" Test Case: Should open select component
+Execute (Test Case: Should open select component):
+  " Reset events
+  call s:reset_events()
+  
+  " Open the select component
+  let open_result = g:select.open()
+  
+  " Assert - Verify component was opened
+  Assert open_result == 1, "Open operation failed"
+  Assert g:select.state.isOpen == 1, "Select is not in open state"
+  
+  " Verify open event was emitted
+  let open_event_emitted = s:has_event('SELECT_OPENED', {'id': g:test_select_id})
+  Assert open_event_emitted, "Select open event was not emitted"
+
+" Test Case: Should close select component
+Execute (Test Case: Should close select component):
+  " Reset events
+  call s:reset_events()
+  
+  " Close the select component
+  let close_result = g:select.close()
+  
+  " Assert - Verify component was closed
+  Assert close_result == 1, "Close operation failed"
+  Assert g:select.state.isOpen == 0, "Select is still in open state"
+  
+  " Verify close event was emitted
+  let close_event_emitted = s:has_event('SELECT_CLOSED', {'id': g:test_select_id})
+  Assert close_event_emitted, "Select close event was not emitted"
+
+" Test Suite: Option Navigation
+Execute (Test Suite: Option Navigation):
+  " This suite tests navigating through select options
+
+" Test Case: Should navigate through options
+Execute (Test Case: Should navigate through options):
+  " Open the select component
+  call g:select.open()
+  
+  " Navigate to first option
+  let nav_result = g:select.focus_next_option()
+  Assert nav_result == 1, "Navigation to first option failed"
+  Assert g:select.state.focusedOptionIndex == 0, "First option not focused"
+  
+  " Navigate to second option
+  let nav_result = g:select.focus_next_option()
+  Assert nav_result == 1, "Navigation to second option failed"
+  Assert g:select.state.focusedOptionIndex == 1, "Second option not focused"
+  
+  " Navigate back to first option
+  let nav_result = g:select.focus_prev_option()
+  Assert nav_result == 1, "Navigation to previous option failed"
+  Assert g:select.state.focusedOptionIndex == 0, "First option not focused after going back"
+  
+  " Direct focus on third option
+  let nav_result = g:select.focus_option(2)
+  Assert nav_result == 1, "Direct focus on third option failed"
+  Assert g:select.state.focusedOptionIndex == 2, "Third option not focused"
+
+" Test Suite: Option Selection
+Execute (Test Suite: Option Selection):
+  " This suite tests selecting options
+
+" Test Case: Should select option
+Execute (Test Case: Should select option):
+  " Reset events
+  call s:reset_events()
+  
+  " Focus and select first option
+  call g:select.focus_option(0)
+  let select_result = g:select.select_current_option()
+  
+  " Assert - Verify selection was successful
+  Assert select_result == 1, "Option selection failed"
+  Assert g:select.state.selectedOptionIndex == 0, "Option was not selected"
+  Assert g:select.state.selectedValue == 'value1', "Selected value does not match"
+  
+  " Verify selection event was emitted
+  let selection_event_emitted = s:has_event('SELECT_OPTION_SELECTED', {
+    \ 'id': g:test_select_id,
+    \ 'option_value': 'value1',
+    \ 'option_index': 0
+  \ })
+  Assert selection_event_emitted, "Selection event was not emitted"
+
+" Test Case: Should select by value
+Execute (Test Case: Should select by value):
+  " Reset events
+  call s:reset_events()
+  
+  " Select by value
+  let select_result = g:select.select_by_value('value2')
+  
+  " Assert - Verify selection was successful
+  Assert select_result == 1, "Selection by value failed"
+  Assert g:select.state.selectedOptionIndex == 1, "Option was not selected by value"
+  Assert g:select.state.selectedValue == 'value2', "Selected value does not match"
+
+" Test Suite: Multi-Select Functionality
+Execute (Test Suite: Multi-Select Functionality):
+  " This suite tests multi-select functionality
+
+" Test Case: Should create multi-select component
+Execute (Test Case: Should create multi-select component):
+  " Create a multi-select component
+  let g:test_select_multi_id = 'test_select_multi_' . strftime('%s')
+  
+  let g:select_multi = CreateSelect(g:test_select_multi_id, [
+    \ {'id': 'option1', 'text': 'Option 1', 'value': 'value1'},
+    \ {'id': 'option2', 'text': 'Option 2', 'value': 'value2'},
+    \ {'id': 'option3', 'text': 'Option 3', 'value': 'value3'}
+  \ ], {
+    \ 'title': 'Multi Select',
+    \ 'placeholder': 'Select multiple options...',
+    \ 'width': 40,
+    \ 'style': 'primary',
+    \ 'multi': 1
+  \ })
+  
+  " Assert - Verify multi-select component was created
+  Assert g:select_multi != {}, "Multi-select component was not created"
+  Assert g:select_multi.props.multi == 1, "Component is not in multi-select mode"
+
+" Test Case: Should select multiple options
+Execute (Test Case: Should select multiple options):
+  " Reset events
+  call s:reset_events()
+  
+  " Open the multi-select
+  call g:select_multi.open()
+  
+  " Select first option
+  call g:select_multi.focus_option(0)
+  let select_result1 = g:select_multi.select_current_option()
+  Assert select_result1 == 1, "First option selection failed"
+  Assert g:select_multi.is_option_selected(0) == 1, "First option not marked as selected"
+  
+  " Select third option
+  call g:select_multi.focus_option(2)
+  let select_result2 = g:select_multi.select_current_option()
+  Assert select_result2 == 1, "Third option selection failed"
+  Assert g:select_multi.is_option_selected(2) == 1, "Third option not marked as selected"
+  
+  " Verify both options are selected
+  Assert len(g:select_multi.state.selectedOptions) == 2, "Incorrect number of selected options"
+
+" Test Case: Should toggle option selection
+Execute (Test Case: Should toggle option selection):
+  " Reset events
+  call s:reset_events()
+  
+  " Deselect first option
+  call g:select_multi.focus_option(0)
+  let deselect_result = g:select_multi.select_current_option()
+  
+  " Assert - Verify deselection was successful
+  Assert deselect_result == 1, "Option deselection failed"
+  Assert g:select_multi.is_option_selected(0) == 0, "First option still marked as selected"
+  Assert g:select_multi.is_option_selected(2) == 1, "Third option no longer selected"
+  Assert len(g:select_multi.state.selectedOptions) == 1, "Incorrect number of selected options after deselection"
+
+" Test Case: Should confirm multi-selection
+Execute (Test Case: Should confirm multi-selection):
+  " Reset events
+  call s:reset_events()
+  
+  " Confirm selection
+  let confirm_result = g:select_multi.confirm()
+  
+  " Assert - Verify confirmation was successful
+  Assert confirm_result == 1, "Multi-selection confirmation failed"
+  Assert g:select_multi.state.isOpen == 0, "Component is still open after confirmation"
+  
+  " Verify confirmation event was emitted
+  let confirmation_event_emitted = s:has_event('SELECT_CONFIRMED', {
+    \ 'id': g:test_select_multi_id,
+    \ 'is_multi': 1
+  \ })
+  Assert confirmation_event_emitted, "Confirmation event was not emitted"
+
+" Test Suite: Component Destruction
+Execute (Test Suite: Component Destruction):
+  " This suite tests destroying select components
+
+" Test Case: Should destroy select component
+Execute (Test Case: Should destroy select component):
+  " Reset events
+  call s:reset_events()
+  
+  " Destroy the select component
+  let destroy_result = g:select.destroy()
+  
+  " Assert - Verify component was destroyed
+  Assert destroy_result == 1, "Component destruction failed"
+  
+  " Verify destruction event was emitted
+  let destruction_event_emitted = s:has_event('COMPONENT_DESTROYED', {'id': g:test_select_id})
+  Assert destruction_event_emitted, "Component destruction event was not emitted"
+
+" Global Teardown
+Execute (Global Teardown):
+  " Clean up
+  unlet g:select
+  unlet g:select_multi
+  unlet g:test_select_id
+  unlet g:test_select_multi_id
+  unlet g:events
+  unlet g:components

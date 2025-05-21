@@ -1,0 +1,55 @@
+# VADER Test Template aligned with TypeScript structure
+# This template follows the structure of TypeScript tests
+
+# Global Setup - Similar to beforeAll in Jest
+Execute (Global Setup):
+  " Setup code that runs once before all tests
+  let g:test_id = 'test_component_' . strftime('%s')
+  lua require('vue-ui').setup({debug = true, log_events = true})
+  lua require('vue-ui').clear_event_log()
+
+# Test Suite: Component Creation
+# Similar to describe('Component Creation', () => {...})
+Execute (Test Suite: Component Creation):
+  " Test suite setup code
+
+# Test Case: Should create component with correct properties
+# Similar to it('should create component with correct properties', () => {...})
+Execute (Test Case: Should create component with correct properties):
+  " Arrange - Setup for this specific test
+  lua local component = require('vue-ui').component.create(vim.g.test_id, 'Test Component', {prop1 = 'value1'})
+  
+  " Act - Perform the action being tested
+  lua local result = require('vue-ui.utils.event_bridge').get_component(vim.g.test_id)
+  
+  " Assert - Verify the expected outcome
+  lua assert(result ~= nil, "Component was not created")
+  lua assert(result.props.prop1 == 'value1', "Component property does not match")
+
+# Test Suite: Component Rendering
+Execute (Test Suite: Component Rendering):
+  " Test suite setup code
+
+# Test Case: Should render with correct content
+Execute (Test Case: Should render with correct content):
+  " Arrange
+  new
+  let g:test_buf = bufnr('%')
+  
+  " Act
+  lua local component = require('vue-ui.utils.event_bridge').get_component(vim.g.test_id)
+  lua local render_result = component:render()
+  
+  " Assert
+  lua assert(render_result ~= nil, "Component rendering failed")
+  lua assert(#render_result.lines > 0, "Component render contains no lines")
+  
+  " Cleanup - Similar to afterEach
+  bwipeout!
+
+# Global Teardown - Similar to afterAll in Jest
+Execute (Global Teardown):
+  " Teardown code that runs once after all tests
+  lua local component = require('vue-ui.utils.event_bridge').get_component(vim.g.test_id)
+  lua if component then component:destroy() end
+  lua require('vue-ui').save_event_log('test_run')
