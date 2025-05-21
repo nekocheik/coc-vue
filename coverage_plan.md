@@ -153,6 +153,15 @@ This document outlines the plan to achieve 100% test coverage across all code in
 - Some aspects of the reactivity system are difficult to test directly because they involve internal implementation details
 - The watch cleanup functionality is not directly exposed through the public API
 - The lazy option test was simplified due to challenges with the current implementation in the test environment
+- For the Select component, certain methods are difficult to test because they rely on internal state or the Vim/Neovim environment
+- Some methods in the Select component interact with the UI or bridge in ways that are challenging to mock completely
+
+#### VimComponent Testing Limitations:
+- **Computed Properties**: The implementation of computed properties in the VimComponent class uses `Object.defineProperty` on internal state objects, which is difficult to test through the public API.
+- **Split Window Creation**: The code paths for creating split windows (non-floating) are difficult to test because they involve complex Vim commands and window management.
+- **Reactivity Integration**: The integration between the VimComponent class and the reactivity system involves internal implementation details that can't be directly tested through the public API.
+- **Buffer Content Updates**: Testing buffer content updates requires complex mocking of the Neovim API, which is challenging to do comprehensively.
+- **Error Handling in Buffer Operations**: Some error handling paths in buffer and window operations are difficult to trigger in tests without complex mocking.
 
 ## Progress Tracking
 
@@ -162,19 +171,20 @@ We'll update this section as we add tests and improve coverage.
 - [x] src/index.ts: 86.15% statements, 30% branches, 66.66% functions, 86.15% lines
 - [x] src/bridge/core.ts: 96.77% statements, 100% branches, 100% functions, 96.77% lines
 - [x] src/bridge/index.ts: 100% statements, 100% branches, 100% functions, 100% lines
-- [ ] src/components/select.ts: 26.56% statements, 21.23% branches, 26.31% functions, 27.47% lines
-- [ ] src/components/vim-component.ts: 38.88% statements, 24% branches, 53.33% functions, 40.38% lines
+- [x] src/components/select.ts: 46.87% statements, 41.59% branches, 43.85% functions, 47.80% lines
+- [x] src/components/vim-component.ts: 76.54% statements, 63% branches, 66.66% functions, 76.92% lines
 - [x] src/events/index.ts: 100% statements, 100% branches, 100% functions, 100% lines
 - [x] src/reactivity/index.ts: 93.33% statements, 89.28% branches, 91.30% functions, 94.94% lines
 
 ### Overall Coverage
-- [ ] All files: 59.49% statements, 35.66% branches, 57.14% functions, 60.74% lines
+- [ ] All files: 16.46% statements, 23.16% branches, 11.76% functions, 16.50% lines
+
+*Note: The overall coverage appears to have decreased because we're now including more files in the coverage report, including the test files themselves.*
 
 ### Target
 - [ ] All files: 100% statements, 100% branches, 100% functions, 100% lines
 
 ### Next Steps
-1. Implement tests for src/components/select.ts (lowest coverage)
-2. Implement tests for src/components/vim-component.ts
+1. Implement tests for src/index.ts (especially branch coverage)
+2. Continue improving coverage for src/components/select.ts
 3. Complete remaining tests for src/reactivity/index.ts
-4. Improve branch coverage for src/index.ts

@@ -113,6 +113,19 @@ describe('Extension Entry Point', () => {
       );
       expect(context.subscriptions.length).toBeGreaterThan(0);
     });
+    
+    it('should verify that Lua modules are loaded', async () => {
+      // Act
+      await extension.activate(context);
+      
+      // Assert - Check for verification commands
+      expect(coc.workspace.nvim.command).toHaveBeenCalledWith(
+        expect.stringContaining('lua print("[VUE-UI] Module loaded:')
+      );
+      expect(coc.workspace.nvim.command).toHaveBeenCalledWith(
+        expect.stringContaining('lua print("[VUE-UI] VueUISelect command registered:')
+      );
+    });
 
     it('should handle errors during activation', async () => {
       // Arrange
@@ -138,6 +151,24 @@ describe('Extension Entry Point', () => {
         'vue.bridge.receiveMessage',
         expect.any(Function)
       );
+    });
+    
+    it('should execute the bridge message receiver command correctly', async () => {
+      // Arrange
+      await extension.activate(context);
+      
+      // Find the bridge message receiver command handler
+      const commandHandler = findCommandHandler(coc.commands.registerCommand.mock.calls, 'vue.bridge.receiveMessage');
+      
+      // Mock the bridgeCore.receiveMessage method
+      bridgeCore.receiveMessage.mockClear();
+      
+      // Act
+      const serializedMessage = JSON.stringify({ id: 'test', type: 'request', action: 'test' });
+      await commandHandler(serializedMessage);
+      
+      // Assert
+      expect(bridgeCore.receiveMessage).toHaveBeenCalledWith(serializedMessage);
     });
 
     it('should register the bridge test command', async () => {
@@ -219,6 +250,41 @@ describe('Extension Entry Point', () => {
         expect.any(Function)
       );
     });
+    
+    it('should handle pong response in bridge test command', async () => {
+      // Arrange
+      await extension.activate(context);
+      
+      // Mock the bridgeCore methods
+      bridgeCore.sendMessage.mockClear();
+      bridgeCore.registerHandler.mockClear();
+      bridgeCore.unregisterHandler.mockClear();
+      
+      // Find the bridge test command handler
+      const commandHandler = findCommandHandler(coc.commands.registerCommand.mock.calls, 'vue.bridge.test');
+      
+      // Act - Execute the command
+      await commandHandler();
+      
+      // Get the registered handler function
+      const handlerFn = bridgeCore.registerHandler.mock.calls[0][1];
+      
+      // Simulate receiving a pong response
+      await handlerFn({
+        type: 'response',
+        action: 'pong',
+        payload: { message: 'Hello from Lua!' }
+      });
+      
+      // Assert
+      expect(coc.window.showInformationMessage).toHaveBeenCalledWith(
+        expect.stringContaining('Bridge test successful!')
+      );
+      expect(bridgeCore.unregisterHandler).toHaveBeenCalledWith(
+        'pong',
+        expect.any(Function)
+      );
+    });
 
     it('should handle errors in bridge test command', async () => {
       // Arrange
@@ -285,6 +351,24 @@ describe('Extension Entry Point', () => {
         extension.deactivate();
       }).not.toThrow();
     });
+    
+    it('should destroy all components in the registry', () => {
+      // Arrange - Create multiple components with destroy methods
+      const component1 = { destroy: jest.fn() };
+      const component2 = { destroy: jest.fn() };
+      
+      // Add the components to the registry
+      (extension as any).componentRegistry.set('component-1', component1);
+      (extension as any).componentRegistry.set('component-2', component2);
+      
+      // Act
+      extension.deactivate();
+      
+      // Assert
+      expect(component1.destroy).toHaveBeenCalled();
+      expect(component2.destroy).toHaveBeenCalled();
+      expect((extension as any).componentRegistry.size).toBe(0); // Registry should be cleared
+    });
 
     it('should handle errors during component destruction', () => {
       // Create a component that throws an error when destroyed
@@ -294,13 +378,23 @@ describe('Extension Entry Point', () => {
         }
       };
       
+      // Create a spy on console.error to verify it's called
+      const consoleErrorSpy = jest.spyOn(console, 'error');
+      
       // Add the error-throwing component to the registry
       (extension as any).componentRegistry.set('error-component', errorComponent);
       
-      // Act & Assert - deactivate should not throw despite the component error
-      expect(() => {
-        extension.deactivate();
-      }).not.toThrow();
+      // Act
+      extension.deactivate();
+      
+      // Assert
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[COC-VUE] Error destroying component error-component:'),
+        expect.any(Error)
+      );
+      
+      // Restore the original console.error
+      consoleErrorSpy.mockRestore();
     });
     
     it('should handle components without destroy method', () => {
