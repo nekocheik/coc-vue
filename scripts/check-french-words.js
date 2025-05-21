@@ -153,9 +153,9 @@ function checkForFrenchPatterns(text) {
     const regex = new RegExp(`\\b${term}\\b`, 'gi');
     let termMatch;
     while ((termMatch = regex.exec(text)) !== null) {
-      // Skip if the word is in the allowed technical terms list
+      // Skip if the word is exactly in the allowed technical terms list
       const matchedWord = termMatch[0].toLowerCase();
-      if (!allowedTechnicalTerms.some(allowed => matchedWord.includes(allowed.toLowerCase()))) {
+      if (!allowedTechnicalTerms.some(allowed => matchedWord === allowed.toLowerCase())) {
         matches.push({
           type: 'technical',
           word: termMatch[0],
