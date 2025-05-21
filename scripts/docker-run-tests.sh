@@ -19,9 +19,28 @@ mkdir -p /app/.ci-artifacts/vader-reports
 mkdir -p /app/test-results
 
 # Configure test environment
-echo -e "\\n${YELLOW}Configuring test environment...${NC}"
+echo -e "\n${YELLOW}Configuring test environment...${NC}"
 export NODE_ENV=test
 export JEST_TIMEOUT=30000
+
+# Check for Neovim installation (needed for Vader tests)
+if command -v nvim &> /dev/null; then
+  NVIM_VERSION=$(nvim --version | head -n 1)
+  echo -e "${GREEN}✓ Neovim detected: ${NVIM_VERSION}${NC}"
+  
+  # Setup Vader test environment
+  echo -e "${YELLOW}Setting up Vader test environment...${NC}"
+  mkdir -p test/coverage/reports
+  mkdir -p test/coverage/json
+  
+  # Copy vader.vim file to test directory if it doesn't exist
+  if [ ! -f "test/vader.vim" ]; then
+    echo -e "${YELLOW}Copying vader.vim file...${NC}"
+    cp -f scripts/test/vader.vim test/vader.vim || echo -e "${RED}Error: couldn't find vader.vim${NC}"
+  fi
+else
+  echo -e "${RED}✗ Neovim not found! Vader tests may not run correctly.${NC}"
+fi
 
 # Run combined test with Jest and save results
 echo -e "\\n${YELLOW}Running Jest tests with results export...${NC}"

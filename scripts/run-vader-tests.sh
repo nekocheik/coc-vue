@@ -35,6 +35,16 @@ let &runtimepath.=','.expand('<sfile>:p:h:h')
 filetype plugin on
 EOF
   
+  # Check if Neovim is installed and available
+  if ! command -v nvim &> /dev/null; then
+    echo -e "${RED}ERROR: Neovim is not installed or not in PATH!${NC}" | tee -a "${log_file}"
+    echo '{"total":0,"success":0,"assertions_total":0,"assertions_passed":0,"status":"error","error":"neovim_not_found"}' > "${output_file}"
+    return 1
+  fi
+  
+  # Show Neovim version for debugging
+  nvim --version | head -n 1 | tee -a "${log_file}"
+  
   # Run Vader test
   echo -e "${BLUE}Running test...${NC}"
   
@@ -44,7 +54,19 @@ EOF
   # Add debug output to show we're running the test
   echo "Executing Vader test: ${test_file}" >> "${log_file}"
   
+  # Create a more verbose setup file for debugging
+  cat > "test/vader/setup.vim" << EOF
+  set runtimepath+=.
+  let &runtimepath.=','.expand('<sfile>:p:h:h')
+  filetype plugin on
+  set verbose=1
+  set verbosefile=${output_dir}/vim_verbose.log
+  echo "Vim runtime path: " . &runtimepath
+  EOF
+  
   # Run the Vader test with more verbose output
+  echo -e "${BLUE}Command: nvim -es -u test/vader/setup.vim -c 'source test/vader.vim' -c 'Vader! ${test_file}'${NC}" | tee -a "${log_file}"
+  
   nvim -es -u test/vader/setup.vim \
        -c "source test/vader.vim" \
        -c "let g:vader_output_file='${log_file}'" \
