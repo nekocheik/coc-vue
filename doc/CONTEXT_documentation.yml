@@ -1,0 +1,105 @@
+file_name: CONTEXT_documentation
+relative_path: /doc/CONTEXT_documentation.yml
+priority: HIGH
+tags:
+  - Context
+  - documentation
+summary: This file contains sections from all documents related to the context 'documentation'.
+sections:
+  - title: "Overview"
+    source_file: "BRIDGE_PROTOCOL"
+    priority: "HIGH"
+    tags:
+      - "documentation"
+      - "Protocol"
+      - "Bridge"
+    content: "Priority: HIGH
+Tags: Protocol, Bridge
+
+The Vue-to-Lua Bridge establishes a generic, component-agnostic communication layer between TypeScript running in COC.nvim and Lua executing in Neovim. This architectural approach creates a standardized foundation for component development that maintains clear separation between the communication mechanism and component-specific implementations. The protocol documentation details message formats, categorization, usage patterns, and implementation examples necessary for developers to create new components that leverage this bridge infrastructure."
+  - title: "Introduction"
+    source_file: "CI_CD_INTEGRATION"
+    priority: "MEDIUM"
+    tags:
+      - "documentation"
+      - "CI/CD"
+      - "Documentation"
+    content: "Priority: MEDIUM
+Tags: CI/CD, Documentation
+
+The coc-vue project implements multiple continuous integration systems to maintain code quality and automate testing processes. These systems provide four key benefits: automated test execution triggered on each commit, verification of environment compatibility across different systems, comprehensive test report generation, and streamlined deployment of new versions. This infrastructure ensures consistent quality standards throughout the development lifecycle."
+  - title: "Purpose"
+    source_file: "CI_VALIDATION"
+    priority: "HIGH"
+    tags:
+      - "documentation"
+      - "CI/CD"
+      - "Documentation"
+    content: "Priority: HIGH
+Tags: CI/CD, Documentation
+
+This document establishes a systematic approach to validate continuous integration test reporting for accuracy and reliability. It provides a structured framework to verify that test results are correctly captured, reported, and interpreted within the CI pipeline, ensuring that the testing infrastructure delivers dependable quality metrics for the codebase."
+  - title: "Notes"
+    source_file: "CI_VALIDATION"
+    priority: "MEDIUM"
+    tags:
+      - "documentation"
+      - "CI/CD"
+      - "Documentation"
+    content: "Priority: MEDIUM
+Tags: CI/CD, Documentation
+
+The validation protocol emphasizes that completion requires examining real CI run output rather than theoretical or simulated results. Four specific requirements must be satisfied: obtaining logs from an actual CI run to ensure authenticity, verifying the existence and completeness of test result files, validating that summary content accurately reflects test execution, and confirming that error handling properly manages exceptional conditions. This rigorous approach ensures the CI pipeline delivers reliable quality metrics."
+  - title: "Overview"
+    source_file: "DOCUMENTATION"
+    priority: "HIGH"
+    tags:
+      - "documentation"
+      - "Documentation"
+      - "Architecture"
+    content: "Priority: HIGH
+Tags: Documentation, Architecture
+
+COC-VUE delivers Vue.js integration for COC.nvim, combining TypeScript core logic with Lua-based Neovim integration to create interactive UI components and features. The architecture implements a component-agnostic design that eliminates hardcoded component references, enabling dynamic component loading without global file modifications. This approach allows keyboard mappings to be automatically configured based on available component methods, creating a flexible and extensible framework for Neovim UI development."
+  - title: "Introduction"
+    source_file: "README"
+    priority: "CRITICAL"
+    tags:
+      - "documentation"
+      - "Documentation"
+    content: "Priority: CRITICAL
+Tags: Documentation
+
+CoC Vue Integration delivers a powerful, agnostic Vue.js integration for Neovim through coc.nvim. This extension transforms Neovim into a responsive Vue.js development environment with interactive features. Developers can directly manipulate Vue components, test component behavior, and accelerate development with this seamless integration."
+  - title: "Debugging"
+    source_file: "README"
+    priority: "MEDIUM"
+    tags:
+      - "documentation"
+      - "Documentation"
+    content: "Priority: MEDIUM
+Tags: Documentation
+
+When troubleshooting, check Neovim errors using ':messages' to view error messages and ':CocOpenLog' to access the Coc.nvim log file. Common issues include component loading failures, port conflicts, asynchronous operation timeouts, and bridge communication breakdowns. Each problem has specific verification steps detailed in the troubleshooting guide."
+  - title: "Prerequisites"
+    source_file: "TESTS"
+    priority: "MEDIUM"
+    tags:
+      - "documentation"
+      - "Testing"
+      - "Setup"
+    content: "Priority: MEDIUM
+Tags: Testing, Setup
+
+Before implementing the testing environment, developers must verify installation of Docker and GitHub CLI. Docker provides the containerized test environment, while GitHub CLI facilitates integration with CI workflows. For macOS users, Docker can be installed from the official documentation, and GitHub CLI can be installed via Homebrew."
+  - title: "Troubleshooting"
+    source_file: "TESTS"
+    priority: "MEDIUM"
+    tags:
+      - "documentation"
+      - "Testing"
+      - "Documentation"
+    content: "Priority: MEDIUM
+Tags: Testing, Documentation
+
+When encountering issues, developers can troubleshoot Docker problems by checking daemon status, cleaning resources with system prune, and verifying port availability. For GitHub CI issues, verify authentication status, check workflow permissions, and validate workflow files. When tests pass locally but fail in Docker, examine volume mounting configuration, environment variable settings, test logs in the results directory, and consider rebuilding the Docker image without cache."

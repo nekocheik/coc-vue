@@ -1,0 +1,576 @@
+file_name: MANAGE_DOC_SCRIPT
+relative_path: /manage-doc.sh
+priority: HIGH
+tags:
+  - Script
+  - Documentation
+  - Shell
+summary: A comprehensive shell script for managing documentation with multiple advanced features including document generation, analysis, and search capabilities.
+sections:
+  - title: "print_usage"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Print usage information
+
+Print usage information
+
+Function signature:
+print_usage() {
+
+Usage:
+No direct usage examples found in script."
+  - title: "check_dependencies"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Check if jq and grep are installed
+
+Check if jq and grep are installed
+
+Function signature:
+check_dependencies() {
+
+Usage:
+No direct usage examples found in script."
+  - title: "validate_file"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Validate file exists
+
+Validate file exists
+
+Function signature:
+validate_file() {
+
+Usage:
+Example: 259:   validate_file "$file""
+  - title: "validate_section"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Validate section exists
+
+Validate section exists
+
+Function signature:
+validate_section() {
+
+Usage:
+Example: 260:   validate_section "$file" "$section_title""
+  - title: "get_confirmation"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Get confirmation from user
+
+Get confirmation from user
+
+Function signature:
+get_confirmation() {
+
+Usage:
+No direct usage examples found in script."
+  - title: "generate_docs"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Generate all YAML docs from Markdown files
+
+Generate all YAML docs from Markdown files
+
+Function signature:
+generate_docs() {
+
+Usage:
+No direct usage examples found in script."
+  - title: "generate_md"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Generate Markdown files from YAML docs
+
+Generate Markdown files from YAML docs
+
+Function signature:
+generate_md() {
+
+Usage:
+No direct usage examples found in script."
+  - title: "delete_block"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Delete a section from a YAML doc
+
+Delete a section from a YAML doc
+
+Function signature:
+delete_block() {
+
+Usage:
+Example: 1123:     delete_block "$1" "$2""
+  - title: "delete_file"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Delete a YAML doc file
+
+Delete a YAML doc file
+
+Function signature:
+delete_file() {
+
+Usage:
+Example: 1132:     delete_file "$1""
+  - title: "update_doc"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Update a section in a YAML doc
+
+Update a section in a YAML doc
+
+Function signature:
+update_doc() {
+
+Usage:
+Example: 1142:       update_doc "$1" "$2" "$3""
+  - title: "set_priority"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Set priority for a section
+
+Set priority for a section
+
+Function signature:
+set_priority() {
+
+Usage:
+Example: 1154:     set_priority "$1" "$2" "$3""
+  - title: "set_category"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Set category for a section
+
+Set category for a section
+
+Function signature:
+set_category() {
+
+Usage:
+Example: 1163:     set_category "$1" "$2" "$3""
+  - title: "is_session_active"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Check if a session is active
+
+Check if a session is active
+
+Function signature:
+is_session_active() {
+
+Usage:
+No direct usage examples found in script."
+  - title: "ensure_session_active"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Ensure session is active before destructive actions
+
+Ensure session is active before destructive actions
+
+Function signature:
+ensure_session_active() {
+
+Usage:
+No direct usage examples found in script."
+  - title: "start_session"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Start a session for tracking document changes
+
+Start a session for tracking document changes
+
+Function signature:
+start_session() {
+
+Usage:
+No direct usage examples found in script."
+  - title: "reset_session"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Reset session by restoring from backup
+
+Reset session by restoring from backup
+
+Function signature:
+reset_session() {
+
+Usage:
+No direct usage examples found in script."
+  - title: "close_session"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Close the session and delete backup
+
+Close the session and delete backup
+
+Function signature:
+close_session() {
+
+Usage:
+No direct usage examples found in script."
+  - title: "list_sections"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "List sections in a YAML doc
+
+List sections in a YAML doc
+
+Function signature:
+list_sections() {
+
+Usage:
+Example: 1180:     list_sections "$1""
+  - title: "list_commands"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "List available helper commands
+
+List available helper commands
+
+Function signature:
+list_commands() {
+
+Usage:
+No direct usage examples found in script."
+  - title: "initialize_search_stats"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Initialize the search stats file if it doesn't exist
+
+Initialize the search stats file if it doesn't exist
+
+Function signature:
+initialize_search_stats() {
+
+Usage:
+No direct usage examples found in script."
+  - title: "view_markdown"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "View a markdown file
+
+View a markdown file
+
+Function signature:
+view_markdown() {
+
+Usage:
+Example: 1191:     view_markdown "$1""
+  - title: "increment_counter"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Increment the search or view counter for a section
+
+Increment the search or view counter for a section
+
+Function signature:
+increment_counter() {
+
+Usage:
+Example: 582:           increment_counter "$filename" "$section_title" "searched""
+  - title: "search_markdown"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Search for text in all markdown files
+
+Search for text in all markdown files
+
+Function signature:
+search_markdown() {
+
+Usage:
+Example: 1199:     search_markdown "$1""
+  - title: "view_section"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "View a specific section of a markdown file
+
+View a specific section of a markdown file
+
+Function signature:
+view_section() {
+
+Usage:
+Example: 1207:     view_section "$1" "$2""
+  - title: "show_ranking"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Show the ranking of most viewed sections
+
+Show the ranking of most viewed sections
+
+Function signature:
+show_ranking() {
+
+Usage:
+No direct usage examples found in script."
+  - title: "generate_summary"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Generate a global summary of the project
+
+Generate a global summary of the project
+
+Function signature:
+generate_summary() {
+
+Usage:
+No direct usage examples found in script."
+  - title: "extract_glossary"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Generate a glossary of technical terms
+
+Generate a glossary of technical terms
+
+Function signature:
+extract_glossary() {
+
+Usage:
+No direct usage examples found in script."
+  - title: "show_structure"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Generate a hierarchical view of project structure
+
+Generate a hierarchical view of project structure
+
+Function signature:
+show_structure() {
+
+Usage:
+No direct usage examples found in script."
+  - title: "export_context"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Export sections by context
+
+Export sections by context
+
+Function signature:
+export_context() {
+
+Usage:
+Example: 1227:     export_context "$1""
+  - title: "document_script"
+    priority: "HIGH"
+    tags:
+      - "Function"
+      - "Shell"
+    content: "Document the script itself
+
+Document the script itself
+
+Function signature:
+document_script() {
+
+Usage:
+No direct usage examples found in script."
+  - title: "Main Script Execution"
+    priority: "HIGH"
+    tags:
+      - "Main"
+      - "Execution"
+    content: "The main execution logic of the script that handles command line arguments and calls the appropriate functions.
+
+# Main script execution
+check_dependencies
+
+if [ $# -lt 1 ]; then
+  print_usage
+  exit 1
+fi
+
+command="$1"
+shift
+
+case "$command" in
+  generate)
+    generate_docs
+    ;;
+  generate-md)
+    generate_md
+    ;;
+  delete-block)
+    ensure_session_active
+    if [ $# -ne 2 ]; then
+      echo "Error: delete-block requires a file and section title."
+      print_usage
+      exit 1
+    fi
+    delete_block "$1" "$2"
+    ;;
+  delete-file)
+    ensure_session_active
+    if [ $# -ne 1 ]; then
+      echo "Error: delete-file requires a file."
+      print_usage
+      exit 1
+    fi
+    delete_file "$1"
+    ;;
+  update-doc)
+    ensure_session_active
+    if [ $# -lt 2 ] || [ $# -gt 3 ]; then
+      echo "Error: update-doc requires a file, section title, and optionally a content file."
+      echo "Usage: $0 update-doc <file> <section-title> [content-file]"
+      exit 1
+    fi
+    if [ $# -eq 3 ]; then
+      update_doc "$1" "$2" "$3"
+    else
+      update_doc "$1" "$2"
+    fi
+    ;;
+  set-priority)
+    ensure_session_active
+    if [ $# -ne 3 ]; then
+      echo "Error: set-priority requires a file, section title, and priority."
+      print_usage
+      exit 1
+    fi
+    set_priority "$1" "$2" "$3"
+    ;;
+  set-category)
+    ensure_session_active
+    if [ $# -ne 3 ]; then
+      echo "Error: set-category requires a file, section title, and category."
+      print_usage
+      exit 1
+    fi
+    set_category "$1" "$2" "$3"
+    ;;
+  start-session)
+    start_session
+    ;;
+  reset-session)
+    reset_session
+    ;;
+  close-session)
+    close_session
+    ;;
+  list-sections)
+    if [ $# -ne 1 ]; then
+      echo "Error: list-sections requires a file."
+      echo "Usage: $0 list-sections <file>"
+      exit 1
+    fi
+    list_sections "$1"
+    ;;
+  list-commands)
+    list_commands
+    ;;
+  view)
+    if [ $# -ne 1 ]; then
+      echo "Error: view requires a file."
+      echo "Usage: $0 view <filename.md>"
+      exit 1
+    fi
+    view_markdown "$1"
+    ;;
+  search)
+    if [ $# -ne 1 ]; then
+      echo "Error: search requires a query."
+      echo "Usage: $0 search <query>"
+      exit 1
+    fi
+    search_markdown "$1"
+    ;;
+  view-section)
+    if [ $# -ne 2 ]; then
+      echo "Error: view-section requires a file and section title."
+      echo "Usage: $0 view-section <filename.md> <section-title>"
+      exit 1
+    fi
+    view_section "$1" "$2"
+    ;;
+  ranking)
+    show_ranking
+    ;;
+  generate-summary)
+    generate_summary
+    ;;
+  extract-glossary)
+    extract_glossary
+    ;;
+  show-structure)
+    show_structure
+    ;;
+  export-context)
+    if [ $# -ne 1 ]; then
+      echo "Error: export-context requires a context keyword."
+      echo "Usage: $0 export-context <context>"
+      exit 1
+    fi
+    export_context "$1"
+    ;;
+  document-script)
+    document_script
+    ;;
+  *)
+    echo "Error: Unknown command '$command'."
+    print_usage
+    exit 1
+    ;;
+esac"

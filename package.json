@@ -66,6 +66,7 @@
     "@vue/reactivity": "^3.3.4",
     "babel-jest": "^29.7.0",
     "coc.nvim": ">= 0.0.80",
+    "js-yaml": "^4.1.0",
     "pinia": "^2.1.4",
     "vue": "^3.3.4"
   },
