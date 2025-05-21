@@ -1,38 +1,57 @@
 {
   "file_name": "SELECT_COMPONENT_INTEGRATION.md",
   "relative_path": "/docs/SELECT_COMPONENT_INTEGRATION.md",
-  "tags": ["Components", "Integration", "Documentation"],
+  "tags": [
+    "Components",
+    "Integration",
+    "Documentation"
+  ],
   "priority": "MEDIUM",
   "summary": "Comprehensive guide for verifying the proper integration of the Select component as a first-class module in the COC-VUE extension, including verification steps, troubleshooting, and architectural overview.",
   "sections": [
     {
       "title": "Prerequisites",
       "priority": "MEDIUM",
-      "tags": ["Setup", "Integration"],
+      "tags": [
+        "Setup",
+        "Integration"
+      ],
       "content": "Before testing the Select component integration, three prerequisites must be established: a clean Neovim environment (optionally created using the clean-setup.sh script for a controlled testing environment), a properly built and linked COC-VUE extension with the latest code changes, and a functional Neovim installation with COC properly configured. These prerequisites ensure a reliable verification process by eliminating potential environment-related issues."
     },
     {
       "title": "Verification Process",
       "priority": "HIGH",
-      "tags": ["Testing", "Integration"],
+      "tags": [
+        "Testing",
+        "Integration"
+      ],
       "content": "The integration verification follows a six-step process: 1) Build and link the extension using npm commands, 2) Verify command registration by checking if the VueUISelect command is properly registered in Neovim, 3) Test direct command execution by running the VueUISelect command with component parameters, 4) Test COC command integration through the CocCommand vue.selectDemo interface, 5) Test keyboard interactions including navigation keys (j/k, Up/Down), selection keys (Enter, Space), and cancellation keys (Esc), and 6) Run automated verification using the provided verification script that checks command registration, runtime paths, module loading, and command execution across both interfaces."
     },
     {
       "title": "Troubleshooting",
       "priority": "HIGH",
-      "tags": ["Integration", "Debugging"],
+      "tags": [
+        "Integration",
+        "Debugging"
+      ],
       "content": "When integration verification fails, four key areas should be checked: 1) Runtime Path Issues - verify the extension directory appears in Neovim's runtime path using :echo &runtimepath, 2) Module Loading Issues - confirm Lua modules are properly loaded by checking if require('vue-ui.init') returns a value, 3) Command Registration Issues - attempt to manually register commands using lua require('vue-ui.init').define_commands(), and 4) COC Integration Issues - examine COC logs with :CocOpenLog for errors related to component or command registration. These troubleshooting approaches systematically identify and resolve common integration problems."
     },
     {
       "title": "Architecture Overview",
       "priority": "MEDIUM",
-      "tags": ["Architecture", "Components"],
+      "tags": [
+        "Architecture",
+        "Components"
+      ],
       "content": "The Select component integration involves a dual-layer architecture spanning both Lua and TypeScript. The Lua Layer provides the core component implementation in lua/vue-ui/components/select.lua with command registration in lua/vue-ui/init.lua. The TypeScript Layer establishes the COC command interface in src/index.ts that bridges between TypeScript and Lua execution environments. The integration flow follows four steps: COC loads the extension and calls activate in src/index.ts, the extension registers commands including vue.selectDemo, execution of vue.selectDemo triggers the VueUISelect command in Neovim, and finally the VueUISelect command creates and opens a Select component using the Lua API."
     },
     {
       "title": "Conclusion",
       "priority": "MEDIUM",
-      "tags": ["Integration", "Validation"],
+      "tags": [
+        "Integration",
+        "Validation"
+      ],
       "content": "When all verification steps succeed, the Select component is confirmed to be properly integrated as a first-class module within the COC-VUE extension. This validation ensures that the component can be reliably used in production Neovim+COC environments, providing users with a fully functional, interactive selection interface that meets the extension's quality standards."
     }
   ]

@@ -1,0 +1,1 @@
+The coc-vue project implements robust CI/CD pipelines to ensure code quality and automate testing. The CI/CD system provides automated test execution on each commit, verifies environment compatibility, generates test reports, and facilitates deployment of new versions.

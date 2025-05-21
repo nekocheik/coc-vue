@@ -1,56 +1,84 @@
 {
   "file_name": "BRIDGE_DOCUMENTATION.md",
   "relative_path": "/docs/technical/BRIDGE_DOCUMENTATION.md",
-  "tags": ["Architecture", "Technical", "Bridge"],
+  "tags": [
+    "Architecture",
+    "Technical",
+    "Bridge"
+  ],
   "priority": "HIGH",
   "summary": "Comprehensive documentation of the Vue-like reactive bridge system implemented for the coc-vue extension, providing a generic communication layer between TypeScript and Lua components with reactive state management.",
   "sections": [
     {
       "title": "Overview and Architecture",
       "priority": "CRITICAL",
-      "tags": ["Architecture", "Technical"],
+      "tags": [
+        "Architecture",
+        "Technical"
+      ],
       "content": "The Vue-like reactive bridge system creates a reusable connection between Lua component implementations and TypeScript component classes with Vue-like reactivity and lifecycle hooks. This architecture consists of three fundamental components: a Generic Bridge Core providing component-agnostic communication between TypeScript and Lua, a Vue-Like Reactivity System implementing Vue 3's reactivity patterns, and a VimComponent base class delivering lifecycle hooks and buffer integration. This layered design enables seamless interaction between the TypeScript layer in COC.nvim and the Lua/Neovim implementation, connected through JSON-RPC/IPC protocols that maintain a clear separation of concerns."
     },
     {
       "title": "Generic Bridge Core",
       "priority": "HIGH",
-      "tags": ["Bridge", "Communication"],
+      "tags": [
+        "Bridge",
+        "Communication"
+      ],
       "content": "The bridge core establishes a component-agnostic communication layer through a standardized message protocol defined by the BridgeMessage interface, which includes component identifier, message type, action name, payload data, optional timestamp, and correlation ID for request/response pairing. Four key features distinguish this implementation: complete absence of hardcoded component logic in the bridge layer, standardized message protocol for all communications, bidirectional information flow between TypeScript and Lua, and a sophisticated handler registration system for appropriate message routing. This abstraction enables component implementations to evolve independently of the communication infrastructure."
     },
     {
       "title": "Vue-Like Reactivity System",
       "priority": "HIGH",
-      "tags": ["Reactivity", "Technical"],
+      "tags": [
+        "Reactivity",
+        "Technical"
+      ],
       "content": "The reactivity system replicates Vue 3's state management patterns with four primary mechanisms: reactive objects that track property access and changes, computed properties that automatically update when dependencies change, effects that execute when reactive state changes (similar to Vue's watchEffect), and watchers that respond to specific state transitions. This implementation enables developers to create reactive state with the reactive() function, define computed values that derive from state, establish effects for automatic execution on state changes, and implement watchers to respond to specific value transitions. This reactivity model ensures UI consistency by automatically propagating state changes to visual representations."
     },
     {
       "title": "VimComponent Class",
       "priority": "HIGH",
-      "tags": ["Components", "Implementation"],
+      "tags": [
+        "Components",
+        "Implementation"
+      ],
       "content": "The VimComponent class combines Vue-like programming patterns with Vim buffer integration through comprehensive lifecycle hooks (beforeMount, onMounted, onUpdated, onBeforeDestroy, onDestroyed), reactive state triggering automatic re-rendering, computed properties with dependency tracking, callable methods from both TypeScript and Lua, watchers responding to state changes, and seamless Vim buffer integration for rendering. Components can be instantiated with state, hooks, and render functions, then managed through the mount(), updateState(), and destroy() methods. The class handles the complexities of Neovim buffer management while presenting a clean, Vue-inspired API for component development."
     },
     {
       "title": "Buffer Integration",
       "priority": "MEDIUM",
-      "tags": ["UI", "Integration"],
+      "tags": [
+        "UI",
+        "Integration"
+      ],
       "content": "Components render to Vim buffers that function as the DOM equivalent for the UI system. Buffer options provide extensive customization including name, filetype, dimensions (width/height), positioning ('floating', 'top', 'bottom', 'left', 'right'), content editability, and focus behavior. The buffer subsystem delivers four essential capabilities: comprehensive buffer lifecycle management (creation, updating, destruction), flexible window positioning (floating or split windows), granular buffer option configuration, and efficient content rendering from component state to buffer content. This buffer-centric approach leverages Neovim's native display capabilities while providing abstractions for component development."
     },
     {
       "title": "Select Component Example",
       "priority": "MEDIUM",
-      "tags": ["Components", "Examples"],
+      "tags": [
+        "Components",
+        "Examples"
+      ],
       "content": "The Select component demonstrates the system's capabilities through a complete implementation lifecycle: creation with configuration (ID, title, options array, multi-select mode, placeholder), mounting with await select.mount(), interaction through methods (open(), focusOption(), selectOption(), getValue(), close()), and cleanup with destroy(). This example showcases five key features: reactive state tracking options and selection, comprehensive method API for interaction, events communicating state changes, complete lifecycle hook implementation, and sophisticated buffer rendering displaying options and selection state. The component effectively demonstrates how abstract architecture translates to concrete interactive interfaces."
     },
     {
       "title": "Bridge Communication Flow",
       "priority": "HIGH",
-      "tags": ["Communication", "Implementation"],
+      "tags": [
+        "Communication",
+        "Implementation"
+      ],
       "content": "The bridge enables bidirectional communication through two distinct flows. TypeScript-to-Lua communication begins with a TypeScript component method call (e.g., select.open()), which sends a message via bridgeCore.sendMessage() with component ID, message type, action name, and payload. The Lua bridge receives this message, routes it to the appropriate component, which then processes the action. Conversely, Lua-to-TypeScript communication starts with a Lua component emitting an event (e.g., option selection) through core_event.emit_select_option_selected(), which the Lua bridge transmits to TypeScript. The TypeScript bridge routes this to the registered handler, which updates component state, triggering the reactivity system to re-render as needed."
     },
     {
       "title": "Implementation and Usage",
       "priority": "MEDIUM",
-      "tags": ["Development", "Implementation"],
+      "tags": [
+        "Development",
+        "Implementation"
+      ],
       "content": "Creating new components follows a six-step workflow: define component options (ID, type, state, methods, computed properties, watchers, hooks, render function), instantiate the component, mount it, call methods as needed, update state, and eventually destroy it when finished. Adding entirely new component types requires creating a Lua implementation, extending the VimComponent class in TypeScript, defining the message protocol between layers, implementing message handlers, and creating comprehensive tests. This structured approach creates a system that's modular (with self-contained, composable components), reactive (with automatic UI updates on state changes), testable (supporting verification at all levels), and extensible (facilitating new component creation). This architecture delivers a modern development experience within Neovim."
     }
   ]
