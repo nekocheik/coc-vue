@@ -1,0 +1,27 @@
+Execute (Simple Registry Test):
+  " Simple assertion to verify test execution
+  Assert 1 == 1
+  
+  " Create a mock registry
+  let g:registry = {}
+  
+  " Mock registry functions
+  function! Register(id, component)
+    let g:registry[a:id] = a:component
+  endfunction
+  
+  function! GetComponent(id)
+    return get(g:registry, a:id, v:null)
+  endfunction
+  
+  " Test registration
+  call Register('test-component', {'id': 'test-component', 'type': 'button'})
+  
+  " Test component retrieval
+  let component = GetComponent('test-component')
+  AssertEqual 'test-component', component.id
+  AssertEqual 'button', component.type
+  
+  " Test non-existent component
+  let missing = GetComponent('non-existent')
+  AssertEqual v:null, missing

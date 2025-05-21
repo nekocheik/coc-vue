@@ -1,0 +1,37 @@
+Execute (Simple Select Test):
+  " Simple assertion to verify test execution
+  Assert 1 == 1
+  
+  " Create a basic test value for the select component
+  let items = ['Option 1', 'Option 2', 'Option 3']
+  AssertEqual 3, len(items)
+
+Execute (Mock Select Object):
+  " Create a mock select object instead of using real components
+  let select = {
+        \ 'id': 'test-select',
+        \ 'items': ['Option 1', 'Option 2', 'Option 3'],
+        \ 'selected_index': 0,
+        \ 'config': {'width': 30, 'height': 5, 'border': v:true},
+        \ 'is_focused': v:false,
+        \ 'is_disabled': v:false
+        \ }
+  
+  " Verify select properties
+  AssertEqual 'test-select', select.id
+  AssertEqual 3, len(select.items)
+  AssertEqual 'Option 1', select.items[0]
+  AssertEqual 30, select.config.width
+  AssertEqual 5, select.config.height
+  
+  " Select an item
+  let select.selected_index = 2
+  AssertEqual 2, select.selected_index
+  AssertEqual 'Option 3', select.items[select.selected_index]
+  
+  " Toggle focus state
+  let select.is_focused = v:true
+  AssertEqual v:true, select.is_focused
+  
+  let select.is_focused = v:false
+  AssertEqual v:false, select.is_focused

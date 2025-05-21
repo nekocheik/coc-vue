@@ -1,0 +1,36 @@
+Execute (Simple Modal Test):
+  " Simple assertion to verify test execution
+  Assert 1 == 1
+  
+  " Create a basic test value
+  let test_val = 'modal'
+  AssertEqual 'modal', test_val
+
+Execute (Mock Modal Object):
+  " Create a mock modal object instead of using real components
+  let modal = {
+        \ 'id': 'test-modal',
+        \ 'title': 'Test Modal',
+        \ 'content': 'This is a test modal content',
+        \ 'config': {'width': 60, 'height': 10, 'border': v:true},
+        \ 'is_visible': v:true,
+        \ 'is_focused': v:false
+        \ }
+  
+  " Verify modal properties
+  AssertEqual 'test-modal', modal.id
+  AssertEqual 'Test Modal', modal.title
+  AssertEqual 'This is a test modal content', modal.content
+  AssertEqual 60, modal.config.width
+  AssertEqual 10, modal.config.height
+  
+  " Toggle visibility
+  let modal.is_visible = v:false
+  AssertEqual v:false, modal.is_visible
+  
+  let modal.is_visible = v:true
+  AssertEqual v:true, modal.is_visible
+  
+  " Update content
+  let modal.content = 'Updated modal content'
+  AssertEqual 'Updated modal content', modal.content

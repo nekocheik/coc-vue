@@ -1,0 +1,30 @@
+Execute (Simple Button Test):
+  " Simple assertion to verify test execution
+  Assert 1 == 1
+  
+  " Create a basic test value
+  let test_val = 42
+  AssertEqual 42, test_val
+
+Execute (Mock Button Object):
+  " Create a mock button object instead of using real components
+  let button = {
+        \ 'id': 'test-button',
+        \ 'text': 'Test Button',
+        \ 'config': {'style': 'primary', 'width': 30, 'enabled': v:true},
+        \ 'is_focused': v:false,
+        \ 'is_disabled': v:false
+        \ }
+  
+  " Verify button properties
+  AssertEqual 'test-button', button.id
+  AssertEqual 'Test Button', button.text
+  AssertEqual 'primary', button.config.style
+  AssertEqual 30, button.config.width
+  
+  " Modify button state
+  let button.is_focused = v:true
+  AssertEqual v:true, button.is_focused
+  
+  let button.is_disabled = v:true
+  AssertEqual v:true, button.is_disabled

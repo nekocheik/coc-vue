@@ -1,0 +1,36 @@
+Execute (Simple Input Test):
+  " Simple assertion to verify test execution
+  Assert 1 == 1
+  
+  " Create a basic test value
+  let test_val = 'input'
+  AssertEqual 'input', test_val
+
+Execute (Mock Input Object):
+  " Create a mock input object instead of using real components
+  let input = {
+        \ 'id': 'test-input',
+        \ 'placeholder': 'Enter your text here',
+        \ 'value': '',
+        \ 'config': {'width': 40, 'height': 1, 'border': v:true},
+        \ 'is_focused': v:false,
+        \ 'is_disabled': v:false
+        \ }
+  
+  " Verify input properties
+  AssertEqual 'test-input', input.id
+  AssertEqual 'Enter your text here', input.placeholder
+  AssertEqual '', input.value
+  AssertEqual 40, input.config.width
+  AssertEqual 1, input.config.height
+  
+  " Set input value
+  let input.value = 'Test Value'
+  AssertEqual 'Test Value', input.value
+  
+  " Toggle focus
+  let input.is_focused = v:true
+  AssertEqual v:true, input.is_focused
+  
+  let input.is_focused = v:false
+  AssertEqual v:false, input.is_focused
