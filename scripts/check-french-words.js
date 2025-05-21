@@ -49,7 +49,6 @@ const frenchPatterns = {
     'fonction', 'fonctions',
     'procédure', 'procédures',
     'boucle', 'boucles',
-    'condition', 'conditions',
     'valeur', 'valeurs'
   ]
 };

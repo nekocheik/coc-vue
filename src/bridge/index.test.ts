@@ -113,6 +113,20 @@ describe('Bridge Index', () => {
       );
     });
 
+    it('should handle non-string, non-object arguments correctly', async () => {
+      // Arrange
+      const command = 'test_command';
+      const args = [42, true]; // Number, boolean
+      
+      // Act
+      await bridge.sendCommand(command, ...args);
+      
+      // Assert
+      expect(coc.workspace.nvim.command).toHaveBeenCalledWith(
+        expect.stringContaining("lua return require('vue-ui.core.bridge').execute_command('test_command', 42, true")
+      );
+    });
+
     it('should handle errors when sending commands', async () => {
       // Arrange
       coc.workspace.nvim.command.mockRejectedValueOnce(new Error('Command error'));
@@ -140,6 +154,25 @@ describe('Bridge Index', () => {
       // Assert
       expect(coc.workspace.nvim.command).toHaveBeenCalledWith(
         expect.stringContaining("lua require('vue-ui.core.bridge').handle_event")
+      );
+    });
+
+    it('should handle errors when sending events', async () => {
+      // Arrange
+      const event = {
+        type: events.EventType.COMPONENT_CREATED,
+        data: {
+          componentId: 'test-component',
+          componentType: 'select'
+        }
+      };
+      coc.workspace.nvim.command.mockRejectedValueOnce(new Error('Event error'));
+      
+      // Act & Assert
+      await expect(bridge.sendEvent(event)).rejects.toThrow('Event error');
+      expect(console.error).toHaveBeenCalledWith(
+        expect.stringContaining(`[Bridge] Error sending event ${event.type}:`),
+        expect.any(Error)
       );
     });
 

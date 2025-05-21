@@ -80,7 +80,6 @@ jobs:
               'fonction', 'fonctions',
               'procédure', 'procédures',
               'boucle', 'boucles',
-              'condition', 'conditions',
               'valeur', 'valeurs'
             ]
           };

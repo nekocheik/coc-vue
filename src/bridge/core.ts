@@ -117,6 +117,7 @@ export class BridgeCore {
       this.messageQueue.push(message);
       this.processMessageQueue();
     } catch (error) {
+      // TODO: Test coverage - Add test for error handling in receiveMessage method
       console.error('[BridgeCore] Error receiving message:', error);
     }
   }
@@ -126,6 +127,7 @@ export class BridgeCore {
    */
   private async processMessageQueue(): Promise<void> {
     if (this.isProcessing || this.messageQueue.length === 0) {
+      // TODO: Test coverage - Add test for early return conditions in processMessageQueue
       return;
     }
     
@@ -173,6 +175,7 @@ export class BridgeCore {
    */
   public unregisterHandler(action: string, handler: MessageHandler): void {
     if (!this.handlers.has(action)) {
+      // TODO: Test coverage - Add test for unregistering a handler for a non-existent action
       return;
     }
     

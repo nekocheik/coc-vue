@@ -11,6 +11,7 @@ export class EventEmitter<T extends Record<string, (...args: any[]) => void>> {
 
   off<K extends keyof T>(event: K, callback: T[K]): void {
     if (!this.listeners[event]) {
+      // TODO: Test coverage - Add test for removing a listener from a non-existent event
       return;
     }
     this.listeners[event] = this.listeners[event]!.filter(cb => cb !== callback);
@@ -18,6 +19,7 @@ export class EventEmitter<T extends Record<string, (...args: any[]) => void>> {
 
   emit<K extends keyof T>(event: K, ...args: Parameters<T[K]>): void {
     if (!this.listeners[event]) {
+      // TODO: Test coverage - Add test for emitting an event with no listeners
       return;
     }
     this.listeners[event]!.forEach(callback => {

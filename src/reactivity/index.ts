@@ -78,6 +78,7 @@ function trigger(target: object, key: string | symbol, newValue?: any, oldValue?
       try {
         effect.fn();
       } catch (err) {
+        // TODO: Test coverage - Add test for error handling in effect execution
         console.error('Error in effect:', err);
       }
     } else {
@@ -103,9 +104,11 @@ export function effect(fn: EffectFn, options: { lazy?: boolean, onStop?: () => v
   if (!options.lazy) {
     _run(_effect);
   }
+  // TODO: Test coverage - Add test for lazy option in effect
   
   const runner = () => {
     if (!_effect.active) return;
+    // TODO: Test coverage - Add test for inactive effect in runner
     return _run(_effect);
   };
   
@@ -115,10 +118,12 @@ export function effect(fn: EffectFn, options: { lazy?: boolean, onStop?: () => v
     if (_effect.active) {
       _cleanup(_effect);
       if (_effect.onStop) {
+        // TODO: Test coverage - Add test for onStop callback
         _effect.onStop();
       }
       _effect.active = false;
     }
+    // TODO: Test coverage - Add test for stopping an already stopped effect
   };
 }
 
@@ -262,11 +267,13 @@ export function watch<T>(
   let cleanup: CleanupFn | undefined;
   
   const onCleanup = (fn: CleanupFn) => {
+    // TODO: Test coverage - Add test for cleanup function in watch
     cleanup = fn;
   };
   
   const job = () => {
     if (cleanup) {
+      // TODO: Test coverage - Add test for cleanup execution in watch
       cleanup();
       cleanup = undefined;
     }

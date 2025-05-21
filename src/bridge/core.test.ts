@@ -114,6 +114,107 @@ describe('BridgeCore', () => {
         payload: { data: 'test-data' }
       }));
     });
+
+    it('should not process messages when queue is empty', async () => {
+      // Arrange - Create a spy on the private method
+      const instance = BridgeCore['getInstance']() as any;
+      
+      // Force the message queue to be empty
+      instance.messageQueue = [];
+      
+      // Mock the internal processing to verify it's not called
+      const originalProcessing = instance.isProcessing;
+      instance.isProcessing = false;
+      
+      // Act
+      await instance.processMessageQueue();
+      
+      // Assert - The processing flag should remain false
+      expect(instance.isProcessing).toBe(false);
+      
+      // Restore the original value
+      instance.isProcessing = originalProcessing;
+    });
+
+    it('should not process messages when already processing', async () => {
+      // Arrange
+      const instance = BridgeCore['getInstance']() as any;
+      
+      // Save original state
+      const originalProcessing = instance.isProcessing;
+      const originalQueue = [...instance.messageQueue];
+      
+      // Force processing flag to be true
+      instance.isProcessing = true;
+      
+      // Add a message to the queue to ensure we're only testing the isProcessing condition
+      instance.messageQueue = [{
+        id: 'test-id',
+        type: MessageType.EVENT,
+        action: 'test'
+      }];
+      
+      // Act
+      await instance.processMessageQueue();
+      
+      // Assert - The queue should remain unchanged
+      expect(instance.messageQueue.length).toBe(1);
+      expect(instance.messageQueue[0].id).toBe('test-id');
+      
+      // Reset the state for other tests
+      instance.isProcessing = originalProcessing;
+      instance.messageQueue = originalQueue;
+    });
+  });
+
+  describe('Handler Management', () => {
+    it('should register and unregister handlers correctly', () => {
+      // Arrange
+      const handler = jest.fn();
+      const action = 'test-action';
+      
+      // Act - Register handler
+      bridgeCore.registerHandler(action, handler);
+      
+      // Assert - Handler should be registered
+      const instance = BridgeCore['getInstance']() as any;
+      expect(instance.handlers.get(action).has(handler)).toBe(true);
+      
+      // Act - Unregister handler
+      bridgeCore.unregisterHandler(action, handler);
+      
+      // Assert - Handler should be removed
+      expect(instance.handlers.has(action)).toBe(false);
+    });
+    
+    it('should handle unregistering a handler for a non-existent action', () => {
+      // Arrange
+      const handler = jest.fn();
+      const nonExistentAction = 'non-existent-action';
+      
+      // Act & Assert - Should not throw an error
+      expect(() => {
+        bridgeCore.unregisterHandler(nonExistentAction, handler);
+      }).not.toThrow();
+    });
+    
+    it('should register and unregister global handlers correctly', () => {
+      // Arrange
+      const globalHandler = jest.fn();
+      
+      // Act - Register global handler
+      bridgeCore.registerGlobalHandler(globalHandler);
+      
+      // Assert - Global handler should be registered
+      const instance = BridgeCore['getInstance']() as any;
+      expect(instance.globalHandlers.has(globalHandler)).toBe(true);
+      
+      // Act - Unregister global handler
+      bridgeCore.unregisterGlobalHandler(globalHandler);
+      
+      // Assert - Global handler should be removed
+      expect(instance.globalHandlers.has(globalHandler)).toBe(false);
+    });
   });
 
   describe('Error Handling', () => {
@@ -129,6 +230,21 @@ describe('BridgeCore', () => {
         type: MessageType.ACTION,
         action: 'test'
       })).rejects.toThrow();
+    });
+
+    it('should handle errors when receiving invalid JSON messages', async () => {
+      // Arrange
+      console.error = jest.fn();
+      const invalidJson = '{invalid:json';
+      
+      // Act
+      await bridgeCore.receiveMessage(invalidJson);
+      
+      // Assert
+      expect(console.error).toHaveBeenCalledWith(
+        '[BridgeCore] Error receiving message:',
+        expect.any(Error)
+      );
     });
   });
 });

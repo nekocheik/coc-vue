@@ -115,6 +115,23 @@ describe('Events Module', () => {
       expect(emitter['listeners'][eventName]).not.toContain(handler);
     });
 
+    it('should handle removing a listener from a non-existent event', () => {
+      // Arrange
+      const emitter = new EventEmitter<{
+        'test:event': (data: any) => void
+      }>();
+      const handler = jest.fn();
+      const nonExistentEventName = 'non:existent:event' as any;
+      
+      // Act & Assert - should not throw an error
+      expect(() => {
+        emitter.off(nonExistentEventName, handler);
+      }).not.toThrow();
+      
+      // Verify the listeners object remains unchanged
+      expect(emitter['listeners'][nonExistentEventName]).toBeUndefined();
+    });
+
     it('should emit events to multiple listeners', () => {
       // Arrange
       const emitter = new EventEmitter<{
@@ -229,6 +246,20 @@ describe('Events Module', () => {
       
       // Verify the handler was called despite throwing an error
       expect(handler).toHaveBeenCalled();
+    });
+
+    it('should handle emitting an event with no listeners', () => {
+      // Arrange
+      const emitter = new EventEmitter<{
+        'test:event': (data: any) => void
+      }>();
+      const eventName = 'test:event';
+      const eventData = { data: 'test' };
+      
+      // Act & Assert - should not throw an error
+      expect(() => {
+        emitter.emit(eventName, eventData);
+      }).not.toThrow();
     });
   });
 });

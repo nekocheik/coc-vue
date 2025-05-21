@@ -25,6 +25,7 @@ export class Bridge {
       } else if (typeof arg === 'string') {
         return `'${arg}'`;
       } else {
+        // TODO: Test coverage - Add test for non-string, non-object arguments (e.g., numbers, booleans)
         return arg;
       }
     }).join(', ');
@@ -52,6 +53,7 @@ export class Bridge {
     try {
       await nvim.command(luaCommand);
     } catch (error) {
+      // TODO: Test coverage - Add test for error handling in sendEvent method
       console.error(`[Bridge] Error sending event ${event.type}:`, error);
       throw error;
     }
