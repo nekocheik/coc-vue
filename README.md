@@ -539,6 +539,8 @@ You can customize the Docker environment by modifying these files:
 
 For detailed documentation on testing with Docker and CI integration, see [CI_TESTING.md](docs/CI_TESTING.md) and [TESTS.md](TESTS.md).
 
+> **CI Status Note**: The main test pipeline (Docker, TypeScript, VADER) is fully functional. The French Language Check job may fail due to detection of certain technical terms in commit history. This is a known limitation documented in [CI_TESTING.md](docs/CI_TESTING.md) and does not affect test coverage or software quality.
+
 ## Test Policy & Commit Enforcement
 
 - All unit/integration tests must be placed in `__tests__/` (mirroring `src/`) or `helper-test/` (for helpers/mocks).

@@ -87,6 +87,22 @@ If tests fail due to missing dependencies:
 - Run `npm install` to update dependencies
 - Make sure the Docker image has all required system dependencies
 
+### 4. French Language Check Limitations
+
+The French Language Check job may fail even when all tests pass. This is a known limitation:
+
+- The check scans for French words in both code and commit history
+- It flags certain technical terms like "configuration" as French words
+- This is a non-blocking issue for development but should be addressed for clean CI
+
+**Solutions:**
+
+- Use `--legacy-peer-deps` flag with npm install in the workflow
+- Consider modifying the French check script to:
+  - Only check the latest commit (not the entire history)
+  - Whitelist common technical terms that are valid in English
+  - Restrict the check to specific file types or directories
+
 ## Adding New Tests
 
 ### TypeScript Tests
