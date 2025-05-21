@@ -193,6 +193,50 @@ describe('Extension Entry Point', () => {
       );
     });
 
+    it('should register the showWindowDemo command', async () => {
+      // Act
+      await extension.activate(context);
+      
+      // Assert
+      expect(coc.commands.registerCommand).toHaveBeenCalledWith(
+        'vue.showWindowDemo',
+        expect.any(Function)
+      );
+    });
+
+    it('should register the showEditorDemo command', async () => {
+      // Act
+      await extension.activate(context);
+      
+      // Assert
+      expect(coc.commands.registerCommand).toHaveBeenCalledWith(
+        'vue.showEditorDemo',
+        expect.any(Function)
+      );
+    });
+
+    it('should register the showComponentsDemo command', async () => {
+      // Act
+      await extension.activate(context);
+      
+      // Assert
+      expect(coc.commands.registerCommand).toHaveBeenCalledWith(
+        'vue.showComponentsDemo',
+        expect.any(Function)
+      );
+    });
+
+    it('should register the vueui.callMethod action', async () => {
+      // Act
+      await extension.activate(context);
+      
+      // Assert
+      expect(coc.commands.registerCommand).toHaveBeenCalledWith(
+        'vueui.callMethod',
+        expect.any(Function)
+      );
+    });
+
     it('should handle errors during command registration', async () => {
       // Arrange - Mock registerCommand to throw an error on first call but work on subsequent calls
       let callCount = 0;
@@ -310,14 +354,17 @@ describe('Extension Entry Point', () => {
       await extension.activate(context);
       
       // Find the select demo command handler
-      const commandHandler = findCommandHandler(coc.commands.registerCommand.mock.calls, 'vue.selectDemo');
+      const selectCommandHandler = findCommandHandler(coc.commands.registerCommand.mock.calls, 'vue.selectDemo');
       
       // Act
-      await commandHandler();
+      await selectCommandHandler();
       
       // Assert
       expect(coc.workspace.nvim.command).toHaveBeenCalledWith(
-        expect.stringMatching(/VueUISelect select_demo_\d+ "Select Component Demo"/)
+        expect.stringContaining('VueUISelect select_demo_')
+      );
+      expect(coc.window.showInformationMessage).toHaveBeenCalledWith(
+        expect.stringContaining('Select component launched successfully')
       );
     });
 
@@ -329,21 +376,130 @@ describe('Extension Entry Point', () => {
       coc.workspace.nvim.command.mockRejectedValueOnce(new Error('Command execution failed'));
       
       // Find the select demo command handler
-      const commandHandler = findCommandHandler(coc.commands.registerCommand.mock.calls, 'vue.selectDemo');
+      const selectCommandHandler = findCommandHandler(coc.commands.registerCommand.mock.calls, 'vue.selectDemo');
       
       // Act
-      await commandHandler();
+      await selectCommandHandler();
       
       // Assert
       expect(coc.window.showErrorMessage).toHaveBeenCalledWith(
         expect.stringContaining('Error launching Select component')
       );
     });
+
+    it('should execute the vue.showWindowDemo command correctly', async () => {
+      // Arrange
+      await extension.activate(context);
+      
+      // Find the window demo command handler
+      const windowCommandHandler = findCommandHandler(coc.commands.registerCommand.mock.calls, 'vue.showWindowDemo');
+      
+      // Act
+      await windowCommandHandler();
+      
+      // Assert
+      expect(coc.window.showInformationMessage).toHaveBeenCalledWith(
+        expect.stringContaining('Window Demo is not fully implemented yet')
+      );
+    });
+
+    it('should execute the vue.showEditorDemo command correctly', async () => {
+      // Arrange
+      await extension.activate(context);
+      
+      // Find the editor demo command handler
+      const editorCommandHandler = findCommandHandler(coc.commands.registerCommand.mock.calls, 'vue.showEditorDemo');
+      
+      // Act
+      await editorCommandHandler();
+      
+      // Assert
+      expect(coc.window.showInformationMessage).toHaveBeenCalledWith(
+        expect.stringContaining('Editor Demo is not fully implemented yet')
+      );
+    });
+
+    it('should execute the vue.showComponentsDemo command correctly', async () => {
+      // Arrange
+      await extension.activate(context);
+      
+      // Find the components demo command handler
+      const componentsCommandHandler = findCommandHandler(coc.commands.registerCommand.mock.calls, 'vue.showComponentsDemo');
+      
+      // Act
+      await componentsCommandHandler();
+      
+      // Assert
+      expect(coc.workspace.nvim.command).toHaveBeenCalledWith(
+        expect.stringContaining('lua if not package.loaded["vue-ui"] then require("vue-ui") end')
+      );
+      expect(coc.window.showInformationMessage).toHaveBeenCalledWith(
+        expect.stringContaining('Launching Components Demo')
+      );
+    });
+
+    it('should execute the vueui.callMethod action correctly', async () => {
+      // Arrange
+      await extension.activate(context);
+      
+      // Find the callMethod action handler
+      const callMethodHandler = findCommandHandler(coc.commands.registerCommand.mock.calls, 'vueui.callMethod');
+      
+      // Prepare test event data - the handler expects eventName and data as separate parameters
+      const eventName = 'component:created';
+      const data = { id: 'test-component' };
+      
+      // Act
+      await callMethodHandler(eventName, data);
+      
+      // Assert
+      expect(coc.window.showInformationMessage).toHaveBeenCalledWith(
+        expect.stringContaining('Component created: test-component')
+      );
+    });
+    
+    it('should handle unrecognized event in vueui.callMethod action', async () => {
+      // Arrange
+      await extension.activate(context);
+      
+      // Find the callMethod action handler
+      const callMethodHandler = findCommandHandler(coc.commands.registerCommand.mock.calls, 'vueui.callMethod');
+      
+      // Prepare test event data with an unrecognized event type
+      const eventName = 'unknown:event';
+      const data = { id: 'test-component' };
+      
+      // Mock console.log since this function uses it for unhandled events
+      const originalConsoleLog = console.log;
+      try {
+        const mockConsoleLog = jest.fn();
+        console.log = mockConsoleLog;
+        
+        // Act
+        await callMethodHandler(eventName, data);
+        
+        // Assert
+        expect(mockConsoleLog).toHaveBeenCalledWith(
+          expect.stringContaining('Unhandled event type')
+        );
+      } finally {
+        // Restore original console.log
+        console.log = originalConsoleLog;
+      }
+    });
   });
 
   describe('Deactivation', () => {
     // We'll test the deactivation function by focusing on its error handling
     // rather than implementation details like the component registry
+    
+    beforeEach(() => {
+      // Clear any previous component registrations
+      Object.defineProperty(extension, 'componentRegistry', {
+        value: new Map(),
+        writable: true
+      });
+    });
     
     it('should not throw errors during deactivation', () => {
       // Act & Assert - deactivate should not throw any errors

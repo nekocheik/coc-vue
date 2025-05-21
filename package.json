@@ -10,7 +10,8 @@
     "*",
     "onCommand:vue.showWindowDemo",
     "onCommand:vue.showEditorDemo",
-    "onCommand:vue.showComponentsDemo"
+    "onCommand:vue.showComponentsDemo",
+    "onCommand:vue.selectDemo"
   ],
   "contributes": {
     "commands": [
@@ -25,6 +26,10 @@
       {
         "command": "vue.showComponentsDemo",
         "title": "Vue: Show Components Demo"
+      },
+      {
+        "command": "vue.selectDemo",
+        "title": "Vue: Show Select Demo"
       }
     ],
     "configuration": {

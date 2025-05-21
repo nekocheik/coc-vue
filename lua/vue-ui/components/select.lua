@@ -436,7 +436,11 @@ function Select:close()
   end
   
   if self.buffer_id then
-    vim.api.nvim_buf_delete(self.buffer_id, { force = true })
+    -- Check if the buffer exists and is valid before deleting it
+    local buffer_exists = pcall(vim.api.nvim_buf_is_valid, self.buffer_id)
+    if buffer_exists and vim.api.nvim_buf_is_valid(self.buffer_id) then
+      vim.api.nvim_buf_delete(self.buffer_id, { force = true })
+    end
     self.buffer_id = nil
   end
   

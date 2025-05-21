@@ -41,6 +41,48 @@ export async function activate(context: ExtensionContext): Promise<void> {
     })
   );
   
+  // Register vueui.callMethod action to handle events from Lua
+  context.subscriptions.push(
+    commands.registerCommand('vueui.callMethod', async (eventName: string, data: any) => {
+      try {
+        console.log(`[COC-VUE] Received Lua event: ${eventName}`, data);
+        
+        // Handle different event types
+        switch (eventName) {
+          case 'component:created':
+            // Handle component creation events
+            window.showInformationMessage(`Component created: ${data?.id || 'unknown'}`);
+            break;
+          
+          case 'select:opened':
+            // Handle select opened events
+            console.log(`[COC-VUE] Select opened: ${data?.id || 'unknown'}`);
+            break;
+          
+          case 'select:changed':
+            // Handle select changed events
+            console.log(`[COC-VUE] Select value changed: ${data?.value || 'unknown'}`);
+            break;
+          
+          case 'select:confirmed':
+            // Handle select confirmed events
+            console.log(`[COC-VUE] Select confirmed with value: ${data?.value || 'unknown'}`);
+            window.showInformationMessage(`Selected value: ${data?.value || 'none'}`);
+            break;
+          
+          default:
+            console.log(`[COC-VUE] Unhandled event type: ${eventName}`);
+        }
+        
+        return { success: true, eventName, timestamp: Date.now() };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`[COC-VUE] Error handling Lua event ${eventName}:`, errorMessage);
+        return { success: false, error: errorMessage, timestamp: Date.now() };
+      }
+    })
+  );
+  
   // Register bridge test command
   context.subscriptions.push(
     commands.registerCommand('vue.bridge.test', async () => {
@@ -129,6 +171,83 @@ export async function activate(context: ExtensionContext): Promise<void> {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('[COC-VUE] Error launching Select component:', errorMessage);
         window.showErrorMessage(`Error launching Select component: ${errorMessage}`);
+      }
+    })
+  );
+  
+  // Register the vue.showComponentsDemo command (newly added)
+  context.subscriptions.push(
+    commands.registerCommand('vue.showComponentsDemo', async () => {
+      try {
+        console.log('[COC-VUE] Executing vue.showComponentsDemo command');
+        const nvim = workspace.nvim;
+        
+        // Ensure the Lua module is loaded before executing the command
+        await nvim.command('lua if not package.loaded["vue-ui"] then require("vue-ui") end');
+        
+        // Create a demo with multiple components
+        window.showInformationMessage('Launching Components Demo...');
+        
+        // Select component demo
+        const selectId = 'select_components_demo_' + Date.now();
+        const selectTitle = 'Select Component';
+        const selectOptions = {
+          multi: false,
+          width: 40,
+          placeholder: 'Select a component...',
+          options: [
+            { id: 'select', text: 'Select', value: 'select' },
+            { id: 'input', text: 'Input', value: 'input' },
+            { id: 'button', text: 'Button', value: 'button' },
+            { id: 'modal', text: 'Modal', value: 'modal' }
+          ]
+        };
+        
+        // Convert options to JSON for the Lua command
+        const optionsJson = JSON.stringify(selectOptions);
+        
+        // Execute the VueUISelect command to create and open the Select component
+        const command = `VueUISelect ${selectId} "${selectTitle}" ${optionsJson}`;
+        await nvim.command(command);
+        
+        console.log('[COC-VUE] Components demo launched successfully');
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('[COC-VUE] Error launching Components demo:', errorMessage);
+        window.showErrorMessage(`Error launching Components demo: ${errorMessage}`);
+      }
+    })
+  );
+  
+  // Register the vue.showWindowDemo command (newly added)
+  context.subscriptions.push(
+    commands.registerCommand('vue.showWindowDemo', async () => {
+      try {
+        console.log('[COC-VUE] Executing vue.showWindowDemo command');
+        // Removed the unused nvim declaration
+        
+        // Display a simple information message for now
+        window.showInformationMessage('Window Demo is not fully implemented yet');
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('[COC-VUE] Error launching Window demo:', errorMessage);
+        window.showErrorMessage(`Error launching Window demo: ${errorMessage}`);
+      }
+    })
+  );
+  
+  // Register the vue.showEditorDemo command (newly added)
+  context.subscriptions.push(
+    commands.registerCommand('vue.showEditorDemo', async () => {
+      try {
+        console.log('[COC-VUE] Executing vue.showEditorDemo command');
+        
+        // Display a simple information message for now
+        window.showInformationMessage('Editor Demo is not fully implemented yet');
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('[COC-VUE] Error launching Editor demo:', errorMessage);
+        window.showErrorMessage(`Error launching Editor demo: ${errorMessage}`);
       }
     })
   );
