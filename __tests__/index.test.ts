@@ -438,7 +438,7 @@ describe('Extension Entry Point', () => {
       );
     });
 
-    it('should execute the vueui.callMethod action correctly', async () => {
+    it('should execute the vueui.callMethod action for component:created event', async () => {
       // Arrange
       await extension.activate(context);
       
@@ -455,6 +455,86 @@ describe('Extension Entry Point', () => {
       // Assert
       expect(coc.window.showInformationMessage).toHaveBeenCalledWith(
         expect.stringContaining('Component created: test-component')
+      );
+    });
+    
+    it('should handle select:opened event in vueui.callMethod action', async () => {
+      // Arrange
+      await extension.activate(context);
+      
+      // Find the callMethod action handler
+      const callMethodHandler = findCommandHandler(coc.commands.registerCommand.mock.calls, 'vueui.callMethod');
+      
+      // Prepare test event data
+      const eventName = 'select:opened';
+      const data = { id: 'test-select-component' };
+      
+      // Mock console.log to verify it's called with the right message
+      const originalConsoleLog = console.log;
+      try {
+        const mockConsoleLog = jest.fn();
+        console.log = mockConsoleLog;
+        
+        // Act
+        await callMethodHandler(eventName, data);
+        
+        // Assert
+        expect(mockConsoleLog).toHaveBeenCalledWith(
+          expect.stringContaining('Select opened: test-select-component')
+        );
+      } finally {
+        // Restore original console.log
+        console.log = originalConsoleLog;
+      }
+    });
+    
+    it('should handle select:changed event in vueui.callMethod action', async () => {
+      // Arrange
+      await extension.activate(context);
+      
+      // Find the callMethod action handler
+      const callMethodHandler = findCommandHandler(coc.commands.registerCommand.mock.calls, 'vueui.callMethod');
+      
+      // Prepare test event data
+      const eventName = 'select:changed';
+      const data = { value: 'new-value' };
+      
+      // Mock console.log to verify it's called with the right message
+      const originalConsoleLog = console.log;
+      try {
+        const mockConsoleLog = jest.fn();
+        console.log = mockConsoleLog;
+        
+        // Act
+        await callMethodHandler(eventName, data);
+        
+        // Assert
+        expect(mockConsoleLog).toHaveBeenCalledWith(
+          expect.stringContaining('Select value changed: new-value')
+        );
+      } finally {
+        // Restore original console.log
+        console.log = originalConsoleLog;
+      }
+    });
+    
+    it('should handle select:confirmed event in vueui.callMethod action', async () => {
+      // Arrange
+      await extension.activate(context);
+      
+      // Find the callMethod action handler
+      const callMethodHandler = findCommandHandler(coc.commands.registerCommand.mock.calls, 'vueui.callMethod');
+      
+      // Prepare test event data
+      const eventName = 'select:confirmed';
+      const data = { value: 'confirmed-value' };
+      
+      // Act
+      await callMethodHandler(eventName, data);
+      
+      // Assert
+      expect(coc.window.showInformationMessage).toHaveBeenCalledWith(
+        expect.stringContaining('Selected value: confirmed-value')
       );
     });
     
