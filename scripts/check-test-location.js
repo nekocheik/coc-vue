@@ -3,14 +3,26 @@
 const { execSync } = require('child_process');
 const path = require('path');
 
-// Get staged files
-const stagedFiles = execSync('git diff --cached --name-only')
+// Get staged files and their status (A=added, M=modified, D=deleted, etc.)
+const stagedFilesWithStatus = execSync('git diff --cached --name-status')
   .toString()
   .trim()
   .split('\n')
-  .filter(Boolean);
+  .filter(Boolean)
+  .map(line => {
+    const [status, ...rest] = line.split('\t');
+    return {
+      status: status.trim(),
+      file: rest.join('\t').trim()
+    };
+  });
 
-// Check for test files in invalid locations
+// Filter out deleted files and keep only the file paths
+const stagedFiles = stagedFilesWithStatus
+  .filter(({ status }) => status !== 'D') // Ignore deleted files
+  .map(({ file }) => file);
+
+// Check for test files in invalid locations (only for non-deleted files)
 const invalidTestLocations = stagedFiles.filter(file => {
   // Skip if not a TypeScript file
   if (!file.endsWith('.ts') && !file.endsWith('.js')) {

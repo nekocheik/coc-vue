@@ -16,12 +16,12 @@ This document describes the configuration and usage of continuous integration (C
 
 ## Introduction
 
-The coc-vue project uses several continuous integration systems to ensure code quality and automate testing. These systems allow:
+The coc-vue project uses multiple continuous integration systems to ensure code quality and automate testing. These systems provide:
 
-- Automatic test execution on each commit
-- Verification of compatibility with different environments
-- Generation of test reports
-- Automatic deployment of new versions
+- Automated test execution on each commit
+- Environment compatibility verification
+- Test report generation
+- Automated deployment of new versions
 
 ## Docker Environments
 
