@@ -1,6 +1,6 @@
-# VADER Test Suite for coc-vue
+# VADER Tests for coc-vue
 
-This directory contains VADER tests for the coc-vue project, structured to mirror the actual component organization of the codebase.
+This directory contains VADER tests for the coc-vue project, structured to mirror the actual component organization of the codebase. All tests follow a standardized mock-based approach to ensure consistency and reliability.
 
 ## Directory Structure
 
@@ -9,9 +9,20 @@ test/vader/
 ├── components/       # Tests for UI components (button, modal, select, etc.)
 ├── core/             # Tests for core functionality (validation, state, etc.)
 ├── events/           # Tests for event handling
+├── templates/        # Official templates for new tests
 ├── utils/            # Tests for utility functions
 └── README.md         # This documentation file
 ```
+
+## Test Standards and Guidelines
+
+All VADER tests in this project MUST adhere to the following standards:
+
+1. **Mock-Based Approach**: All tests must use mock implementations instead of requiring actual modules.
+2. **One Test Per Component**: Each component must have exactly one test file.
+3. **100% Pass Rate**: All tests must pass 100% before being merged.
+4. **No Duplicates**: No duplicate or legacy test files are allowed.
+5. **Follow Template**: All new tests must use the official template in `templates/component-test-template.vader`.
 
 ## Writing VADER Tests
 
@@ -19,124 +30,35 @@ VADER tests in this project follow a structure aligned with TypeScript tests, us
 
 ### Test File Structure
 
-```vim
+Each test file should follow this structure:
+
+```vader
 " Component Name Test
-" Description of what this test covers
-
-" Global Setup - Similar to beforeAll in Jest
-Execute (Global Setup):
-  " Setup code that runs once before all tests
-  let g:test_id = 'test_component_' . strftime('%s')
-  lua require('vue-ui').setup({debug = true})
-
-" Test Suite: Feature Name
-Execute (Test Suite: Feature Name):
-  " Test suite setup code
-
-" Test Case: Should do something specific
-Execute (Test Case: Should do something specific):
-  " Arrange - Setup for this specific test
-  lua local component = require('vue-ui.components.component').create(vim.g.test_id, 'Label')
-  
-  " Act - Perform the action being tested
-  lua local result = component:someMethod()
-  
-  " Assert - Verify the expected outcome
-  lua assert(result == expected, "Error message")
-
-" Global Teardown - Similar to afterAll in Jest
-Execute (Global Teardown):
-  " Teardown code that runs once after all tests
-  lua local component = require('vue-ui.utils.event_bridge').get_component(vim.g.test_id)
-  lua if component then component:destroy() end
-```
-
-### Assertions
-
-Use Lua's `assert()` function for assertions:
-
-```lua
-assert(condition, "Error message if assertion fails")
-```
-
-Examples:
-```lua
-assert(button ~= nil, "Button was not created")
-assert(button.props.label == "Test Button", "Button label does not match")
-assert(#render_result.lines > 0, "Render contains no lines")
-```
-
-## Running Tests
-
-### Running a Single Test File
-
-```bash
-# From the project root
-nvim -es -u NONE -c 'filetype plugin on' -c 'set rtp+=test/vader' -c "source test/vader.vim" -c "Vader! test/vader/components/button.vader"
-```
-
-### Running All Tests
-
-```bash
-# From the project root
-bash scripts/run-vader-tests.sh
-```
-
-## Coverage Analysis
-
-Coverage is tracked for each component. To generate a coverage report:
-
-```bash
-# From the project root
-bash scripts/generate-coverage-report.sh
-```
-
-The coverage report will be available in `test/coverage/report.html`.
-
-## Adding New Tests
-
-1. Identify which component or feature you want to test
-2. Create or modify the appropriate test file in the matching directory
-3. Follow the test structure outlined above
-4. Run the test to verify it passes
-5. Check coverage to ensure your test covers the intended code paths
-
-### Simplified Test Structure
-
-For simpler components, you can use a more straightforward test structure that avoids complex Lua module dependencies:
-
-```vim
-" Component Name Test - Simplified Version
+" Description of what this test verifies
 
 " Global Setup
 Execute (Global Setup):
   " Configure test environment
   let g:test_component_id = 'test_component_' . strftime('%s')
   
-  " Create a simple mock component
-  function! CreateComponent(id, text, opts)
-    let component = {'id': a:id, 'text': a:text, 'props': a:opts}
-    return component
+  " Create mock implementations here
+  function! CreateComponent(...)
+    " Component implementation
   endfunction
   
   " Create a test component
-  let g:component = CreateComponent(g:test_component_id, 'Test Component', {'style': 'primary'})
+  let g:component = CreateComponent(...)
 
-" Test Case: Should create component with correct properties
-Execute (Test Case: Should create component with correct properties):
-  " Assert - Verify component was created with correct properties
-  Assert g:component != {}, "Component was not created"
-  Assert g:component.id == g:test_component_id, "Component ID does not match"
-  Assert g:component.text == 'Test Component', "Component text does not match"
-  Assert g:component.props.style == 'primary', "Component style does not match"
+" Test Suite: Feature Area
+Execute (Test Suite: Feature Area):
+  " Description of this test suite
 
-" Test Case: Should update component correctly
-Execute (Test Case: Should update component correctly):
-  " Act - Update component text
-  let g:component.text = "New text"
+" Test Case: Specific Behavior
+Execute (Test Case: Specific Behavior):
+  " Test implementation
   
-  " Assert - Verify text was updated
-  Assert g:component.text == "New text", "Component text was not updated"
+  " Assertions
+  Assert condition, "Error message"
 
 " Global Teardown
 Execute (Global Teardown):
@@ -145,58 +67,69 @@ Execute (Global Teardown):
   unlet g:test_component_id
 ```
 
-This simplified approach is particularly useful during the refactoring process, as it allows you to focus on testing the component's behavior without worrying about complex module dependencies.
+### Mock Implementation Guidelines
 
-## Debugging Tests
+1. **Self-Contained**: Tests should be completely self-contained and not rely on external modules.
+2. **Event Tracking**: Implement a simple event tracking system in your mocks to verify events.
+3. **State Management**: Track component state in your mocks to verify state changes.
+4. **Mock Registry**: Implement a simple component registry if needed for your tests.
 
-If a test fails, you can run it in interactive mode:
+### Assertions
 
-```bash
-nvim -c 'filetype plugin on' -c 'set rtp+=test/vader' -c "source test/vader.vim" -c "Vader test/vader/components/button.vader"
+Use VimScript's `Assert` function for assertions in VADER tests:
+
+```vim
+Assert condition, "Error message if assertion fails"
 ```
 
-This will open Vim and run the test, showing you exactly where it fails.
+Examples:
+```vim
+Assert g:component != {}, "Component was not created"
+Assert g:component.props.title == "Test Title", "Component title does not match"
+Assert len(render_result.lines) > 0, "Render contains no lines"
+```
 
-## Maintaining Tests
+### Running Tests
 
-When modifying the codebase:
+Use the validated test runner script to run tests:
 
-1. Run the affected tests to ensure they still pass
-2. Update tests if the component behavior has changed
-3. Add new tests for new functionality
-4. Remove tests for removed functionality
+```bash
+# Run all tests
+./scripts/run-vader-tests.sh
 
-## Component-Specific Test Guidelines
+# Run a specific component test
+./scripts/run-vader-tests.sh test/vader/components/component-name.vader
+```
 
-### Button Component
+## CI/CD Integration
 
-- Test creation with various properties
-- Test rendering with different styles
-- Test click events and focus handling
-- Test disabled state behavior
+The VADER tests are integrated into the CI/CD pipeline. The pipeline will:
 
-### Modal Component
+1. Run all VADER tests
+2. Generate a JSON report of test results
+3. Generate an HTML report for easy viewing
+4. Upload test artifacts
 
-- Test opening and closing
-- Test content rendering
-- Test interaction with buttons inside the modal
-- Test keyboard shortcuts
+Tests are expected to pass with 100% success rate before merging.
 
-### Select Component
+## Adding New Tests
 
-- Test option rendering
-- Test selection behavior
-- Test keyboard navigation
-- Test search functionality if applicable
+When adding a new component test:
 
-## Best Practices
+1. Copy the template from `templates/component-test-template.vader`
+2. Rename it to match your component name
+3. Implement the necessary mock objects and test cases
+4. Ensure all tests pass with 100% success rate
+5. Submit for code review
 
-1. **Keep tests focused**: Each test should verify one specific behavior
-2. **Use descriptive names**: Test case names should clearly describe what is being tested
-3. **Follow AAA pattern**: Arrange, Act, Assert
-4. **Clean up after tests**: Ensure all components are destroyed after testing
-5. **Avoid dependencies between tests**: Each test should be able to run independently
-6. **Test edge cases**: Include tests for error conditions and boundary values
-7. **Use Lua heredoc syntax**: When writing complex Lua code in tests, use the heredoc syntax (`lua << EOF ... EOF`) to ensure the Lua code runs as a single block
-8. **Store components in global variables**: For components that need to be accessed across multiple test cases, store them in `_G` variables (e.g., `_G.test_button`)
-9. **Mock dependencies**: Create mock implementations of dependencies to isolate the component being tested
+## Code Review Guidelines
+
+When reviewing VADER tests, ensure:
+
+1. The test follows the mock-based approach
+2. There is exactly one test file per component
+3. All tests pass with 100% success rate
+4. The test follows the official template structure
+5. There are no duplicate or legacy test files
+
+**IMPORTANT**: No test should be merged if it doesn't meet these standards.
