@@ -48,6 +48,80 @@ All TypeScript test files have been moved to the `.legacy_ts_tests` directory, p
 
 - `/jest.config.js` - Configures Jest to run the new test structure
 
+## Step 2: Strict Mirrored Test Structure in `__tests__` (Completed)
+
+To ensure a consistent and maintainable test structure, we have implemented a strict mirrored test structure rule. This means that for every source file in `src/`, there should be a corresponding test file in the `__tests__/` directory that mirrors the exact folder structure.
+
+### Strict Mirrored Structure Rule
+
+- For every source file `src/<path>/<filename>.ts`, there must be a test file `__tests__/<path>/<filename>.test.ts`.
+- Example:
+  ```
+  src/
+  ├── components/
+  │   ├── select.ts
+  │   └── vim-component.ts
+  ├── bridge/
+  │   ├── core.ts
+  │   └── index.ts
+  
+  __tests__/
+  ├── components/
+  │   ├── select.test.ts
+  │   └── vim-component.test.ts
+  ├── bridge/
+  │   ├── core.test.ts
+  │   └── index.test.ts
+  ```
+
+### Test Files Moved
+
+All test files have been moved from `src/` to the mirrored structure in `__tests__/`:
+
+| Original Path | New Path |
+|---------------|----------|
+| `src/bridge/core.test.ts` | `__tests__/bridge/core.test.ts` |
+| `src/bridge/index.test.ts` | `__tests__/bridge/index.test.ts` |
+| `src/components/select.test.ts` | `__tests__/components/select.test.ts` |
+| `src/components/vim-component.test.ts` | `__tests__/components/vim-component.test.ts` |
+| `src/events/index.test.ts` | `__tests__/events/index.test.ts` |
+| `src/index.test.ts` | `__tests__/index.test.ts` |
+| `src/reactivity/index.test.ts` | `__tests__/reactivity/index.test.ts` |
+
+### Test Utility Files
+
+All test utility files remain in the `/helper-test/` directory to keep them separate from the actual test files:
+
+| Path |
+|------|
+| `helper-test/mocks/bridge-core.ts` |
+| `helper-test/mocks/coc-tests.ts` |
+| `helper-test/mocks/neovim-mock.ts` |
+| `helper-test/mocks/nvim.ts` |
+| `helper-test/mocks/vim-component-tests.ts` |
+| `helper-test/utils/neovim-client-factory.ts` |
+| `helper-test/utils/neovim-test-client-mock.ts` |
+| `helper-test/utils/neovim-test-client.ts` |
+| `helper-test/mocks/bridge-core-improved.ts` |
+| `helper-test/mocks/coc-improved.ts` |
+| `helper-test/mocks/vim-component-improved.ts` |
+| `helper-test/utils/neovim-client.ts` |
+| `helper-test/utils/test-helpers.ts` |
+
+### Current Test Structure
+
+All source files now have their corresponding test files in the mirrored `__tests__` directory structure:
+
+| Source File | Test File |
+|-------------|-----------|
+| `src/bridge/core.ts` | `__tests__/bridge/core.test.ts` |
+| `src/bridge/index.ts` | `__tests__/bridge/index.test.ts` |
+| `src/components/select.ts` | `__tests__/components/select.test.ts` |
+| `src/components/vim-component.ts` | `__tests__/components/vim-component.test.ts` |
+| `src/events/index.ts` | `__tests__/events/index.test.ts` |
+| `src/index.ts` | `__tests__/index.test.ts` |
+| `src/reactivity/index.ts` | `__tests__/reactivity/index.test.ts` |
+
 ## New Test Structure Rules
 
 1. **Mirrored Structure**: Each `.ts` source file should have a corresponding `.test.ts` file in the same directory.
