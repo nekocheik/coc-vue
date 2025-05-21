@@ -46,17 +46,17 @@ local function test_modal_creation()
     }
   })
   
-  -- Vérifier que la modal a été créée
+  -- Check that the modal has been created
   if not test_result("Modal creation", modal ~= nil, "Modal was not created") then
     return nil
   end
   
-  -- Vérifier que la modal est enregistrée
+  -- Check that the modal is registered
   if not test_result("Modal registration", event_bridge.get_component(modal_id) ~= nil, "Modal was not registered") then
     return nil
   end
   
-  -- Vérifier que l'événement de création a été émis
+  -- Check that the creation event was emitted
   if not test_result("Creation event", check_event_emitted(schema.EVENT_TYPES.COMPONENT_CREATED, modal_id), "Creation event was not emitted") then
     return nil
   end
@@ -68,20 +68,20 @@ end
 local function test_modal_render(modal)
   if not modal then return false end
   
-  -- Rendre la modal
+  -- Render the modal
   local render_result = modal:render()
   
-  -- Vérifier que le rendu a réussi
+  -- Check that the rendering was successful
   if not test_result("Modal rendering", render_result ~= nil, "Rendering failed") then
     return false
   end
   
-  -- Vérifier que le rendu contient des lignes
+  -- Check that the render contains lines
   if not test_result("Rendering lines", #render_result.lines > 0, "Rendering contains no lines") then
     return false
   end
   
-  -- Vérifier que le rendu contient le titre
+  -- Check that the render contains the title
   local title_found = false
   for _, line in ipairs(render_result.lines) do
     if line:find('Test Modal') then
@@ -93,7 +93,7 @@ local function test_modal_render(modal)
     return false
   end
   
-  -- Vérifier que le rendu contient le contenu
+  -- Check that the render contains the content
   local content_found = false
   for _, line in ipairs(render_result.lines) do
     if line:find('This is a test content for the modal') then
@@ -112,20 +112,20 @@ end
 local function test_modal_open(modal)
   if not modal then return false end
   
-  -- Ouvrir la modal
+  -- Open the modal
   local open_result = modal:open()
   
-  -- Vérifier que l'ouverture a réussi
+  -- Check that the opening was successful
   if not test_result("Modal opening", open_result == true, "Opening failed") then
     return false
   end
   
-  -- Vérifier que la modal est ouverte
+  -- Check that the modal is open
   if not test_result("Open state", modal.is_open == true, "Modal is not in open state") then
     return false
   end
   
-  -- Vérifier que l'événement d'ouverture a été émis
+  -- Check that the opening event was emitted
   if not test_result("Open event", check_event_emitted(schema.EVENT_TYPES.MODAL_OPENED, modal.id), "Open event was not emitted") then
     return false
   end
@@ -137,41 +137,41 @@ end
 local function test_modal_navigation(modal)
   if not modal then return false end
   
-  -- Naviguer vers le bouton suivant
+  -- Navigate to the next button
   local next_result = modal:focus_next_button()
   
-  -- Vérifier que la navigation a réussi
+  -- Check that the navigation was successful
   if not test_result("Next button navigation", next_result == true, "Navigation failed") then
     return false
   end
   
-  -- Vérifier que le focus est sur le premier bouton
+  -- Check that the focus is on the first button
   if not test_result("Focus on first button", modal.focused_button_index == 0, "Focus is not on first button") then
     return false
   end
   
-  -- Naviguer vers le bouton suivant encore
+  -- Navigate to the next button again
   local next_result2 = modal:focus_next_button()
   
-  -- Vérifier que la navigation a réussi
+  -- Check that the navigation was successful
   if not test_result("Second button navigation", next_result2 == true, "Navigation failed") then
     return false
   end
   
-  -- Vérifier que le focus est sur le deuxième bouton
+  -- Check that the focus is on the second button
   if not test_result("Focus on second button", modal.focused_button_index == 1, "Focus is not on second button") then
     return false
   end
   
-  -- Naviguer vers le bouton précédent
+  -- Navigate to the previous button
   local prev_result = modal:focus_prev_button()
   
-  -- Vérifier que la navigation a réussi
+  -- Check that the navigation was successful
   if not test_result("Previous button navigation", prev_result == true, "Navigation failed") then
     return false
   end
   
-  -- Vérifier que le focus est revenu sur le premier bouton
+  -- Check that the focus is back on the first button
   if not test_result("Focus back on first button", modal.focused_button_index == 0, "Focus is not back on first button") then
     return false
   end
@@ -183,20 +183,20 @@ end
 local function test_modal_confirm(modal)
   if not modal then return false end
   
-  -- Confirmer la modal
+  -- Confirm the modal
   local confirm_result = modal:confirm()
   
-  -- Vérifier que la confirmation a réussi
+  -- Check that the confirmation was successful
   if not test_result("Modal confirmation", confirm_result == true, "Confirmation failed") then
     return false
   end
   
-  -- Vérifier que la modal est fermée
+  -- Check that the modal is closed
   if not test_result("Modal closed after confirmation", modal.is_open == false, "Modal is still open after confirmation") then
     return false
   end
   
-  -- Vérifier que l'événement de confirmation a été émis
+  -- Check that the confirmation event was emitted
   if not test_result("Confirmation event", check_event_emitted(schema.EVENT_TYPES.MODAL_CONFIRMED, modal.id), "Confirmation event was not emitted") then
     return false
   end
@@ -208,33 +208,33 @@ end
 local function test_modal_reopen_cancel(modal)
   if not modal then return false end
   
-  -- Rouvrir la modal
+  -- Reopen the modal
   local open_result = modal:open()
   
-  -- Vérifier que la réouverture a réussi
+  -- Check that the reopening was successful
   if not test_result("Modal reopening", open_result == true, "Reopening failed") then
     return false
   end
   
-  -- Vérifier que la modal est ouverte
+  -- Check that the modal is open
   if not test_result("Modal reopened", modal.is_open == true, "Modal is not in open state after reopening") then
     return false
   end
   
-  -- Annuler la modal
+  -- Cancel the modal
   local cancel_result = modal:cancel()
   
-  -- Vérifier que l'annulation a réussi
+  -- Check that the cancellation was successful
   if not test_result("Modal cancellation", cancel_result == true, "Cancellation failed") then
     return false
   end
   
-  -- Vérifier que la modal est fermée
+  -- Check that the modal is closed
   if not test_result("Modal closed after cancellation", modal.is_open == false, "Modal is still open after cancellation") then
     return false
   end
   
-  -- Vérifier que l'événement d'annulation a été émis
+  -- Check that the cancellation event was emitted
   if not test_result("Cancellation event", check_event_emitted(schema.EVENT_TYPES.MODAL_CANCELLED, modal.id), "Cancellation event was not emitted") then
     return false
   end
@@ -261,46 +261,46 @@ local function test_modal_with_input()
     }
   })
   
-  -- Vérifier que la modal a été créée
+  -- Check that the modal with input was created
   if not test_result("Modal with input creation", modal ~= nil, "Modal with input was not created") then
     return nil
   end
   
-  -- Ouvrir la modal
+  -- Open the modal
   local open_result = modal:open()
   if not test_result("Opening of the modal with input", open_result == true, "Opening of the modal with input failed") then
     return nil
   end
   
-  -- Activer le champ de saisie
+  -- Activate the input field
   local focus_input_result = modal:focus_input()
   if not test_result("Field focus state", modal.input_focused == true, "Input field is not focused") then
     return nil
   end
   
-  -- Simuler une saisie
+  -- Simulate input
   local set_input_result = modal:set_input_value("Test value")
   if not test_result("Value update", set_input_result == true, "Input field value update failed") then
     return nil
   end
   
-  -- Vérifier que la valeur a été mise à jour
+  -- Check that the value has been updated
   if not test_result("Value update", modal.input_value == "Test value", "Input field value was not updated") then
     return nil
   end
   
-  -- Vérifier que l'événement de changement d'input a été émis
+  -- Check that the input change event was emitted
   if not test_result("Input change event", check_event_emitted(schema.EVENT_TYPES.INPUT_CHANGED, modal_id), "Input change event was not emitted") then
     return nil
   end
   
-  -- Confirmer la modal avec input
+  -- Confirm the modal with input
   local confirm_result = modal:confirm()
   if not test_result("Modal confirmation", confirm_result == true, "Confirmation of the modal with input failed") then
     return nil
   end
   
-  -- Vérifier que l'événement de confirmation avec input a été émis
+  -- Check that the confirmation event with input was emitted
   local events = event_bridge._get_events_for_test()
   local found = false
   for _, event in ipairs(events or {}) do
@@ -322,29 +322,29 @@ end
 local function test_modal_destruction(modal1, modal2)
   if not modal1 or not modal2 then return false end
   
-  -- Détruire la première modal
+  -- Destroy the first modal
   local destroy_result1 = modal1:destroy()
   if not test_result("Destruction of the first modal", destroy_result1 == true, "Destruction of the first modal failed") then
     return false
   end
   
-  -- Vérifier que la première modal a été supprimée du registre
+  -- Check that the first modal has been removed from the registry
   if not test_result("Registry removal (modal 1)", event_bridge.get_component(modal1.id) == nil, "First modal was not removed from registry") then
     return false
   end
   
-  -- Détruire la deuxième modal
+  -- Destroy the second modal
   local destroy_result2 = modal2:destroy()
   if not test_result("Destruction of the second modal", destroy_result2 == true, "Destruction of the second modal failed") then
     return false
   end
   
-  -- Vérifier que la deuxième modal a été supprimée du registre
+  -- Check that the second modal has been removed from the registry
   if not test_result("Registry removal (modal 2)", event_bridge.get_component(modal2.id) == nil, "Second modal was not removed from registry") then
     return false
   end
   
-  -- Vérifier que les événements de destruction ont été émis
+  -- Check that the destruction events were emitted
   local events = event_bridge._get_events_for_test()
   local found1, found2 = false, false
   for _, event in ipairs(events or {}) do

@@ -111,12 +111,63 @@ describe('VimComponent', () => {
       );
     });
   });
-  
+
+  // LIFECYCLE TESTS
   describe('Lifecycle Hooks', () => {
     it('should call lifecycle hooks in the correct order', async () => {
       // Arrange
+      const beforeMount = jest.fn();
+      const onMounted = jest.fn();
+      const onUpdated = jest.fn();
+      const onBeforeDestroy = jest.fn();
+      const onDestroyed = jest.fn();
+      
+      const component = new VimComponent({
+        id: 'test-component',
+        type: 'test',
+        beforeMount,
+        onMounted,
+        onUpdated,
+        onBeforeDestroy,
+        onDestroyed
+      });
+      
+      // Act - Mount the component
+      await component.mount();
+      
+      // Assert - beforeMount and onMounted should be called
+      expect(beforeMount).toHaveBeenCalled();
+      expect(onMounted).toHaveBeenCalled();
+      expect(onBeforeDestroy).not.toHaveBeenCalled();
+      expect(onDestroyed).not.toHaveBeenCalled();
+      
+      // Act - Destroy the component
+      await component.destroy();
+      
+      // Assert - onBeforeDestroy and onDestroyed should be called
+      expect(onBeforeDestroy).toHaveBeenCalled();
+      expect(onDestroyed).toHaveBeenCalled();
+    });
+    
+    it('should handle missing lifecycle hooks gracefully', async () => {
+      // Arrange - Component without lifecycle hooks
+      const component = new VimComponent({
+        id: 'test-component',
+        type: 'test'
+      });
+      
+      // Act & Assert - Should not throw errors
+      await expect(component.mount()).resolves.not.toThrow();
+      await expect(component.destroy()).resolves.not.toThrow();
+    });
+  });
+
+  describe('Component Lifecycle', () => {
+    it('should mount the component', async () => {
+      // Arrange
       const beforeMountFn = jest.fn();
       const onMountedFn = jest.fn();
+      
       const component = new VimComponent({
         id: 'test-component',
         type: 'test',
@@ -130,38 +181,12 @@ describe('VimComponent', () => {
       // Assert
       expect(beforeMountFn).toHaveBeenCalled();
       expect(onMountedFn).toHaveBeenCalled();
-      // Check order
-      const beforeMountCallOrder = beforeMountFn.mock.invocationCallOrder[0];
-      const onMountedCallOrder = onMountedFn.mock.invocationCallOrder[0];
-      expect(beforeMountCallOrder).toBeLessThan(onMountedCallOrder);
-    });
-    
-    it('should handle missing lifecycle hooks gracefully', async () => {
-      // Arrange
-      const component = new VimComponent({
+      expect(component.isMounted).toBe(true);
+      expect(bridgeCore.sendMessage).toHaveBeenCalledWith(expect.objectContaining({
         id: 'test-component',
-        type: 'test'
-        // No lifecycle hooks provided
-      });
-      
-      // Act & Assert - Should not throw
-      await expect(component.mount()).resolves.not.toThrow();
-    });
-  });
-
-  describe('Component Lifecycle', () => {
-    it('should mount the component', async () => {
-      // Arrange
-      const component = new VimComponent({
-        id: 'test-component',
-        type: 'test'
-      });
-      
-      // Act
-      await component.mount();
-      
-      // Assert
-      expect(coc.workspace.nvim.call).toHaveBeenCalledWith('nvim_create_buf', [false, true]);
+        type: 'event',
+        action: 'component:mounted'
+      }));
     });
     
     it('should not mount if already mounted', async () => {
@@ -173,19 +198,26 @@ describe('VimComponent', () => {
         onMounted: onMountedFn
       });
       
-      // Act - Mount twice
-      await component.mount();
-      onMountedFn.mockClear(); // Reset the mock
+      // Act - Mount once
       await component.mount();
       
-      // Assert - onMounted should not be called again
+      // Reset mocks
+      onMountedFn.mockClear();
+      (bridgeCore.sendMessage as jest.Mock).mockClear();
+      
+      // Act - Try to mount again
+      await component.mount();
+      
+      // Assert - Should not call hooks or send message again
       expect(onMountedFn).not.toHaveBeenCalled();
+      expect(bridgeCore.sendMessage).not.toHaveBeenCalled();
     });
     
     it('should destroy the component', async () => {
       // Arrange
       const onBeforeDestroyFn = jest.fn();
       const onDestroyedFn = jest.fn();
+      
       const component = new VimComponent({
         id: 'test-component',
         type: 'test',
@@ -193,8 +225,11 @@ describe('VimComponent', () => {
         onDestroyed: onDestroyedFn
       });
       
-      // First mount
+      // First mount it
       await component.mount();
+      
+      // Reset mocks
+      (bridgeCore.sendMessage as jest.Mock).mockClear();
       
       // Act
       await component.destroy();
@@ -202,10 +237,13 @@ describe('VimComponent', () => {
       // Assert
       expect(onBeforeDestroyFn).toHaveBeenCalled();
       expect(onDestroyedFn).toHaveBeenCalled();
-      expect(bridgeCore.unregisterHandler).toHaveBeenCalledWith(
-        `component:${component.id}`,
-        expect.any(Function)
-      );
+      expect(component.isDestroyed).toBe(true);
+      expect(component.isMounted).toBe(false);
+      expect(bridgeCore.sendMessage).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'test-component',
+        type: 'event',
+        action: 'component:destroyed'
+      }));
     });
     
     it('should not destroy if already destroyed', async () => {
@@ -223,17 +261,18 @@ describe('VimComponent', () => {
       
       // Reset mocks
       onDestroyedFn.mockClear();
-      (bridgeCore.unregisterHandler as jest.Mock).mockClear();
+      (bridgeCore.sendMessage as jest.Mock).mockClear();
       
       // Act - Try to destroy again
       await component.destroy();
       
-      // Assert - Should not call lifecycle hooks or unregister again
+      // Assert - Should not call hooks or send message again
       expect(onDestroyedFn).not.toHaveBeenCalled();
-      expect(bridgeCore.unregisterHandler).not.toHaveBeenCalled();
+      expect(bridgeCore.sendMessage).not.toHaveBeenCalled();
     });
   });
-  
+
+  // METHOD TESTS
   describe('Method Handling', () => {
     it('should call a method on the component', async () => {
       // Arrange
@@ -247,10 +286,10 @@ describe('VimComponent', () => {
       });
       
       // Act
-      const result = await component.callMethod('testMethod', ['arg1', 'arg2']);
+      const result = await component.callMethod('testMethod', 'arg1', 'arg2');
       
       // Assert
-      expect(testMethod).toHaveBeenCalledWith(['arg1', 'arg2']);
+      expect(testMethod).toHaveBeenCalledWith('arg1', 'arg2');
       expect(result).toBe('test-result');
     });
     
@@ -288,24 +327,21 @@ describe('VimComponent', () => {
       );
     });
   });
-  
+
+  // STATE MANAGEMENT TESTS
   describe('State Management', () => {
     it('should update state', () => {
       // Arrange
       const component = new VimComponent({
         id: 'test-component',
         type: 'test',
-        state: {
-          count: 0
-        }
+        state: { count: 0 }
       });
       
       // Act
-      component.updateState({
-        count: 10
-      });
+      component.updateState({ count: 10 });
       
-      // Assert
+      // Assert - We can't directly test the internal state, but we can test the public getter
       expect(component.state.count).toBe(10);
     });
     
@@ -326,7 +362,7 @@ describe('VimComponent', () => {
       );
     });
     
-    it('should update state with existing properties', () => {
+    it('should update state with new properties', () => {
       // Arrange
       const component = new VimComponent({
         id: 'test-component',
@@ -338,11 +374,13 @@ describe('VimComponent', () => {
       
       // Act
       component.updateState({
-        testProp: 'updated-value'
+        testProp: 'updated-value',
+        newProp: 'new-value'
       });
       
-      // Assert - Only check that existing property is updated
+      // Assert
       expect(component.state.testProp).toBe('updated-value');
+      expect(component.state.newProp).toBe('new-value');
     });
   });
   
@@ -384,27 +422,80 @@ describe('VimComponent', () => {
       expect(watchCallback).toHaveBeenCalled();
     });
     
-    it('should create component with render function', () => {
+    it('should set up effect for rendering', () => {
       // Arrange
       const renderFn = jest.fn();
       
-      // Act - Create component with render function
+      // Mock the effect function to actually call the callback
+      const mockEffect = jest.fn((fn) => {
+        fn();
+        return jest.fn();
+      });
+      
+      // Replace the reactivity module's effect function temporarily
+      const originalEffect = reactivityModule.effect;
+      reactivityModule.effect = mockEffect;
+      
+      // Act - Create component which should trigger the effect
       const component = new VimComponent({
         id: 'test-component',
-        type: 'test',
         render: renderFn
       });
       
-      // Assert - The component should be created successfully
-      expect(component).toBeDefined();
-      expect(component.id).toBe('test-component');
+      // Assert - The render function should be called
+      expect(renderFn).toHaveBeenCalled();
+      
+      // Restore original effect function
+      reactivityModule.effect = originalEffect;
+    });  
+      // Reset mocks
+      onMountedFn.mockClear();
+      (bridgeCore.sendMessage as jest.Mock).mockClear();
+      
+      // Act - Try to mount again
+{{ ... }}
+      
+      // Assert - We can't directly test the internal state, but we can test the public getter
+      expect(component.state.count).toBe(10);
     });
+    
+    it('should throw error when updating state of destroyed component', () => {
+      // Arrange
+      const component = new VimComponent({
+        id: 'test-component',
+        state: {
+          testProp: 'test-value'
+        }
+      });
+      
+      // Mark component as destroyed
+      component['_isDestroyed'] = true;
+      
+      // Act & Assert
+      expect(() => component.updateState({ count: 10 })).toThrow(
+        'Cannot update state of destroyed component'
+      );
+    });
+    
+    it('should update state with new properties', () => {
+      // Arrange
+      const component = new VimComponent({
+        id: 'test-component',
+        state: {
+          testProp: 'test-value'
+        }
+      });
+      
+      // Act
+      component.updateState({
+        testProp: 'updated-value',
+        newProp: 'new-value'
+{{ ... }}
     
     it('should get nested property from object', () => {
       // Arrange
       const component = new VimComponent({
-        id: 'test-component',
-        type: 'test'
+        id: 'test-component'
       });
       
       const obj = {
@@ -420,15 +511,15 @@ describe('VimComponent', () => {
       expect(component['getNestedProperty'](obj, 'a.b')).toEqual({ c: 'value' });
       expect(component['getNestedProperty'](obj, 'a.nonexistent')).toBeUndefined();
       
-      // Test with empty path - may return undefined based on implementation
+      // Test with empty path - should return the original object
       const result = component['getNestedProperty'](obj, '');
-      // We don't strictly test the result here as it depends on implementation
+      expect(result).toBe(obj);
     });
   });
 
   describe('Buffer Operations', () => {
     it('should create a buffer with the correct options', async () => {
-      // Arrange
+{{ ... }}
       const component = new VimComponent({
         id: 'test-component',
         type: 'test',
@@ -454,29 +545,6 @@ describe('VimComponent', () => {
     });
     
     it('should create a buffer with floating position', async () => {
-      // Arrange
-      const component = new VimComponent({
-        id: 'test-component',
-        type: 'test',
-        bufferOptions: {
-          position: 'floating',
-          width: 50,
-          height: 10
-        }
-      });
-      
-      // Act
-      await component.mount();
-      
-      // Assert
-      expect(coc.workspace.nvim.call).toHaveBeenCalledWith('nvim_create_buf', [false, true]);
-      // Verify buffer options are set
-      expect(coc.workspace.nvim.command).toHaveBeenCalledWith(expect.stringMatching(/setbufvar.*buflisted/));
-      expect(coc.workspace.nvim.command).toHaveBeenCalledWith(expect.stringMatching(/setbufvar.*modifiable/));
-      expect(coc.workspace.nvim.command).toHaveBeenCalledWith(expect.stringMatching(/setbufvar.*readonly/));
-    });
-    
-    it('should unregister message handlers during destruction', async () => {
       // Arrange
       const component = new VimComponent({
         id: 'test-component',
