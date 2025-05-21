@@ -1,0 +1,35 @@
+#!/bin/sh
+
+echo "Running pre-commit hooks..."
+
+# 1. Check for test files in invalid locations
+echo "Checking test file locations..."
+node scripts/check-test-location.js
+if [ $? -ne 0 ]; then
+  exit 1
+fi
+
+# 2. Run tests and check coverage
+echo "Running tests and checking coverage..."
+node scripts/check-test-coverage.js
+if [ $? -ne 0 ]; then
+  exit 1
+fi
+
+# 3. Log test results
+echo "Logging test results..."
+HASH=$(git rev-parse --verify HEAD 2>/dev/null || echo "staged")
+node scripts/log-test-result.js $HASH
+if [ $? -ne 0 ]; then
+  echo "Warning: Failed to log test results, but continuing with commit"
+fi
+
+# 4. Check for French words (existing check)
+echo "Checking for French words..."
+node scripts/check-french-words.js
+if [ $? -ne 0 ]; then
+  exit 1
+fi
+
+echo "All pre-commit checks passed!"
+exit 0

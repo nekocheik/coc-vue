@@ -539,6 +539,16 @@ You can customize the Docker environment by modifying these files:
 
 For detailed documentation on testing with Docker and CI integration, see [TESTS.md](TESTS.md).
 
+## Test Policy & Commit Enforcement
+
+- All unit/integration tests must be placed in `__tests__/` (mirroring `src/`) or `helper-test/` (for helpers/mocks).
+- Commits are **automatically blocked** if:
+    - Any test fails
+    - Coverage < 80% for statements/branches/functions/lines
+    - Any test/helper is in an unauthorized location
+- Each commit runs a full test + coverage, logs result in `.test-logs/history.json` (with commit hash, timestamp, coverage).
+- See `.test-logs/README.md` for details and audit procedure.
+
 ## 🔍 Debugging Guide
 
 ### In-Editor Debugging

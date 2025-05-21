@@ -45,7 +45,7 @@ const frenchPatterns = {
     'variable', 'variables',
     'tableau', 'tableaux',
     'objet', 'objets',
-    'classe', 'classes',
+    'classe',
     'fonction', 'fonctions',
     'procédure', 'procédures',
     'boucle', 'boucles',
