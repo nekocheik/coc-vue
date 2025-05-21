@@ -24,9 +24,32 @@ jobs:
       - name: Run tests in Docker
         run: docker run --rm -v $(pwd)/.ci-artifacts:/app/.ci-artifacts coc-vue-test ./scripts/docker-run-tests.sh
       
+      - name: Debug test results presence
+        run: |
+          echo "=== Debug: Test Results Directory Contents ==="
+          echo "- Listing test-results directory:"
+          ls -la test-results || true
+          echo "- Listing vader-reports directory:"
+          ls -la .ci-artifacts/vader-reports || true
+          
+          # Verify test results exist
+          if [ ! -f "test-results/jest-results.json" ]; then
+            echo "::error ::jest-results.json is missing from test-results directory"
+            exit 1
+          fi
+          
+          if [ ! -d ".ci-artifacts/vader-reports" ]; then
+            echo "::error ::vader-reports directory is missing"
+            exit 1
+          fi
+          
+          # Verify vader reports exist
+          if [ ! $(ls -A .ci-artifacts/vader-reports/*_results.json 2>/dev/null) ]; then
+            echo "::error ::No Vader test result files found in vader-reports directory"
+            exit 1
+          fi
+      
       - name: Add test summary to GitHub Actions output
-        if: always()
-        continue-on-error: true
         run: |
           echo "## 📊 Test Results Summary" >> $GITHUB_STEP_SUMMARY
           echo "- Test execution completed at $(date)" >> $GITHUB_STEP_SUMMARY
@@ -130,6 +153,103 @@ jobs:
             echo "❌ No Vader test results found." >> $GITHUB_STEP_SUMMARY
           fi
           
+          # Parse Jest test results
+          echo "## 📊 Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Test execution completed at $(date)" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if Jest test results exist
+          if [ -f "test-results/jest-results.json" ]; then
+            echo "=== Parsing Jest Results ==="
+            cat test-results/jest-results.json
+            
+            TOTAL_TESTS=$(jq '.numTotalTests' test-results/jest-results.json)
+            PASSED_TESTS=$(jq '.numPassedTests' test-results/jest-results.json)
+            FAILED_TESTS=$(jq '.numFailedTests' test-results/jest-results.json)
+            
+            echo "### 🧪 Jest Tests" >> $GITHUB_STEP_SUMMARY
+            echo "- Total Tests: $TOTAL_TESTS" >> $GITHUB_STEP_SUMMARY
+            echo "- Passed: $PASSED_TESTS" >> $GITHUB_STEP_SUMMARY
+            echo "- Failed: $FAILED_TESTS" >> $GITHUB_STEP_SUMMARY
+            
+            if [ "$FAILED_TESTS" -gt 0 ]; then
+              echo "❌ Failed Tests:" >> $GITHUB_STEP_SUMMARY
+              # Get failed test names
+              FAILED_TEST_NAMES=$(jq -r '.testResults[] | select(.status == "failed") | .name' test-results/jest-results.json)
+              if [ -n "$FAILED_TEST_NAMES" ]; then
+                echo "$FAILED_TEST_NAMES" | while read -r test_name; do
+                  echo "  - $test_name" >> $GITHUB_STEP_SUMMARY
+                done
+              fi
+              echo "❌ Some Jest tests failed." >> $GITHUB_STEP_SUMMARY
+            else
+              echo "✅ All Jest tests passed." >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "::error ::jest-results.json is missing or invalid"
+            echo "❌ Error: Jest test results file is missing or invalid" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
+          
+          # Parse Vader test results
+          echo "=== Parsing Vader Results ==="
+          
+          # Count total tests and successes
+          TOTAL_TESTS=0
+          PASSED_TESTS=0
+          
+          for file in .ci-artifacts/vader-reports/*_results.json; do
+            if [ -f "$file" ]; then
+              echo "=== Parsing $file ==="
+              cat "$file"
+              
+              # Use grep instead of jq to be more tolerant of format errors
+              FILE_TOTAL=$(grep -o '"total":[[:space:]]*[0-9]\+' "$file" | grep -o '[0-9]\+')
+              FILE_SUCCESS=$(grep -o '"success":[[:space:]]*[0-9]\+' "$file" | grep -o '[0-9]\+')
+              
+              # If values are empty, try with old field names
+              if [ -z "$FILE_TOTAL" ]; then
+                FILE_TOTAL=$(grep -o '"total_count":[[:space:]]*[0-9]\+' "$file" | grep -o '[0-9]\+')
+              fi
+              if [ -z "$FILE_SUCCESS" ]; then
+                FILE_SUCCESS=$(grep -o '"success_count":[[:space:]]*[0-9]\+' "$file" | grep -o '[0-9]\+')
+              fi
+              
+              # If still empty, use default values
+              if [ -z "$FILE_TOTAL" ] || [ -z "$FILE_SUCCESS" ]; then
+                echo "::error ::Invalid format in $file"
+                echo "❌ Error: Invalid format in $file" >> $GITHUB_STEP_SUMMARY
+                exit 1
+              fi
+              
+              TOTAL_TESTS=$((TOTAL_TESTS + FILE_TOTAL))
+              PASSED_TESTS=$((PASSED_TESTS + FILE_SUCCESS))
+              
+              TEST_NAME=$(basename "$file" _results.json)
+              FILE_FAILED=$((FILE_TOTAL - FILE_SUCCESS))
+              
+              echo "#### $TEST_NAME" >> $GITHUB_STEP_SUMMARY
+              echo "- Total: $FILE_TOTAL" >> $GITHUB_STEP_SUMMARY
+              echo "- Passed: $FILE_SUCCESS" >> $GITHUB_STEP_SUMMARY
+              echo "- Failed: $FILE_FAILED" >> $GITHUB_STEP_SUMMARY
+              
+              if [ "$FILE_FAILED" -gt 0 ]; then
+                # Get failed test names from the report
+                FAILED_TEST_NAMES=$(grep -o '"name":"[^"].*","status":"failed"' "$file" | grep -o '"name":"[^"].*"' | sed 's/"name"://g' | sed 's/"//g')
+                if [ -n "$FAILED_TEST_NAMES" ]; then
+                  echo "❌ Failed Tests:" >> $GITHUB_STEP_SUMMARY
+                  echo "$FAILED_TEST_NAMES" | while read -r test_name; do
+                    echo "  - $test_name" >> $GITHUB_STEP_SUMMARY
+                  done
+                fi
+                echo "❌ Some tests failed in $TEST_NAME." >> $GITHUB_STEP_SUMMARY
+              else
+                echo "✅ All tests passed in $TEST_NAME." >> $GITHUB_STEP_SUMMARY
+              fi
+            fi
+          done
+          
+          FAILED_TESTS=$((TOTAL_TESTS - PASSED_TESTS))
+          
           # Add overall summary
           echo "## 📈 Overall Test Summary" >> $GITHUB_STEP_SUMMARY
           echo "- Jest Tests: $TOTAL_TESTS total, $PASSED_TESTS passed, $FAILED_TESTS failed" >> $GITHUB_STEP_SUMMARY
@@ -137,6 +257,12 @@ jobs:
           echo "- Total Tests: $((TOTAL_TESTS + TOTAL_TESTS))" >> $GITHUB_STEP_SUMMARY
           echo "- Total Passed: $((PASSED_TESTS + PASSED_TESTS))" >> $GITHUB_STEP_SUMMARY
           echo "- Total Failed: $((FAILED_TESTS + FAILED_TESTS))" >> $GITHUB_STEP_SUMMARY
+          
+          # Fail if any tests failed
+          if [ "$FAILED_TESTS" -gt 0 ]; then
+            echo "::error ::Some tests failed"
+            exit 1
+          fi
       
       # Temporarily disabled artifact upload due to GitHub Actions issues
       # - name: Upload test artifacts
