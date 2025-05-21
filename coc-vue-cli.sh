@@ -31,6 +31,8 @@ show_help() {
   echo -e "  ${GREEN}test:component [section]${NC}            Run a specific section of component tests"
   echo -e "  ${GREEN}test:command${NC}                        Run command tests"
   echo -e "  ${GREEN}test:ping${NC}                           Run ping tests"
+  echo -e "  ${GREEN}test:vader${NC}                          Run Vader tests"
+  echo -e "  ${GREEN}test:vader [component]${NC}              Run Vader tests for a specific component"
   echo -e "  ${GREEN}server:start${NC}                        Start the component server"
   echo -e "  ${GREEN}server:stop${NC}                         Stop the component server"
   echo -e "  ${GREEN}logs:check [step]${NC}                   Check logs for a specific step"
@@ -77,6 +79,21 @@ run_command_tests() {
 run_ping_tests() {
   echo -e "${YELLOW}Running ping tests...${NC}"
   "$PROJECT_ROOT/scripts/test/runners/run-ping-tests.sh"
+}
+
+# Function to run Vader tests
+run_vader_tests() {
+  local component=$1
+  echo -e "${YELLOW}Running Vader tests...${NC}"
+  
+  if [ -n "$component" ]; then
+    echo -e "${YELLOW}Component: ${component}${NC}"
+    # Execute Vader tests for a specific component
+    "$PROJECT_ROOT/scripts/run-vader-tests.sh" "test/vader/components/${component}.vader"
+  else
+    # Execute all Vader tests
+    "$PROJECT_ROOT/scripts/run-vader-tests.sh"
+  fi
 }
 
 # Function to start the component server
@@ -148,6 +165,9 @@ main() {
       ;;
     "test:ping")
       run_ping_tests
+      ;;
+    "test:vader")
+      run_vader_tests "$1"
       ;;
     "server:start")
       start_component_server

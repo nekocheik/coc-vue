@@ -197,6 +197,49 @@ generate_html_report() {
     .badge-success { background-color: #28a745; }
     .badge-warning { background-color: #ffc107; color: #212529; }
     .badge-danger { background-color: #dc3545; }
+    .badge-neutral { background-color: #6c757d; }
+    
+    .test-details {
+      margin-top: 15px;
+      padding-top: 10px;
+      border-top: 1px solid #eee;
+    }
+    
+    .test-steps {
+      width: 100%;
+      margin-top: 10px;
+      border-collapse: collapse;
+    }
+    
+    .test-steps th, .test-steps td {
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    
+    details {
+      margin-top: 15px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 4px;
+    }
+    
+    details summary {
+      cursor: pointer;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    
+    .full-log {
+      max-height: 300px;
+      overflow-y: auto;
+      font-size: 0.9em;
+      background-color: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
   </style>
 </head>
 <body>
@@ -319,15 +362,70 @@ EOF
   <p>Execution time: <strong>${execution_time}s</strong></p>
 EOF
     
-    # Add error details if test failed
-    if [ "$status" = "failure" ]; then
-      local log_file="test/coverage/reports/${type}_${component}_log.txt"
-      if [ -f "$log_file" ]; then
-        echo "<div class=\"error-details\">
-<h4>Error details:</h4>
-<pre>$(grep -A 3 "Expected:" "$log_file" || grep -A 5 "Error:" "$log_file" || echo "No detailed error information available")</pre>
-</div>" >> "$report_file"
+    # Add test details (both for passing and failing tests)
+    local log_file="test/coverage/reports/${type}_${component}_log.txt"
+    if [ -f "$log_file" ]; then
+      # Get test details section
+      echo "<div class=\"test-details\">" >> "$report_file"
+      echo "<h4>Test Details:</h4>" >> "$report_file"
+      
+      # Extract all test cases and their assertions
+      echo "<div class=\"test-cases\">" >> "$report_file"
+      
+      # Try to extract test cases and assertions
+      local test_cases=$(grep -E "^\s*(Given|When|Then|Execute|Expect|Assert|Before|After):" "$log_file" || echo "No test details available")
+      
+      if [ "$test_cases" != "No test details available" ]; then
+        echo "<table class=\"test-steps\">" >> "$report_file"
+        echo "<tr><th>Step Type</th><th>Description</th><th>Status</th></tr>" >> "$report_file"
+        
+        # Process each line and format accordingly
+        while IFS= read -r line; do
+          # Extract the step type (Given, When, Then, etc.)
+          step_type=$(echo "$line" | grep -oE "^\s*(Given|When|Then|Execute|Expect|Assert|Before|After):" | sed 's/://g' | xargs)
+          # Extract the description (everything after the step type)
+          description=$(echo "$line" | sed "s/^\s*$step_type://" | xargs)
+          
+          # Determine status based on context
+          status="neutral"
+          if echo "$line" | grep -q "Expected:" || echo "$line" | grep -q "Error:"; then
+            status="failure"
+          elif echo "$line" | grep -q "success" || echo "$line" | grep -q "passed"; then
+            status="success"
+          fi
+          
+          # Add the row to the table
+          echo "<tr>" >> "$report_file"
+          echo "<td><strong>$step_type</strong></td>" >> "$report_file"
+          echo "<td>$description</td>" >> "$report_file"
+          echo "<td><span class=\"badge badge-$status\">$([ "$status" = "success" ] && echo "Pass" || [ "$status" = "failure" ] && echo "Fail" || echo "Info")</span></td>" >> "$report_file"
+          echo "</tr>" >> "$report_file"
+        done <<< "$test_cases"
+        
+        echo "</table>" >> "$report_file"
+      else
+        echo "<p>No detailed test steps available</p>" >> "$report_file"
       fi
+      
+      echo "</div>" >> "$report_file"
+      
+      # If test failed, also include error details
+      if [ "$status" = "failure" ]; then
+        echo "<div class=\"error-details\">" >> "$report_file"
+        echo "<h4>Error details:</h4>" >> "$report_file"
+        echo "<pre>$(grep -A 3 "Expected:" "$log_file" || grep -A 5 "Error:" "$log_file" || echo "No detailed error information available")" >> "$report_file"
+        echo "</pre>" >> "$report_file"
+        echo "</div>" >> "$report_file"
+      fi
+      
+      # Include full log (collapsible)
+      echo "<details>" >> "$report_file"
+      echo "<summary>Full test log</summary>" >> "$report_file"
+      echo "<pre class=\"full-log\">$(cat "$log_file" | sed 's/</\&lt;/g' | sed 's/>/\&gt;/g')" >> "$report_file"
+      echo "</pre>" >> "$report_file"
+      echo "</details>" >> "$report_file"
+      
+      echo "</div>" >> "$report_file"
     fi
     
     echo "</div>" >> "$report_file"
