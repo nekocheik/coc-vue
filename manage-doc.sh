@@ -6,6 +6,7 @@ print_usage() {
   echo ""
   echo "Commands:"
   echo "  generate                           Generate all YAML docs from Markdown files"
+  echo "  generate-md                        Generate Markdown files from YAML docs"
   echo "  delete-block <file> <section-title> Delete a section from a YAML doc"
   echo "  delete-file <file>                 Delete a YAML doc file"
   echo "  update-doc <file> <section-title>  Update a section in a YAML doc"
@@ -75,6 +76,63 @@ generate_docs() {
   done
   
   echo "YAML documentation generation complete."
+}
+
+# Generate Markdown files from YAML docs
+generate_md() {
+  echo "Generating Markdown files from YAML docs..."
+  
+  for yaml_file in doc/*.yml; do
+    if [ -f "$yaml_file" ]; then
+      filename=$(basename "$yaml_file")
+      base_name="${filename%.yml}"
+      md_file="doc/${base_name}.md"
+      
+      # Extract values from YAML file using jq
+      file_name=$(jq -r '.file_name // "$base_name"' "$yaml_file")
+      relative_path=$(jq -r '.relative_path // ""' "$yaml_file")
+      priority=$(jq -r '.priority // ""' "$yaml_file")
+      tags=$(jq -r '.tags | map(.) | join(", ")' "$yaml_file")
+      summary=$(jq -r '.summary // ""' "$yaml_file")
+      
+      # Start the markdown file with header
+      {
+        echo "# ${base_name}"
+        echo "**Path:** ${relative_path}"
+        echo "**Priority:** ${priority}"
+        echo "**Tags:** ${tags}"
+        echo "**Summary:** ${summary}"
+        echo ""
+        echo "## Sections"
+        echo ""
+        
+        # Process each section
+        jq -c '.sections[]' "$yaml_file" | while read -r section; do
+          section_title=$(echo "$section" | jq -r '.title')
+          section_priority=$(echo "$section" | jq -r '.priority')
+          section_tags=$(echo "$section" | jq -r '.tags | map(.) | join(", ")')
+          section_content=$(echo "$section" | jq -r '.content')
+          
+          echo "### ${section_title}"
+          echo "**Priority:** ${section_priority}"
+          echo "**Tags:** ${section_tags}"
+          echo ""
+          echo "${section_content}"
+          echo ""
+        done
+      } > "$md_file"
+      
+      echo "Generated: $filename -> ${base_name}.md"
+    fi
+  done
+  
+  echo "
+List of created Markdown files:"
+  for md_file in doc/*.md; do
+    if [ -f "$md_file" ]; then
+      echo "- $(basename "$md_file")"
+    fi
+  done
 }
 
 # Delete a section from a YAML doc
@@ -277,6 +335,9 @@ shift
 case "$command" in
   generate)
     generate_docs
+    ;;
+  generate-md)
+    generate_md
     ;;
   delete-block)
     ensure_session_active
