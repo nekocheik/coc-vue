@@ -20,15 +20,15 @@ export JEST_TIMEOUT=30000
 
 # Run tests with Jest directly
 echo -e "\\n${YELLOW}Running unit tests...${NC}"
-npx jest --config /app/test/simplified-jest.config.js --testPathPattern="__tests__/(?!integration)" --passWithNoTests
+npx jest --config /app/jest.config.js --testPathPattern="__tests__/(?!integration)" --passWithNoTests
 UNIT_RESULT=$?
 
 echo -e "\\n${YELLOW}Running component tests...${NC}"
-npx jest --config /app/test/simplified-jest.config.js --testPathPattern="__tests__/components" --passWithNoTests
+npx jest --config /app/jest.config.js --testPathPattern="__tests__/components" --passWithNoTests
 COMPONENT_RESULT=$?
 
 echo -e "\\n${YELLOW}Running integration tests...${NC}"
-npx jest --config /app/test/simplified-jest.config.js --testPathPattern="__tests__/integration" --passWithNoTests
+npx jest --config /app/jest.config.js --testPathPattern="__tests__/integration" --passWithNoTests
 INTEGRATION_RESULT=$?
 
 # Run Vader tests for components

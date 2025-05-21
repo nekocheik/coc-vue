@@ -59,10 +59,10 @@ EOF
   "type": "${component_type}",
   "total_tests": ${total_tests},
   "success_tests": ${success_tests},
-  "assertions_total": ${assertions_total},
-  "assertions_passed": ${assertions_passed},
-  "execution_time": ${execution_time},
-  "status": $([ ${assertions_passed} -eq ${assertions_total} ] && [ ${assertions_total} -gt 0 ] && echo '"success"' || echo '"failure"')
+  "assertions_total": ${assertions_total:-0},
+  "assertions_passed": ${assertions_passed:-0},
+  "execution_time": ${execution_time:-0},
+  "status": $([ "${assertions_passed:-0}" -eq "${assertions_total:-0}" ] && [ "${assertions_total:-0}" -gt 0 ] && echo '"success"' || echo '"failure"')
 }
 EOF
   
