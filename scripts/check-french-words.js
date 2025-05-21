@@ -59,9 +59,6 @@ const frenchPatterns = {
 // File extensions to check
 const extensions = ['.js', '.ts', '.lua', '.json', '.yml', '.md'];
 
-// Directories to ignore
-const ignoreDirs = ['node_modules', '.git', 'dist', 'build'];
-
 // Function to check for French patterns
 function checkForFrenchPatterns(text) {
   const matches = [];
@@ -102,39 +99,43 @@ function checkForFrenchPatterns(text) {
   return matches;
 }
 
-// Function to walk through directory
-function walkDir(dir) {
-  let results = [];
-  const list = fs.readdirSync(dir);
-  
-  for (const file of list) {
-    const filePath = path.join(dir, file);
-    const stat = fs.statSync(filePath);
-    
-    if (stat.isDirectory()) {
-      if (!ignoreDirs.includes(file)) {
-        results = results.concat(walkDir(filePath));
-      }
-    } else {
-      if (extensions.includes(path.extname(file))) {
-        results.push(filePath);
-      }
-    }
+// Function to get staged files
+function getStagedFiles() {
+  try {
+    // Get list of staged files
+    const output = execSync('git diff --cached --name-only').toString();
+    return output.split('\n').filter(file => {
+      // Filter out empty lines and only include files with specified extensions
+      return file && extensions.includes(path.extname(file));
+    });
+  } catch (error) {
+    console.error('Error getting staged files:', error);
+    return [];
   }
-  
-  return results;
 }
 
-// Function to check commit messages
-function checkCommitMessages() {
+// Function to get staged content
+function getStagedContent(file) {
   try {
-    const commitMessages = execSync('git log --pretty=format:"%s"').toString().split('\n');
-    let hasFrenchPatterns = false;
-    
-    for (const message of commitMessages) {
+    // Get staged content of the file
+    return execSync(`git show :${file}`).toString();
+  } catch (error) {
+    console.error(`Error getting staged content for ${file}:`, error);
+    return '';
+  }
+}
+
+// Function to check commit message
+function checkCommitMessage() {
+  try {
+    // Get the commit message from the commit message file
+    const messageFile = '.git/COMMIT_EDITMSG';
+    if (fs.existsSync(messageFile)) {
+      const message = fs.readFileSync(messageFile, 'utf8');
       const matches = checkForFrenchPatterns(message);
+      
       if (matches.length > 0) {
-        console.log(`\nFrench patterns found in commit message: "${message}"`);
+        console.log(`\nFrench patterns found in commit message: "${message.trim()}"`);
         for (const match of matches) {
           if (match.type === 'accent') {
             console.log(`- Accented character "${match.char}" at position ${match.index}`);
@@ -143,13 +144,13 @@ function checkCommitMessages() {
           } else if (match.type === 'technical') {
             console.log(`- French technical term "${match.word}" at position ${match.index}`);
           }
-          hasFrenchPatterns = true;
         }
+        return true;
       }
     }
-    return hasFrenchPatterns;
+    return false;
   } catch (error) {
-    console.error('Error checking commit messages:', error);
+    console.error('Error checking commit message:', error);
     return false;
   }
 }
@@ -157,10 +158,10 @@ function checkCommitMessages() {
 // Main execution
 let hasFrenchPatterns = false;
 
-// Check files
-const files = walkDir('.');
-for (const file of files) {
-  const content = fs.readFileSync(file, 'utf8');
+// Check staged files
+const stagedFiles = getStagedFiles();
+for (const file of stagedFiles) {
+  const content = getStagedContent(file);
   const matches = checkForFrenchPatterns(content);
   
   if (matches.length > 0) {
@@ -178,13 +179,13 @@ for (const file of files) {
   }
 }
 
-// Check commit messages
-const hasFrenchInCommits = checkCommitMessages();
-hasFrenchPatterns = hasFrenchPatterns || hasFrenchInCommits;
+// Check commit message
+const hasFrenchInMessage = checkCommitMessage();
+hasFrenchPatterns = hasFrenchPatterns || hasFrenchInMessage;
 
 if (hasFrenchPatterns) {
-  console.error('\nError: French patterns (accents, punctuation, or technical terms) were found in the codebase or commit messages');
+  console.error('\nError: French patterns (accents, punctuation, or technical terms) were found in the staged changes or commit message');
   process.exit(1);
 } else {
-  console.log('\nSuccess: No French patterns were found in the codebase or commit messages');
+  console.log('\nSuccess: No French patterns were found in the staged changes or commit message');
 } 

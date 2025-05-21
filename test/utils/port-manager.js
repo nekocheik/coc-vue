@@ -19,10 +19,10 @@ const LOCK_FILE = path.join(__dirname, '../.port-manager.lock');
 const PORT_ALLOCATION_RETRIES = 10;
 const PORT_CHECK_TIMEOUT = 1000; // ms
 
-// Activer le mode verbeux si la variable d'environnement est définie
+// Enable verbose mode if environment variable is set
 const VERBOSE = process.env.VERBOSE_LOGS === 'true';
 
-// Fonction pour journaliser avec horodatage
+// Function to log with timestamp
 function log(message, isError = false) {
   const timestamp = new Date().toISOString();
   const logMessage = `[PortManager ${timestamp}] ${message}`;
@@ -34,30 +34,30 @@ function log(message, isError = false) {
   }
 }
 
-// Créer un verrou pour éviter les accès concurrents
+// Create a lock to avoid concurrent access
 function acquireLock(retries = 10, delay = 200) {
   return new Promise((resolve, reject) => {
     const tryAcquire = (attempt) => {
       try {
-        // Vérifier si le verrou existe
+        // Check if lock exists
         if (fs.existsSync(LOCK_FILE)) {
           try {
-            // Vérifier si le verrou est périmé (plus de 30 secondes)
+            // Check if lock is expired (more than 30 seconds)
             const stats = fs.statSync(LOCK_FILE);
             const lockAge = Date.now() - stats.mtimeMs;
             
-            // Lire le contenu du verrou pour obtenir des informations sur le processus qui le détient
+            // Read lock content to get information about the process that holds it
             let lockInfo = {};
             try {
               const lockContent = fs.readFileSync(LOCK_FILE, 'utf8');
               lockInfo = JSON.parse(lockContent);
             } catch (readErr) {
-              // Si on ne peut pas lire le verrou, on suppose qu'il est corrompu
-              log(`Verrou corrompu détecté, suppression...`);
+              // If we can't read the lock, assume it's corrupted
+              log(`Corrupted lock detected, removing...`);
               try {
                 fs.unlinkSync(LOCK_FILE);
               } catch (unlinkErr) {
-                // Ignorer les erreurs lors de la suppression
+                // Ignore errors during removal
               }
             }
             
@@ -144,10 +144,10 @@ function acquireLock(retries = 10, delay = 200) {
         }
       } catch (err) {
         if (attempt < retries) {
-          // Attendre et réessayer
+          // Wait and retry
           setTimeout(() => tryAcquire(attempt + 1), delay);
         } else {
-          reject(new Error(`Erreur lors de l'acquisition du verrou: ${err.message}`));
+          reject(new Error(`Error acquiring lock: ${err.message}`));
         }
       }
     };
@@ -210,25 +210,25 @@ async function initPortFile() {
   }
 }
 
-// Initialiser le fichier de ports au démarrage
+// Initialize port file at startup
 initPortFile();
 
 /**
- * Vérifier si un port est disponible
- * @param {number} port - Port à vérifier
- * @returns {Promise<boolean>} - True si le port est disponible
+ * Check if a port is available
+ * @param {number} port - Port to check
+ * @returns {Promise<boolean>} - True if port is available
  */
 function isPortAvailable(port) {
   return new Promise((resolve) => {
-    // Ajouter un timeout pour éviter de bloquer indéfiniment
+    // Add timeout to avoid blocking indefinitely
     const timeout = setTimeout(() => {
-      // Si le timeout est atteint, considérer que le port n'est pas disponible
+      // If timeout is reached, consider the port unavailable
       try {
         if (server) server.close();
       } catch (err) {
-        // Ignorer les erreurs lors de la fermeture
+        // Ignore errors during closure
       }
-      log(`Timeout atteint lors de la vérification du port ${port}`, true);
+      log(`Timeout reached while checking port ${port}`, true);
       resolve(false);
     }, PORT_CHECK_TIMEOUT);
     
@@ -237,7 +237,7 @@ function isPortAvailable(port) {
     server.once('error', (err) => {
       clearTimeout(timeout);
       if (VERBOSE) {
-        log(`Port ${port} n'est pas disponible: ${err.message}`);
+        log(`Port ${port} is not available: ${err.message}`);
       }
       resolve(false);
     });
@@ -246,7 +246,7 @@ function isPortAvailable(port) {
       clearTimeout(timeout);
       server.close();
       if (VERBOSE) {
-        log(`Port ${port} est disponible`);
+        log(`Port ${port} is available`);
       }
       resolve(true);
     });
@@ -255,46 +255,46 @@ function isPortAvailable(port) {
       server.listen(port);
     } catch (err) {
       clearTimeout(timeout);
-      log(`Erreur lors de l'ouverture du port ${port}: ${err.message}`, true);
+      log(`Error while opening port ${port}: ${err.message}`, true);
       resolve(false);
     }
   });
 }
 
 /**
- * Vérifier si un port est utilisé par un processus système
- * @param {number} port - Port à vérifier
- * @returns {Promise<boolean>} - True si le port est utilisé
+ * Check if a port is used by a system process
+ * @param {number} port - Port to check
+ * @returns {Promise<boolean>} - True if port is used
  */
 async function isPortUsedBySystem(port) {
   try {
-    // Utiliser lsof pour vérifier si le port est utilisé
+    // Use lsof to check if the port is used
     const command = `lsof -i :${port} -t`;
     const result = execSync(command, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
     
-    // Si un résultat est retourné, le port est utilisé
+    // If a result is returned, the port is used
     return result.trim().length > 0;
   } catch (err) {
-    // Si lsof retourne une erreur, cela signifie généralement qu'aucun processus n'utilise ce port
+    // If lsof returns an error, it generally means no process is using this port
     return false;
   }
 }
 
 /**
- * Trouver un port disponible dans la plage spécifiée
- * @returns {Promise<number>} - Port disponible
+ * Find an available port in the specified range
+ * @returns {Promise<number>} - Available port
  */
 async function findAvailablePort() {
   try {
     await acquireLock();
     
-    // Lire les ports déjà utilisés
+    // Read already used ports
     let portData;
     try {
       portData = JSON.parse(fs.readFileSync(PORT_FILE, 'utf8'));
     } catch (err) {
-      // Si le fichier est corrompu ou n'existe pas, le réinitialiser
-      log(`Erreur lors de la lecture du fichier de ports, réinitialisation: ${err.message}`, true);
+      // If file is corrupted or doesn't exist, reset it
+      log(`Error reading port file, resetting: ${err.message}`, true);
       portData = {
         activePorts: {},
         usedPorts: [],
@@ -306,30 +306,30 @@ async function findAvailablePort() {
     const activePorts = Object.keys(portData.activePorts).map(Number);
     const usedPorts = portData.usedPorts.map(info => info.port);
     
-    // Créer une liste de ports à éviter
+    // Create a list of ports to avoid
     const portsToAvoid = new Set([...activePorts, ...usedPorts]);
     
-    // Fonction pour vérifier si un port est vraiment disponible
+    // Function to check if a port is really available
     async function isPortReallyAvailable(port) {
-      // Vérifier d'abord si le port est utilisé par le système
+      // First, check if the port is used by the system
       if (await isPortUsedBySystem(port)) {
-        if (VERBOSE) log(`Port ${port} est utilisé par le système`);
+        if (VERBOSE) log(`Port ${port} is used by the system`);
         return false;
       }
       
-      // Ensuite, vérifier si le port est disponible pour l'écoute
+      // Then, check if the port is available for listening
       if (!await isPortAvailable(port)) {
-        if (VERBOSE) log(`Port ${port} n'est pas disponible pour l'écoute`);
+        if (VERBOSE) log(`Port ${port} is not available for listening`);
         return false;
       }
       
       return true;
     }
     
-    // Essayer des ports aléatoires dans la plage
+    // Try random ports in the range
     const attemptedPorts = new Set();
     for (let attempt = 0; attempt < PORT_ALLOCATION_RETRIES; attempt++) {
-      // Générer un port aléatoire dans la plage
+      // Generate a random port in the range
       let port;
       let attempts = 0;
       do {
@@ -337,30 +337,30 @@ async function findAvailablePort() {
         attempts++;
       } while (portsToAvoid.has(port) || attemptedPorts.has(port) && attempts < 20);
       
-      // Marquer ce port comme tenté
+      // Mark this port as attempted
       attemptedPorts.add(port);
       
-      if (VERBOSE) log(`Tentative d'allocation du port ${port} (tentative ${attempt + 1}/${PORT_ALLOCATION_RETRIES})`);
+      if (VERBOSE) log(`Attempting to allocate port ${port} (attempt ${attempt + 1}/${PORT_ALLOCATION_RETRIES})`);
       
-      // Vérifier si le port est vraiment disponible
+      // Check if the port is really available
       if (await isPortReallyAvailable(port)) {
-        log(`Port ${port} alloué avec succès`);
+        log(`Port ${port} allocated successfully`);
         return port;
       }
     }
     
-    // Si on n'a pas trouvé de port après plusieurs tentatives, essayer séquentiellement
-    log(`Aucun port aléatoire disponible, recherche séquentielle...`, true);
+    // If no port is found after multiple attempts, sequentially search
+    log(`No random port available, sequential search...`, true);
     for (let port = PORT_RANGE_START; port <= PORT_RANGE_END; port++) {
       if (!portsToAvoid.has(port) && await isPortReallyAvailable(port)) {
-        log(`Port ${port} alloué après recherche séquentielle`);
+        log(`Port ${port} allocated after sequential search`);
         return port;
       }
     }
     
-    throw new Error('Impossible de trouver un port disponible dans la plage spécifiée');
+    throw new Error('Unable to find a port available in the specified range');
   } catch (err) {
-    log(`Erreur lors de la recherche d'un port disponible: ${err.message}`, true);
+    log(`Error finding available port: ${err.message}`, true);
     throw err;
   } finally {
     releaseLock();
@@ -368,68 +368,68 @@ async function findAvailablePort() {
 }
 
 /**
- * Allouer un port pour un service spécifique
- * @param {string} serviceName - Nom du service qui utilisera le port
- * @param {number} [preferredPort] - Port préféré (optionnel)
- * @returns {Promise<number>} - Port alloué
+ * Allocate a port for a specific service
+ * @param {string} serviceName - Name of the service that will use the port
+ * @param {number} [preferredPort] - Preferred port (optional)
+ * @returns {Promise<number>} - Allocated port
  */
 async function allocatePort(serviceName, preferredPort = null) {
   try {
-    // Vérifier si le service a déjà un port alloué
+    // Check if the service already has a port allocated
     const existingPort = await getServicePort(serviceName);
     if (existingPort) {
-      log(`Le service "${serviceName}" utilise déjà le port ${existingPort}`);
+      log(`Service "${serviceName}" already uses port ${existingPort}`);
       return existingPort;
     }
     
-    // Si un port préféré est spécifié, vérifier s'il est disponible
+    // If a preferred port is specified, check if it's available
     if (preferredPort) {
-      // Vérifier si le port est dans la plage autorisée
+      // Check if the port is within the allowed range
       if (preferredPort < PORT_RANGE_START || preferredPort > PORT_RANGE_END) {
-        log(`Le port préféré ${preferredPort} est en dehors de la plage autorisée (${PORT_RANGE_START}-${PORT_RANGE_END})`, true);
+        log(`Preferred port ${preferredPort} is outside the allowed range (${PORT_RANGE_START}-${PORT_RANGE_END})`, true);
       } else {
-        // Vérifier si le port est disponible
+        // Check if the port is available
         if (await isPortAvailable(preferredPort) && !await isPortUsedBySystem(preferredPort)) {
-          // Allouer le port préféré
+          // Allocate the preferred port
           await registerPort(preferredPort, serviceName);
-          log(`Port préféré ${preferredPort} alloué pour le service "${serviceName}"`);
+          log(`Preferred port ${preferredPort} allocated for service "${serviceName}"`);
           return preferredPort;
         } else {
-          log(`Le port préféré ${preferredPort} n'est pas disponible, recherche d'une alternative...`);
+          log(`Preferred port ${preferredPort} is not available, searching for an alternative...`);
         }
       }
     }
     
-    // Trouver un port disponible
+    // Find an available port
     const port = await findAvailablePort();
     
-    // Enregistrer le port
+    // Register the port
     await registerPort(port, serviceName);
     
-    log(`Port ${port} alloué pour le service "${serviceName}"`);
+    log(`Port ${port} allocated for service "${serviceName}"`);
     return port;
   } catch (err) {
-    log(`Erreur lors de l'allocation du port pour "${serviceName}": ${err.message}`, true);
+    log(`Error allocating port for "${serviceName}": ${err.message}`, true);
     throw err;
   }
 }
 
 /**
- * Enregistrer un port comme étant utilisé par un service
- * @param {number} port - Port à enregistrer
- * @param {string} serviceName - Nom du service
+ * Register a port as being used by a service
+ * @param {number} port - Port to register
+ * @param {string} serviceName - Name of the service
  * @returns {Promise<void>}
  */
 async function registerPort(port, serviceName) {
   try {
     await acquireLock();
     
-    // Lire le fichier de ports
+    // Read port file
     let portData;
     try {
       portData = JSON.parse(fs.readFileSync(PORT_FILE, 'utf8'));
     } catch (err) {
-      // Si le fichier est corrompu ou n'existe pas, le réinitialiser
+      // If file is corrupted or doesn't exist, reset it
       portData = {
         activePorts: {},
         usedPorts: [],
@@ -437,7 +437,7 @@ async function registerPort(port, serviceName) {
       };
     }
     
-    // Enregistrer le port
+    // Register the port
     portData.activePorts[port] = {
       service: serviceName,
       pid: process.pid,
@@ -446,13 +446,13 @@ async function registerPort(port, serviceName) {
       user: os.userInfo().username
     };
     
-    // Mettre à jour le timestamp
+    // Update timestamp
     portData.lastUpdated = Date.now();
     
-    // Écrire les modifications
+    // Write changes
     fs.writeFileSync(PORT_FILE, JSON.stringify(portData, null, 2));
   } catch (err) {
-    log(`Erreur lors de l'enregistrement du port ${port}: ${err.message}`, true);
+    log(`Error registering port ${port}: ${err.message}`, true);
     throw err;
   } finally {
     releaseLock();
@@ -460,28 +460,28 @@ async function registerPort(port, serviceName) {
 }
 
 /**
- * Libérer un port spécifique
- * @param {number} port - Port à libérer
- * @returns {Promise<boolean>} - True si le port a été libéré avec succès
+ * Release a specific port
+ * @param {number} port - Port to release
+ * @returns {Promise<boolean>} - True if port was released successfully
  */
 async function releasePort(port) {
   try {
     await acquireLock();
     
-    // Lire le fichier de ports
+    // Read port file
     let portData;
     try {
       portData = JSON.parse(fs.readFileSync(PORT_FILE, 'utf8'));
     } catch (err) {
-      log(`Erreur lors de la lecture du fichier de ports: ${err.message}`, true);
+      log(`Error reading port file: ${err.message}`, true);
       return false;
     }
     
-    // Vérifier si le port est actif
+    // Check if the port is active
     if (portData.activePorts[port]) {
       const portInfo = portData.activePorts[port];
       
-      // Déplacer le port de activePorts vers usedPorts
+      // Move port from activePorts to usedPorts
       portData.usedPorts.push({
         port,
         ...portInfo,
@@ -489,30 +489,30 @@ async function releasePort(port) {
         releasedBy: process.pid
       });
       
-      // Limiter la taille de l'historique des ports utilisés
+      // Limit the size of the used ports history
       if (portData.usedPorts.length > 100) {
         portData.usedPorts = portData.usedPorts.slice(-100);
       }
       
-      // Supprimer le port des ports actifs
+      // Remove port from activePorts
       delete portData.activePorts[port];
       
-      // Mettre à jour le timestamp
+      // Update timestamp
       portData.lastUpdated = Date.now();
       
-      // Écrire les modifications
+      // Write changes
       fs.writeFileSync(PORT_FILE, JSON.stringify(portData, null, 2));
       
-      log(`Port ${port} libéré (service: ${portInfo.service})`);
+      log(`Port ${port} released (service: ${portInfo.service})`);
       return true;
     } else {
       if (VERBOSE) {
-        log(`Port ${port} n'est pas actif, rien à libérer`);
+        log(`Port ${port} is not active, nothing to release`);
       }
       return false;
     }
   } catch (err) {
-    log(`Erreur lors de la libération du port ${port}: ${err.message}`, true);
+    log(`Error releasing port ${port}: ${err.message}`, true);
     return false;
   } finally {
     releaseLock();
@@ -520,23 +520,23 @@ async function releasePort(port) {
 }
 
 /**
- * Libérer tous les ports alloués par le processus actuel
- * @returns {Promise<number>} - Nombre de ports libérés
+ * Release all ports allocated by the current process
+ * @returns {Promise<number>} - Number of released ports
  */
 async function releaseAllPortsForCurrentProcess() {
   try {
     await acquireLock();
     
-    // Lire le fichier de ports
+    // Read port file
     let portData;
     try {
       portData = JSON.parse(fs.readFileSync(PORT_FILE, 'utf8'));
     } catch (err) {
-      log(`Erreur lors de la lecture du fichier de ports: ${err.message}`, true);
+      log(`Error reading port file: ${err.message}`, true);
       return 0;
     }
     
-    // Trouver tous les ports alloués par ce processus
+    // Find all ports allocated by this process
     const currentPid = process.pid;
     const portsToRelease = [];
     
@@ -546,12 +546,12 @@ async function releaseAllPortsForCurrentProcess() {
       }
     }
     
-    // Libérer chaque port
+    // Release each port
     let releasedCount = 0;
     for (const port of portsToRelease) {
       const portInfo = portData.activePorts[port];
       
-      // Déplacer le port de activePorts vers usedPorts
+      // Move port from activePorts to usedPorts
       portData.usedPorts.push({
         port,
         ...portInfo,
@@ -559,32 +559,32 @@ async function releaseAllPortsForCurrentProcess() {
         releasedBy: currentPid
       });
       
-      // Supprimer le port des ports actifs
+      // Remove port from activePorts
       delete portData.activePorts[port];
       releasedCount++;
       
-      log(`Port ${port} libéré (service: ${portInfo.service})`);
+      log(`Port ${port} released (service: ${portInfo.service})`);
     }
     
-    // Limiter la taille de l'historique des ports utilisés
+    // Limit the size of the used ports history
     if (portData.usedPorts.length > 100) {
       portData.usedPorts = portData.usedPorts.slice(-100);
     }
     
-    // Mettre à jour le timestamp
+    // Update timestamp
     portData.lastUpdated = Date.now();
     
-    // Écrire les modifications si des ports ont été libérés
+    // Write changes if any ports were released
     if (releasedCount > 0) {
       fs.writeFileSync(PORT_FILE, JSON.stringify(portData, null, 2));
-      log(`${releasedCount} port(s) libéré(s) pour le processus ${currentPid}`);
+      log(`${releasedCount} port(s) released for process ${currentPid}`);
     } else if (VERBOSE) {
-      log(`Aucun port à libérer pour le processus ${currentPid}`);
+      log(`No ports to release for process ${currentPid}`);
     }
     
     return releasedCount;
   } catch (err) {
-    log(`Erreur lors de la libération des ports pour le processus actuel: ${err.message}`, true);
+    log(`Error releasing ports for current process: ${err.message}`, true);
     return 0;
   } finally {
     releaseLock();
@@ -592,9 +592,9 @@ async function releaseAllPortsForCurrentProcess() {
 }
 
 /**
- * Obtenir le port actif pour un service spécifique
- * @param {string} serviceName - Nom du service
- * @returns {Promise<number|null>} - Port utilisé par le service ou null si non trouvé
+ * Get the active port for a specific service
+ * @param {string} serviceName - Name of the service
+ * @returns {Promise<number|null>} - Port used by the service or null if not found
  */
 async function getServicePort(serviceName) {
   try {
@@ -604,30 +604,30 @@ async function getServicePort(serviceName) {
     try {
       portData = JSON.parse(fs.readFileSync(PORT_FILE, 'utf8'));
     } catch (err) {
-      log(`Erreur lors de la lecture du fichier de ports: ${err.message}`, true);
+      log(`Error reading port file: ${err.message}`, true);
       return null;
     }
     
-    // Rechercher le service dans les ports actifs
+    // Search for the service in active ports
     for (const [port, info] of Object.entries(portData.activePorts)) {
       if (info.service === serviceName) {
         const portNumber = parseInt(port, 10);
         
-        // Vérifier si le port est toujours disponible
+        // Check if the port is still available
         if (await isPortUsedBySystem(portNumber)) {
-          // Vérifier si le processus qui a alloué le port est toujours en cours d'exécution
+          // Check if the process that allocated the port is still running
           try {
-            process.kill(info.pid, 0); // Vérifie si le processus existe sans l'arrêter
+            process.kill(info.pid, 0); // Check if process exists without stopping it
             return portNumber;
           } catch (e) {
-            // Le processus n'existe plus, marquer le port comme libéré
-            log(`Le processus ${info.pid} qui utilisait le port ${portNumber} n'existe plus, libération du port...`);
+            // The process no longer exists, mark the port as released
+            log(`The process ${info.pid} that used port ${portNumber} no longer exists, releasing port...`);
             await releasePort(portNumber);
             return null;
           }
         } else {
-          // Le port n'est plus utilisé par le système, le libérer
-          log(`Le port ${portNumber} n'est plus utilisé par le système, libération...`);
+          // The port is no longer used by the system, release it
+          log(`The port ${portNumber} is no longer used by the system, releasing...`);
           await releasePort(portNumber);
           return null;
         }
@@ -636,7 +636,7 @@ async function getServicePort(serviceName) {
     
     return null;
   } catch (err) {
-    log(`Erreur lors de la recherche du port pour le service ${serviceName}: ${err.message}`, true);
+    log(`Error finding port for service ${serviceName}: ${err.message}`, true);
     return null;
   } finally {
     releaseLock();
@@ -644,8 +644,8 @@ async function getServicePort(serviceName) {
 }
 
 /**
- * Tuer tous les processus utilisant des ports actifs
- * @returns {Promise<number>} - Nombre de ports libérés
+ * Kill all system processes using active ports
+ * @returns {Promise<number>} - Number of released ports
  */
 async function killAllActivePorts() {
   try {
@@ -655,26 +655,26 @@ async function killAllActivePorts() {
     try {
       portData = JSON.parse(fs.readFileSync(PORT_FILE, 'utf8'));
     } catch (err) {
-      log(`Erreur lors de la lecture du fichier de ports: ${err.message}`, true);
+      log(`Error reading port file: ${err.message}`, true);
       return 0;
     }
     
     const activePorts = Object.keys(portData.activePorts).map(Number);
     
     if (activePorts.length === 0) {
-      log('Aucun port actif à libérer');
+      log('No active ports to release');
       return 0;
     }
     
-    log(`Libération de ${activePorts.length} ports actifs...`);
+    log(`Releasing ${activePorts.length} active ports...`);
     
     let releasedCount = 0;
     for (const port of activePorts) {
       try {
-        // Vérifier si le port est utilisé par un processus
+        // Check if the port is used by a process
         const portInfo = portData.activePorts[port];
         
-        // Tuer les processus utilisant ce port
+        // Kill system processes using this port
         try {
           const output = execSync(`lsof -i :${port} -t`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
           if (output) {
@@ -682,44 +682,44 @@ async function killAllActivePorts() {
             for (const pid of pids) {
               try {
                 const pidNum = parseInt(pid, 10);
-                log(`Tentative d'arrêt du processus ${pidNum} utilisant le port ${port}...`);
+                log(`Attempting to stop process ${pidNum} using port ${port}...`);
                 
-                // Essayer d'abord un arrêt propre
+                // First, try a clean stop
                 process.kill(pidNum, 'SIGTERM');
                 
-                // Attendre un peu et vérifier si le processus est toujours en cours d'exécution
+                // Wait a little and check if the process is still running
                 await new Promise(resolve => setTimeout(resolve, 500));
                 
                 try {
                   process.kill(pidNum, 0);
-                  // Le processus est toujours en cours d'exécution, utiliser SIGKILL
-                  log(`Le processus ${pidNum} n'a pas répondu à SIGTERM, utilisation de SIGKILL...`);
+                  // The process is still running, use SIGKILL
+                  log(`The process ${pidNum} did not respond to SIGTERM, using SIGKILL...`);
                   process.kill(pidNum, 'SIGKILL');
                 } catch (e) {
-                  // Le processus a été arrêté avec succès
-                  log(`Processus ${pidNum} arrêté avec succès`);
+                  // The process was stopped successfully
+                  log(`Process ${pidNum} stopped successfully`);
                 }
               } catch (killErr) {
-                log(`Erreur lors de la tentative d'arrêt du processus ${pid}: ${killErr.message}`, true);
+                log(`Error stopping process ${pid}: ${killErr.message}`, true);
               }
             }
           }
         } catch (lsofErr) {
-          // Ignorer les erreurs de lsof (aucun processus trouvé)
+          // Ignore lsof errors (no processes found)
         }
         
-        // Marquer le port comme libéré
+        // Mark the port as released
         await releasePort(port);
         releasedCount++;
       } catch (err) {
-        log(`Erreur lors de la libération du port ${port}: ${err.message}`, true);
+        log(`Error releasing port ${port}: ${err.message}`, true);
       }
     }
     
-    log(`${releasedCount} port(s) libéré(s) avec succès`);
+    log(`${releasedCount} ports released successfully`);
     return releasedCount;
   } catch (err) {
-    log(`Erreur lors de la libération des ports actifs: ${err.message}`, true);
+    log(`Error releasing active ports: ${err.message}`, true);
     return 0;
   } finally {
     releaseLock();
@@ -727,18 +727,18 @@ async function killAllActivePorts() {
 }
 
 /**
- * Nettoyer tous les ports (actifs et utilisés)
- * @returns {Promise<boolean>} - True si le nettoyage a réussi
+ * Clean all ports (active and used)
+ * @returns {Promise<boolean>} - True if cleaning succeeded
  */
 async function cleanupAllPorts() {
   try {
-    // Tuer tous les processus utilisant des ports actifs
+    // Kill all system processes using active ports
     await killAllActivePorts();
     
-    // Acquérir le verrou pour réinitialiser le fichier
+    // Acquire lock to reset file
     await acquireLock();
     
-    // Réinitialiser le fichier de ports
+    // Reset port file
     fs.writeFileSync(PORT_FILE, JSON.stringify({
       activePorts: {},
       usedPorts: [],
@@ -751,10 +751,10 @@ async function cleanupAllPorts() {
       }
     }, null, 2));
     
-    log('Tous les ports ont été nettoyés');
+    log('All ports cleaned');
     return true;
   } catch (err) {
-    log(`Erreur lors du nettoyage des ports: ${err.message}`, true);
+    log(`Error cleaning ports: ${err.message}`, true);
     return false;
   } finally {
     releaseLock();
@@ -762,8 +762,8 @@ async function cleanupAllPorts() {
 }
 
 /**
- * Vérifier l'état du gestionnaire de ports
- * @returns {Promise<Object>} - État du gestionnaire de ports
+ * Check port manager status
+ * @returns {Promise<Object>} - Port manager status
  */
 async function getPortManagerStatus() {
   try {
@@ -775,7 +775,7 @@ async function getPortManagerStatus() {
     } catch (err) {
       return {
         status: 'error',
-        error: `Erreur lors de la lecture du fichier de ports: ${err.message}`,
+        error: `Error reading port file: ${err.message}`,
         timestamp: Date.now()
       };
     }
@@ -783,7 +783,7 @@ async function getPortManagerStatus() {
     const activePorts = Object.keys(portData.activePorts).map(Number);
     const activePortsInfo = {};
     
-    // Vérifier l'état de chaque port actif
+    // Check status of each active port
     for (const port of activePorts) {
       const info = portData.activePorts[port];
       let processStatus = 'unknown';
@@ -798,7 +798,7 @@ async function getPortManagerStatus() {
       activePortsInfo[port] = {
         ...info,
         processStatus,
-        age: Math.floor((Date.now() - info.timestamp) / 1000) // en secondes
+        age: Math.floor((Date.now() - info.timestamp) / 1000) // in seconds
       };
     }
     
@@ -813,7 +813,7 @@ async function getPortManagerStatus() {
   } catch (err) {
     return {
       status: 'error',
-      error: `Erreur lors de la vérification de l'état du gestionnaire de ports: ${err.message}`,
+      error: `Error checking port manager status: ${err.message}`,
       timestamp: Date.now()
     };
   } finally {
@@ -821,11 +821,11 @@ async function getPortManagerStatus() {
   }
 }
 
-// Configurer le gestionnaire de processus pour libérer les ports à la sortie
+// Configure process manager to release ports on exit
 process.on('exit', () => {
   try {
-    // Libérer tous les ports alloués par ce processus
-    // Utiliser execSync car on ne peut pas utiliser async dans le gestionnaire 'exit'
+    // Release all ports allocated by this process
+    // Use execSync because we can't use async in the 'exit' handler
     const currentPid = process.pid;
     try {
       if (fs.existsSync(PORT_FILE)) {
@@ -834,7 +834,7 @@ process.on('exit', () => {
         
         for (const [port, info] of Object.entries(portData.activePorts)) {
           if (info.pid === currentPid) {
-            // Déplacer le port vers usedPorts
+            // Move port to usedPorts
             portData.usedPorts.push({
               port: parseInt(port, 10),
               ...info,
@@ -843,7 +843,7 @@ process.on('exit', () => {
               reason: 'process_exit'
             });
             
-            // Supprimer le port des ports actifs
+            // Remove port from activePorts
             delete portData.activePorts[port];
             released = true;
           }
@@ -854,29 +854,29 @@ process.on('exit', () => {
         }
       }
     } catch (err) {
-      // Ignorer les erreurs lors de la sortie
+      // Ignore exit errors
     }
   } catch (err) {
-    // Ignorer les erreurs lors de la sortie
+    // Ignore exit errors
   }
 });
 
-// Exporter les fonctions
+// Export functions
 module.exports = {
-  // Fonctions principales
+  // Main functions
   allocatePort,
   releasePort,
   getServicePort,
   killAllActivePorts,
   cleanupAllPorts,
   
-  // Fonctions utilitaires
+  // Utility functions
   isPortAvailable,
   isPortUsedBySystem,
   releaseAllPortsForCurrentProcess,
   getPortManagerStatus,
   
-  // Constantes
+  // Constants
   PORT_RANGE_START,
   PORT_RANGE_END
 };
