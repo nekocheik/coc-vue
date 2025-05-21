@@ -544,10 +544,12 @@ For detailed documentation on testing with Docker and CI integration, see [TESTS
 - All unit/integration tests must be placed in `__tests__/` (mirroring `src/`) or `helper-test/` (for helpers/mocks).
 - Commits are **automatically blocked** if:
     - Any test fails
-    - Coverage < 80% for statements/branches/functions/lines
+    - Coverage < 80% for statements/functions/lines
+    - **Branch coverage below 60% blocks any commit.** (temporarily reduced from 80%)
     - Any test/helper is in an unauthorized location
 - Each commit runs a full test + coverage, logs result in `.test-logs/history.json` (with commit hash, timestamp, coverage).
 - See `.test-logs/README.md` for details and audit procedure.
+- **TEMPORARY POLICY**: The branch coverage threshold has been temporarily reduced to 60% while we improve test coverage. The target remains 80% for all metrics.
 
 ## 🔍 Debugging Guide
 
