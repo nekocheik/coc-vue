@@ -82,11 +82,14 @@ generate_docs() {
 generate_md() {
   echo "Generating Markdown files from YAML docs..."
   
+  # Create doc_md directory if it doesn't exist
+  mkdir -p doc_md
+  
   for yaml_file in doc/*.yml; do
     if [ -f "$yaml_file" ]; then
       filename=$(basename "$yaml_file")
       base_name="${filename%.yml}"
-      md_file="doc/${base_name}.md"
+      md_file="doc_md/${base_name}.md"
       
       # Extract values from YAML file using jq
       file_name=$(jq -r '.file_name // "$base_name"' "$yaml_file")
@@ -122,13 +125,13 @@ generate_md() {
         done
       } > "$md_file"
       
-      echo "Generated: $filename -> ${base_name}.md"
+      echo "Generated: $filename -> doc_md/${base_name}.md"
     fi
   done
   
   echo "
 List of created Markdown files:"
-  for md_file in doc/*.md; do
+  for md_file in doc_md/*.md; do
     if [ -f "$md_file" ]; then
       echo "- $(basename "$md_file")"
     fi
