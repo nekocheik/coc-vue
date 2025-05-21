@@ -1,0 +1,63 @@
+{
+  "file_name": "README.md",
+  "relative_path": "/README.md",
+  "tags": ["Documentation", "Architecture", "Components"],
+  "priority": "HIGH",
+  "summary": "Core documentation of CoC Vue Integration providing agnostic Vue.js components for Neovim. Details architecture, component system, testing framework, and development workflows.",
+  "sections": [
+    {
+      "title": "Introduction",
+      "priority": "CRITICAL",
+      "tags": ["Documentation"],
+      "content": "CoC Vue Integration delivers a powerful, agnostic Vue.js integration for Neovim through coc.nvim. This extension transforms Neovim into a responsive Vue.js development environment with interactive features. Developers can directly manipulate Vue components, test component behavior, and accelerate development with this seamless integration."
+    },
+    {
+      "title": "Key Features",
+      "priority": "HIGH",
+      "tags": ["Documentation", "Components"],
+      "content": "The extension provides six core capabilities: 1) Component-agnostic architecture supporting any Vue component without configuration, 2) Reactive system enabling real-time component interaction, 3) Dynamic mappings automatically generated from available methods, 4) Comprehensive testing suite ensuring reliability, 5) Simplified command-line interface for operations, and 6) Bidirectional communication between TypeScript and Lua layers."
+    },
+    {
+      "title": "Architecture",
+      "priority": "HIGH",
+      "tags": ["Architecture", "Technical"],
+      "content": "Built on a client-server architecture, the extension establishes bidirectional communication between TypeScript (Node.js) and Lua (Neovim). At its core, a robust bridge enables seamless inter-layer messaging through four key mechanisms: component lifecycle management, method invocation with argument passing, state synchronization, and event handling. The component-agnostic design employs dynamic method detection, automatic property mapping, flexible component discovery, and a unified API that eliminates hardcoded references."
+    },
+    {
+      "title": "Testing Framework",
+      "priority": "MEDIUM",
+      "tags": ["Testing"],
+      "content": "The modular testing framework ensures system reliability through selective test execution. Developers can run the entire suite, specific test sections, or progressive section-by-section testing. Nine specialized test sections cover component loading, state management, dropdown controls, option selection, property updates, multi-select functionality, navigation, error handling, and resource cleanup."
+    },
+    {
+      "title": "Component Library",
+      "priority": "MEDIUM",
+      "tags": ["Components"],
+      "content": "The Select component exemplifies the extension's capabilities as a fully-featured dropdown selector supporting both single and multi-select modes. Its comprehensive API provides methods for dropdown control (open/close), option focusing, selection management, confirmation handling, and component configuration. This standardized interface demonstrates the extension's ability to create interactive, state-aware components."
+    },
+    {
+      "title": "Server Operations",
+      "priority": "MEDIUM",
+      "tags": ["Technical"],
+      "content": "A command server facilitates TypeScript-Lua communication on port 9999, logging all commands and responses for monitoring. Verification scripts test server functionality by executing a complete workflow: starting the background server, running command tests, displaying results and logs, and automatically terminating the process upon completion."
+    },
+    {
+      "title": "Debugging",
+      "priority": "MEDIUM",
+      "tags": ["Documentation"],
+      "content": "When troubleshooting, check Neovim errors using ':messages' to view error messages and ':CocOpenLog' to access the Coc.nvim log file. Common issues include component loading failures, port conflicts, asynchronous operation timeouts, and bridge communication breakdowns. Each problem has specific verification steps detailed in the troubleshooting guide."
+    },
+    {
+      "title": "Development Workflow",
+      "priority": "HIGH",
+      "tags": ["Documentation", "Development"],
+      "content": "The modular architecture simplifies extension with new components and features. Developers should follow the standard workflow: clone the repository, install dependencies with npm, implement code changes, build with 'npm run build', and verify with 'npm test'. The component-agnostic architecture streamlines adding new components by creating component classes in src/components/ with appropriate method and property implementations."
+    },
+    {
+      "title": "Project Structure",
+      "priority": "MEDIUM",
+      "tags": ["Documentation", "Architecture"],
+      "content": "The repository organizes code logically: src/ contains TypeScript source including bridge communication, core functionality, and renderers; lua/ houses Neovim integration modules; test/ contains test suites for unit and integration testing. Configuration files like package.json, tsconfig.json, and GitHub workflow definitions establish development and CI/CD standards."
+    }
+  ]
+}
