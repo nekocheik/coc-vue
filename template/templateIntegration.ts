@@ -164,8 +164,8 @@ export async function renderAppTemplate(
   bufferRouter: BufferRouter
 ): Promise<boolean> {
   try {
-    // Dynamically import the App component
-    const { default: App } = await import('./index');
+    // Dynamically import the App component - specify .tsx extension explicitly
+    const { default: App } = await import('./index.tsx');
     
     // Create the App VNode
     const appNode = App();

@@ -350,5 +350,16 @@
       "lines": 84.5
     },
     "failingTests": null
+  },
+  {
+    "hash": "9f7ce390b1da1480a6f963983d4b63365ebc844e",
+    "time": "2025-05-22T13:58:48.316Z",
+    "coverage": {
+      "statements": 83.88,
+      "branches": 71.72,
+      "functions": 84.52,
+      "lines": 84.5
+    },
+    "failingTests": null
   }
 ]

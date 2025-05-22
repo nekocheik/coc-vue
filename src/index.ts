@@ -4,6 +4,7 @@ import { BridgeCore, BridgeMessage, MessageType, bridgeCore } from './bridge/cor
 import { registerBufferCommands } from './commands/bufferCommands';
 import { registerWindowManagerCommands } from './commands/windowManagerCommands';
 import { Select } from './components/select';
+import { renderAppTemplate } from '../template/templateIntegration';
 
 // Registry to keep track of active components
 const componentRegistry = new Map<string, any>();
@@ -16,7 +17,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
   const { bufferRouter } = registerBufferCommands(context);
   
   // Initialize the window manager and register window manager commands
-  registerWindowManagerCommands(context);
+  const { windowManager } = registerWindowManagerCommands(context);
   
   try {
     // Force-load the Lua module to ensure commands are registered
@@ -278,6 +279,30 @@ export async function activate(context: ExtensionContext): Promise<void> {
       }
     })
   );
+  
+  // Auto-bootstrap template system on startup
+  try {
+    console.log('[COC-VUE] Auto-bootstrapping template system...');
+    
+    // Close any existing windows/buffers to ensure clean mounting
+    await windowManager.cleanLayout();
+    
+    // Render the app template
+    const success = await renderAppTemplate(windowManager, bufferRouter);
+    
+    if (success) {
+      console.log('[COC-VUE] Template layout auto-mounted on startup');
+      window.showInformationMessage('Template layout auto-mounted on startup.');
+    } else {
+      console.warn('[COC-VUE] Template layout auto-mount completed with warnings');
+      window.showWarningMessage('Template layout auto-mounted with warnings. Check logs for details.');
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[COC-VUE] Error auto-mounting template layout:', errorMessage);
+    window.showErrorMessage(`Error auto-mounting template layout: ${errorMessage}`);
+    // Continue with extension activation despite template errors
+  }
   
   console.log('[COC-VUE] Vue-like reactive bridge activated successfully');
 }

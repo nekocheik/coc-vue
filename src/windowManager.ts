@@ -206,6 +206,30 @@ export class WindowManager implements Disposable {
   }
 
   /**
+   * Clean existing layout by closing all windows and unmounting all buffers
+   * This is used before rendering a new template to ensure a clean slate
+   * @returns Promise that resolves when the layout is cleaned
+   */
+  public async cleanLayout(): Promise<boolean> {
+    try {
+      console.log('[WindowManager] Cleaning existing layout');
+      
+      // Unmount all buffers from slots
+      Object.keys(this.slots).forEach(slot => {
+        this.unmountBuffer(slot as WindowSlot);
+      });
+      
+      // Additional cleanup logic can be added here as needed
+      // For example, closing windows or resetting other state
+      
+      return true;
+    } catch (error) {
+      console.error('[WindowManager] Error cleaning layout:', error);
+      return false;
+    }
+  }
+
+  /**
    * Clean up all resources used by the window manager
    */
   public dispose(): void {
