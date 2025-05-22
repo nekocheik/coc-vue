@@ -233,13 +233,32 @@ export async function renderAppTemplate(
   bufferRouter: BufferRouter
 ): Promise<boolean> {
   try {
+    // Set the buffer router instance in the renderer
+    // Import needed so TypeScript can find the renderer module
+    const { setBufferRouter, renderVNode, applyDiff } = await import('./renderer');
+    setBufferRouter(bufferRouter);
+    
     // Dynamically import the App component without extension (webpack will resolve it)
     const { default: App } = await import('./index');
     
     // Create the App VNode
     const appNode = App();
     
-    // Render the template
+    // Use the VNode tree for reactive template rendering
+    // This will convert the VNode tree to buffer lines
+    const renderedLines = renderVNode(appNode);
+    
+    // Determine active buffer ID (we'll need to retrieve this in a real implementation)
+    const currentBuffer = await bufferRouter.getCurrentBuffer();
+    if (currentBuffer) {
+      const bufferId = parseInt(currentBuffer.id);
+      if (!isNaN(bufferId)) {
+        // Apply the rendered content to the buffer with diffing
+        applyDiff(bufferId, renderedLines);
+      }
+    }
+    
+    // Also render the traditional way for now during transition
     return await renderTemplate(appNode, windowManager, bufferRouter);
   } catch (error) {
     console.error('[TemplateIntegration] Error rendering app template:', error);

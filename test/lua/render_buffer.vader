@@ -1,0 +1,32 @@
+Execute (Test RenderBuffer Function):
+  " Create a test buffer
+  let buffer = nvim_create_buf(v:false, v:true)
+  
+  " In Lua, we can directly use the buffer number
+  let luaBuffer = buffer
+  
+  " Call the RenderBuffer function with lines
+  call luaeval('require("vue-ui.utils.render_buffer").RenderBuffer(_A[1], _A[2])', [luaBuffer, ['Line 1', 'Line 2']])
+  
+  " Get the buffer content
+  let lines = nvim_buf_get_lines(buffer, 0, -1, v:false)
+  
+  " Assert that the buffer has exactly 2 lines with the expected content
+  AssertEqual 2, len(lines)
+  AssertEqual 'Line 1', lines[0]
+  AssertEqual 'Line 2', lines[1]
+  
+  " Test updating existing content
+  call luaeval('require("vue-ui.utils.render_buffer").RenderBuffer(_A[1], _A[2])', [luaBuffer, ['Updated Line 1', 'Updated Line 2', 'New Line 3']])
+  
+  " Get the updated buffer content
+  let updatedLines = nvim_buf_get_lines(buffer, 0, -1, v:false)
+  
+  " Assert that the buffer now has 3 lines with the updated content
+  AssertEqual 3, len(updatedLines)
+  AssertEqual 'Updated Line 1', updatedLines[0]
+  AssertEqual 'Updated Line 2', updatedLines[1]
+  AssertEqual 'New Line 3', updatedLines[2]
+  
+  " Clean up
+  call nvim_buf_delete(buffer, {'force': v:true})

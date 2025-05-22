@@ -307,6 +307,44 @@ export class BufferRouter implements Disposable {
       return null;
     }
   }
+  
+  /**
+   * Update buffer content with an array of lines
+   * @param bufferId - The buffer ID to update
+   * @param lines - The array of lines to set in the buffer
+   * @returns Success status
+   */
+  public async updateBufferContent(bufferId: number, lines: (string | undefined)[]): Promise<boolean> {
+    try {
+      // Filter out undefined lines (those that don't need updates)
+      const filteredLines = lines.map((line, index) => {
+        return { line, index, update: line !== undefined };
+      }).filter(item => item.update);
+      
+      // If there are no lines to update, return success
+      if (filteredLines.length === 0) {
+        return true;
+      }
+      
+      // Call the Lua render_buffer utility to update buffer content
+      const success = await this.nvim.lua(
+        `return require('vue-ui.utils.render_buffer').RenderBuffer(${bufferId}, vim.fn.json_decode('${JSON.stringify(lines)}'))`
+      );
+      
+      if (success) {
+        // Emit event for buffer content update
+        this.emitter.emit(BufferRouter.Events.BUFFER_UPDATED, {
+          bufferId,
+          linesUpdated: filteredLines.length
+        });
+      }
+      
+      return !!success;
+    } catch (error) {
+      console.error(`[BufferRouter] Error updating buffer content for buffer ${bufferId}:`, error);
+      return false;
+    }
+  }
 
   /**
    * Subscribe to buffer events
