@@ -1,6 +1,7 @@
 // COC-VUE Implementation with Vue-like Reactive Bridge
 import { workspace, ExtensionContext, commands, window } from 'coc.nvim';
 import { BridgeCore, BridgeMessage, MessageType, bridgeCore } from './bridge/core';
+import { registerBufferCommands } from './commands/bufferCommands';
 import { Select } from './components/select';
 
 // Registry to keep track of active components
@@ -10,6 +11,9 @@ const componentRegistry = new Map<string, any>();
 export async function activate(context: ExtensionContext): Promise<void> {
   console.log('[COC-VUE] Starting activation of Select component integration');
   
+  // Initialize the buffer router and register buffer commands
+  const { bufferRouter } = registerBufferCommands(context);
+  
   try {
     // Force-load the Lua module to ensure commands are registered
     const nvim = workspace.nvim;
@@ -18,6 +22,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
     // Ensure the Lua module is loaded and commands are registered
     await nvim.command('lua print("[VUE-UI] Loading module from TypeScript activation")');
     await nvim.command('lua if not package.loaded["vue-ui"] then require("vue-ui") end');
+  await nvim.command('lua if not package.loaded["buffer_router"] then require("buffer_router") end');
     await nvim.command('lua if not package.loaded["vue-ui.init"] then require("vue-ui.init") end');
     
     // Verify that the module is loaded and commands are registered
@@ -34,6 +39,22 @@ export async function activate(context: ExtensionContext): Promise<void> {
     window.showErrorMessage(`Error loading Lua module: ${errorMessage}`);
   }
   
+  // Register buffer router commands
+  context.subscriptions.push(
+    commands.registerCommand('vue.buffer.create', async (path: string, query?: Record<string, any>) => {
+      return await bufferRouter.createBuffer(path, query);
+    }),
+    commands.registerCommand('vue.buffer.delete', async (id: string) => {
+      return await bufferRouter.deleteBuffer(id);
+    }),
+    commands.registerCommand('vue.buffer.switch', async (identifier: string) => {
+      return await bufferRouter.switchBuffer(identifier);
+    }),
+    commands.registerCommand('vue.buffer.current', async () => {
+      return await bufferRouter.getCurrentBuffer();
+    })
+  );
+
   // Register bridge message receiver command
   context.subscriptions.push(
     commands.registerCommand('vue.bridge.receiveMessage', async (serializedMessage: string) => {
@@ -132,6 +153,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
         
         // Ensure the Lua module is loaded before executing the command
         await nvim.command('lua if not package.loaded["vue-ui"] then require("vue-ui") end');
+  await nvim.command('lua if not package.loaded["buffer_router"] then require("buffer_router") end');
         
         // Create a unique ID for the Select component
         const selectId = 'select_demo_' + Date.now();
@@ -184,6 +206,7 @@ export async function activate(context: ExtensionContext): Promise<void> {
         
         // Ensure the Lua module is loaded before executing the command
         await nvim.command('lua if not package.loaded["vue-ui"] then require("vue-ui") end');
+  await nvim.command('lua if not package.loaded["buffer_router"] then require("buffer_router") end');
         
         // Create a demo with multiple components
         window.showInformationMessage('Launching Components Demo...');
