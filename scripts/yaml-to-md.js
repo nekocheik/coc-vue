@@ -18,6 +18,60 @@ const readdir = util.promisify(fs.readdir);
 const mkdir = util.promisify(fs.mkdir);
 
 /**
+ * Extraction manuelle des métadonnées d'un fichier YAML/JSON mal formaté
+ * @param {string} content - Contenu du fichier à analyser
+ * @returns {object} - Objet contenant les métadonnées extraites
+ */
+function extractMetadataManually(contentText) {
+  const doc = {
+    sections: []
+  };
+  
+  // Extraire les métadonnées principales
+  const fileNameMatch = contentText.match(/["']?file_name["']?\s*:\s*["']([^"']+)["']/);
+  if (fileNameMatch) doc.file_name = fileNameMatch[1];
+  
+  const relativePathMatch = contentText.match(/["']?relative_path["']?\s*:\s*["']([^"']+)["']/);
+  if (relativePathMatch) doc.relative_path = relativePathMatch[1];
+  
+  const priorityMatch = contentText.match(/["']?priority["']?\s*:\s*["']([^"']+)["']/);
+  if (priorityMatch) doc.priority = priorityMatch[1];
+  
+  const summaryMatch = contentText.match(/["']?summary["']?\s*:\s*["']([^"']+)["']/);
+  if (summaryMatch) doc.summary = summaryMatch[1];
+  
+  // Trouver les débuts de sections
+  const sectionMatches = [...contentText.matchAll(/["']?title["']?\s*:\s*["']([^"']+)["']/g)];
+  
+  // Extraire chaque section
+  for (const match of sectionMatches) {
+    const title = match[1];
+    const sectionStartIdx = match.index;
+    
+    // Chercher la priorité et les tags pour cette section
+    const sectionText = contentText.substring(sectionStartIdx, sectionStartIdx + 500); // Limiter à 500 caractères
+    
+    const sectionPriorityMatch = sectionText.match(/["']?priority["']?\s*:\s*["']([^"']+)["']/);
+    const priority = sectionPriorityMatch ? sectionPriorityMatch[1] : 'MEDIUM';
+    
+    const sectionContentMatch = sectionText.match(/["']?content["']?\s*:\s*["']([^"']+)["']/);
+    const sectionContent = sectionContentMatch ? sectionContentMatch[1] : 'No content available';
+    
+    // Créer un objet de section
+    const section = {
+      title,
+      priority,
+      content: sectionContent,
+      tags: ['Auto-extracted']
+    };
+    
+    doc.sections.push(section);
+  }
+  
+  return doc;
+}
+
+/**
  * Convertit un fichier YAML en Markdown
  * @param {string} yamlPath - Chemin vers le fichier YAML
  * @param {string} mdPath - Chemin où enregistrer le fichier Markdown
@@ -30,8 +84,21 @@ async function convertYamlToMd(yamlPath, mdPath) {
     // Extraire le nom du fichier pour le titre
     const fileName = path.basename(yamlPath, '.yml');
     
-    // Analyser le contenu YAML
-    const doc = yaml.load(yamlContent);
+    let doc;
+    try {
+      // Essayer d'analyser le contenu comme YAML
+      doc = yaml.load(yamlContent);
+    } catch (yamlError) {
+      // Si le parsing YAML échoue, essayer de traiter comme du JSON
+      try {
+        console.log(`Tentative de parsing JSON pour ${yamlPath}...`);
+        doc = JSON.parse(yamlContent);
+      } catch (jsonError) {
+        // Si le JSON échoue aussi, essayer une approche plus souple
+        console.log(`Tentative d'extraction manuelle des métadonnées pour ${yamlPath}...`);
+        doc = extractMetadataManually(yamlContent);
+      }
+    }
     
     // Créer le contenu Markdown
     let markdown = `# ${fileName}\n`;

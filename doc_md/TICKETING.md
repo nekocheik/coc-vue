@@ -1,50 +1,50 @@
 # TICKETING
 **Path:** /docs/TICKETING.md
 **Priority:** MEDIUM
-**Tags:** Documentation, Workflow, Management
+**Tags:** 
 **Summary:** Detailed documentation of the ticket-based development workflow used in the coc-vue project, including ticket structure, categories, workflow processes, CLI commands, and GitHub integration.
 
 ## Sections
 
 ### Overview
 **Priority:** HIGH
-**Tags:** Workflow, Documentation
+**Tags:** Auto-extracted
 
-The coc-vue project implements a structured ticket-based workflow to track all development tasks. This system delivers five key benefits: comprehensive documentation of all changes, standardized workflow processes for consistency, transparent progress visibility across team members, systematic work prioritization capabilities, and seamless GitHub Issues integration for team-wide visibility. This structured approach ensures that all development activities are properly tracked, managed, and communicated.
+No content available
 
 ### Ticket Structure
 **Priority:** HIGH
-**Tags:** Documentation, Organization
+**Tags:** Auto-extracted
 
-Tickets follow a standardized naming convention of 'issue-[priority]-[uuid]-[status]' where priority ranges from 1-100 (higher values indicating greater importance), uuid provides a unique identifier, and status reflects the current development stage. The directory organization groups tickets by category in the Ticket/ directory with dedicated folders for features, UI components, code structure, CI/CD pipeline, documentation, testing, and performance optimizations. Each category maintains an index.md roadmap listing all related tickets. Individual tickets contain structured content including metadata (priority, UUID, category, status), detailed task description, category-specific workflow steps, completion requirements, relevant test cases, and affected components.
+Tickets follow a standardized naming convention of 
 
 ### Categories and Workflows
 **Priority:** MEDIUM
-**Tags:** Workflow, Organization
+**Tags:** Auto-extracted
 
-The system defines seven specialized categories with distinct workflows. Feature tickets progress through design, implementation, testing, documentation, and review phases. UI tickets follow design, implementation, testing, and integration phases. Structure tickets addressing code organization move through analysis, planning, implementation, and verification phases. CI/CD tickets advance through analysis, implementation, testing, and documentation phases. Documentation tickets follow research, writing, review, and publication phases. Testing tickets proceed through analysis, implementation, verification, and integration phases. Performance tickets progress through profiling, implementation, testing, and documentation phases. These specialized workflows ensure appropriate processes for each development activity type.
+No content available
 
 ### Ticket Management Workflow
 **Priority:** HIGH
-**Tags:** Workflow, Management
+**Tags:** Auto-extracted
 
-Ticket lifecycle management follows three main phases. Creation begins by identifying the appropriate category, determining priority (1-100), drafting a descriptive title, and executing the ticket creation command, which generates a ticket with unique UUID and category-specific template. Work progression involves following defined workflow steps and updating ticket status through the CLI with './coc-vue-cli.sh ticket:status [uuid] [in-progress]'. Completion requires verification that all workflow steps and acceptance criteria are met, followed by status update to 'completed' and, if applicable, GitHub issue synchronization. This structured approach ensures consistent process adherence throughout development cycles.
+No content available
 
 ### CLI Commands
 **Priority:** MEDIUM
-**Tags:** CLI, Workflow
+**Tags:** Auto-extracted
 
-The coc-vue-cli provides four essential commands for ticket management. 'ticket:create [category] [priority] [title]' generates new tickets with appropriate templates, as demonstrated in './coc-vue-cli.sh ticket:create feat 90 "Add Modal Component"'. 'ticket:list' displays all tickets across categories, sorted by priority for workload management. 'ticket:status [uuid] [status]' updates development progress with standardized status values (pending, in-progress, review, completed, blocked). 'ticket:deploy [uuid]' integrates with GitHub by creating an issue containing ticket details and establishing bidirectional linkage between local tickets and GitHub tracking.
+The coc-vue-cli provides four essential commands for ticket management. 
 
 ### GitHub Integration
 **Priority:** MEDIUM
-**Tags:** GitHub, Integration
+**Tags:** Auto-extracted
 
-The ticketing system seamlessly integrates with GitHub Issues through a three-step process. First, deploying a ticket to GitHub creates an issue containing the ticket title, detailed description, priority, UUID, and appropriate category/priority labels. Second, the GitHub issue URL is saved within the local ticket, establishing a permanent cross-reference. Third, ticket status updates can be synchronized with GitHub either manually or through the GitHub CLI, maintaining consistency across platforms. This integration expands visibility beyond local development environments to support distributed team collaboration.
+No content available
 
 ### Best Practices
 **Priority:** MEDIUM
-**Tags:** Workflow, Guidelines
+**Tags:** Auto-extracted
 
-Four key practice areas enhance ticketing effectiveness. Prioritization should use meaningful number ranges: 90-100 for critical blockers, 70-89 for high-priority features, 50-69 for medium-priority tasks, 30-49 for low-priority enhancements, and 1-29 for nice-to-have improvements. Ticket creation benefits from specific titles, comprehensive descriptions, appropriate task granularity, and accurate priority assignment. Workflow execution should follow category-specific steps sequentially while maintaining current status and documenting blockers. GitHub integration works best when important tickets are deployed for team visibility, progress is regularly synchronized, issues facilitate team discussions, and completed tickets trigger issue closure. These practices collectively maximize the value of the ticketing infrastructure.
+No content available
 

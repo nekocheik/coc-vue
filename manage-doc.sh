@@ -93,7 +93,15 @@ generate_docs() {
   for file in doc/*.yml; do
     if [ -f "$file" ]; then
       filename=$(basename "$file")
-      summary=$(jq -r '.summary' "$file")
+      # Utiliser grep pour extraire le résumé de manière plus robuste
+      # Cela fonctionne même si le fichier YAML est mal formaté
+      summary=$(grep -o '"summary":\s*"[^"]*"' "$file" | sed 's/"summary":\s*"\(.*\)"/\1/')
+      
+      # Si grep ne trouve pas de résumé, essayer jq comme fallback
+      if [ -z "$summary" ]; then
+        summary=$(jq -r '.summary' "$file" 2>/dev/null || echo "No summary available")
+      fi
+      
       echo "- $filename: $summary"
     fi
   done

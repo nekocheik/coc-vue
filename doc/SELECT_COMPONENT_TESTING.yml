@@ -15,7 +15,7 @@
       "title": "Testing Methods",
       "priority": "HIGH",
       "tags": ["Testing", "Implementation"],
-      "content": "Two primary testing approaches are available for component verification. The CocCommand interface method involves opening Neovim and executing ':CocCommand vue.selectDemo', which displays a Select component with three predefined options. Alternatively, the VueUISelect command method provides direct component instantiation through ':VueUISelect test_select \"My Select Component\" {\"multi\":false,\"options\":[{\"id\":\"option1\",\"text\":\"Option 1\",\"value\":\"value1\"},{\"id\":\"option2\",\"text\":\"Option 2\",\"value\":\"value2\"},{\"id\":\"option3\",\"text\":\"Option 3\",\"value\":\"value3\"}]}', offering more control over component configuration. For multi-select testing, users can specify {\"multi\":true} in the options parameter."
+      "content": "Two primary testing approaches are available for component verification. The CocCommand interface method involves opening Neovim and executing ':CocCommand vue.selectDemo', which displays a Select component with three predefined options. Alternatively, the VueUISelect command method provides direct component instantiation through ':VueUISelect test_select "My Select Component" {"multi":false,"options":[{"id":"option1","text":"Option 1","value":"value1"},{"id":"option2","text":"Option 2","value":"value2"},{"id":"option3","text":"Option 3","value":"value3"}]}', offering more control over component configuration. For multi-select testing, users can specify {"multi":true} in the options parameter."
     },
     {
       "title": "Keyboard Navigation",
