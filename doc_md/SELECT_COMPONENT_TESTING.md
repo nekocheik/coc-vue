@@ -1,10 +1,50 @@
 # SELECT_COMPONENT_TESTING
-**Path:** 
-**Priority:** 
-**Tags:** 
-**Summary:** 
+**Path:** /docs/SELECT_COMPONENT_TESTING.md
+**Priority:** MEDIUM
+**Tags:** Testing, Components, Documentation
+**Summary:** Manual testing guide for verifying the refactored Select component in the COC-VUE extension, including testing methods, keyboard navigation, event verification, and troubleshooting steps.
 
 ## Sections
 
-*No sections found in this document.*
+### Overview
+**Priority:** HIGH
+**Tags:** Testing, Components
+
+The Select component has undergone refactoring to leverage new core modules (core_state, core_event, core_options, core_keymap, and core_render) while preserving complete behavioral parity with the legacy implementation. This manual testing guide provides structured verification procedures to ensure that the refactored component maintains functionality during the transition. Before testing, users must have Neovim with COC.nvim installed, the COC-VUE extension properly configured, and the refactored Select component integrated into the extension.
+
+### Testing Methods
+**Priority:** HIGH
+**Tags:** Testing, Implementation
+
+Two primary testing approaches are available for component verification. The CocCommand interface method involves opening Neovim and executing ':CocCommand vue.selectDemo', which displays a Select component with three predefined options. Alternatively, the VueUISelect command method provides direct component instantiation through ':VueUISelect test_select "My Select Component" {"multi":false,"options":[{"id":"option1","text":"Option 1","value":"value1"},{"id":"option2","text":"Option 2","value":"value2"},{"id":"option3","text":"Option 3","value":"value3"}]}', offering more control over component configuration. For multi-select testing, users can specify {"multi":true} in the options parameter.
+
+### Keyboard Navigation
+**Priority:** MEDIUM
+**Tags:** Testing, Interaction
+
+The Select component supports six keyboard shortcuts for comprehensive interaction testing: 'j' or 'Down' moves focus to the next option, 'k' or 'Up' moves focus to the previous option, 'Enter' selects the currently focused option, 'Space' toggles selection in multi-select mode, 'Ctrl+Enter' confirms selection in multi-select mode, and 'Esc' cancels or closes the component. These keyboard mappings should provide seamless navigation and selection within the component interface.
+
+### Verifying Event Logs
+**Priority:** MEDIUM
+**Tags:** Testing, Events
+
+To verify proper event emission, testers should open the Select component using either method, interact with it through navigation and selection actions, execute the ':VueUISaveEventLog' command to save the event log, and examine the saved log file (typically located at ~/.local/share/nvim/ui_events_select.json). This verification ensures that all user interactions correctly trigger the appropriate events within the component's event system.
+
+### Troubleshooting
+**Priority:** HIGH
+**Tags:** Testing, Debugging
+
+When the Select component fails to appear, three primary troubleshooting steps should be followed: check the COC log for errors using ':CocCommand workspace.showOutput', ensure that the refactored Select component is properly registered in lua/vue-ui/init.lua, and verify that all core modules are correctly imported in the Select component file. These diagnostic steps help identify common integration issues affecting component instantiation and rendering.
+
+### Expected Behavior
+**Priority:** HIGH
+**Tags:** Testing, Validation
+
+Proper functionality includes six key behaviors: the Select component should open in a new buffer, navigation should work correctly with up/down movement, selection should function with the Enter key, multi-select mode should allow toggling multiple options, events should be properly emitted (verifiable through logs), and the component should close when Esc is pressed. These behaviors collectively validate that the refactored component maintains complete functional parity with its predecessor.
+
+### Reporting Issues
+**Priority:** MEDIUM
+**Tags:** Testing, Documentation
+
+When reporting issues with the refactored Select component, five elements should be included: detailed steps to reproduce the issue, description of the expected behavior, description of the actual observed behavior, COC log output containing error messages, and the event log if available. This structured reporting format ensures that developers receive sufficient information to diagnose and resolve issues effectively.
 

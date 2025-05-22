@@ -48,7 +48,7 @@ Function signature:
 validate_file() {
 
 Usage:
-Example: 259:   validate_file "$file""
+Example: 259:   validate_file \"$file\""
   - title: "validate_section"
     priority: "HIGH"
     tags:
@@ -62,7 +62,7 @@ Function signature:
 validate_section() {
 
 Usage:
-Example: 260:   validate_section "$file" "$section_title""
+Example: 260:   validate_section \"$file\" \"$section_title\""
   - title: "get_confirmation"
     priority: "HIGH"
     tags:

@@ -33,7 +33,7 @@
       "title": "CLI Commands",
       "priority": "MEDIUM",
       "tags": ["CLI", "Workflow"],
-      "content": "The coc-vue-cli provides four essential commands for ticket management. 'ticket:create [category] [priority] [title]' generates new tickets with appropriate templates, as demonstrated in './coc-vue-cli.sh ticket:create feat 90 "Add Modal Component"'. 'ticket:list' displays all tickets across categories, sorted by priority for workload management. 'ticket:status [uuid] [status]' updates development progress with standardized status values (pending, in-progress, review, completed, blocked). 'ticket:deploy [uuid]' integrates with GitHub by creating an issue containing ticket details and establishing bidirectional linkage between local tickets and GitHub tracking."
+      "content": "The coc-vue-cli provides four essential commands for ticket management. 'ticket:create [category] [priority] [title]' generates new tickets with appropriate templates, as demonstrated in './coc-vue-cli.sh ticket:create feat 90 \"Add Modal Component\"'. 'ticket:list' displays all tickets across categories, sorted by priority for workload management. 'ticket:status [uuid] [status]' updates development progress with standardized status values (pending, in-progress, review, completed, blocked). 'ticket:deploy [uuid]' integrates with GitHub by creating an issue containing ticket details and establishing bidirectional linkage between local tickets and GitHub tracking."
     },
     {
       "title": "GitHub Integration",
