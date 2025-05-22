@@ -48,7 +48,7 @@ Function signature:
 validate_file() {
 
 Usage:
-Example: 259:   validate_file \"$file\""
+Example: 147:   validate_file "$file""
   - title: "validate_section"
     priority: "HIGH"
     tags:
@@ -62,7 +62,7 @@ Function signature:
 validate_section() {
 
 Usage:
-Example: 260:   validate_section \"$file\" \"$section_title\""
+Example: 148:   validate_section "$file" "$section_title""
   - title: "get_confirmation"
     priority: "HIGH"
     tags:
@@ -96,9 +96,9 @@ No direct usage examples found in script."
     tags:
       - "Function"
       - "Shell"
-    content: "Generate Markdown files from YAML docs
+    content: "Generate Markdown files from YAML docs using Node.js script
 
-Generate Markdown files from YAML docs
+Generate Markdown files from YAML docs using Node.js script
 
 Function signature:
 generate_md() {
@@ -118,7 +118,7 @@ Function signature:
 delete_block() {
 
 Usage:
-Example: 1123:     delete_block "$1" "$2""
+Example: 1011:     delete_block "$1" "$2""
   - title: "delete_file"
     priority: "HIGH"
     tags:
@@ -132,7 +132,7 @@ Function signature:
 delete_file() {
 
 Usage:
-Example: 1132:     delete_file "$1""
+Example: 1020:     delete_file "$1""
   - title: "update_doc"
     priority: "HIGH"
     tags:
@@ -146,7 +146,7 @@ Function signature:
 update_doc() {
 
 Usage:
-Example: 1142:       update_doc "$1" "$2" "$3""
+Example: 1030:       update_doc "$1" "$2" "$3""
   - title: "set_priority"
     priority: "HIGH"
     tags:
@@ -160,7 +160,7 @@ Function signature:
 set_priority() {
 
 Usage:
-Example: 1154:     set_priority "$1" "$2" "$3""
+Example: 1042:     set_priority "$1" "$2" "$3""
   - title: "set_category"
     priority: "HIGH"
     tags:
@@ -174,7 +174,7 @@ Function signature:
 set_category() {
 
 Usage:
-Example: 1163:     set_category "$1" "$2" "$3""
+Example: 1051:     set_category "$1" "$2" "$3""
   - title: "is_session_active"
     priority: "HIGH"
     tags:
@@ -258,7 +258,7 @@ Function signature:
 list_sections() {
 
 Usage:
-Example: 1180:     list_sections "$1""
+Example: 1068:     list_sections "$1""
   - title: "list_commands"
     priority: "HIGH"
     tags:
@@ -300,7 +300,7 @@ Function signature:
 view_markdown() {
 
 Usage:
-Example: 1191:     view_markdown "$1""
+Example: 1079:     view_markdown "$1""
   - title: "increment_counter"
     priority: "HIGH"
     tags:
@@ -314,7 +314,7 @@ Function signature:
 increment_counter() {
 
 Usage:
-Example: 582:           increment_counter "$filename" "$section_title" "searched""
+Example: 470:           increment_counter "$filename" "$section_title" "searched""
   - title: "search_markdown"
     priority: "HIGH"
     tags:
@@ -328,7 +328,7 @@ Function signature:
 search_markdown() {
 
 Usage:
-Example: 1199:     search_markdown "$1""
+Example: 1087:     search_markdown "$1""
   - title: "view_section"
     priority: "HIGH"
     tags:
@@ -342,7 +342,7 @@ Function signature:
 view_section() {
 
 Usage:
-Example: 1207:     view_section "$1" "$2""
+Example: 1095:     view_section "$1" "$2""
   - title: "show_ranking"
     priority: "HIGH"
     tags:
@@ -412,7 +412,7 @@ Function signature:
 export_context() {
 
 Usage:
-Example: 1227:     export_context "$1""
+Example: 1115:     export_context "$1""
   - title: "document_script"
     priority: "HIGH"
     tags:
