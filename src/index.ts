@@ -2,6 +2,7 @@
 import { workspace, ExtensionContext, commands, window } from 'coc.nvim';
 import { BridgeCore, BridgeMessage, MessageType, bridgeCore } from './bridge/core';
 import { registerBufferCommands } from './commands/bufferCommands';
+import { registerWindowManagerCommands } from './commands/windowManagerCommands';
 import { Select } from './components/select';
 
 // Registry to keep track of active components
@@ -13,6 +14,9 @@ export async function activate(context: ExtensionContext): Promise<void> {
   
   // Initialize the buffer router and register buffer commands
   const { bufferRouter } = registerBufferCommands(context);
+  
+  // Initialize the window manager and register window manager commands
+  registerWindowManagerCommands(context);
   
   try {
     // Force-load the Lua module to ensure commands are registered
@@ -242,15 +246,15 @@ export async function activate(context: ExtensionContext): Promise<void> {
     })
   );
   
-  // Register the vue.showWindowDemo command (newly added)
+  // Register the vue.showWindowDemo command (redirects to windowManager.demoLayout)
   context.subscriptions.push(
     commands.registerCommand('vue.showWindowDemo', async () => {
       try {
         console.log('[COC-VUE] Executing vue.showWindowDemo command');
-        // Removed the unused nvim declaration
         
-        // Display a simple information message for now
-        window.showInformationMessage('Window Demo is not fully implemented yet');
+        // Execute the windowManager.demoLayout command
+        window.showInformationMessage('Launching Window Manager Demo Layout...');
+        await commands.executeCommand('windowManager.demoLayout');
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('[COC-VUE] Error launching Window demo:', errorMessage);
