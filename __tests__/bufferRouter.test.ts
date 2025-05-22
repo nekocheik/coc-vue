@@ -17,8 +17,10 @@ const mockRoute2: BufferRoute = {
   createdAt: 1747915084400
 };
 
-// Create mock event emitter for testing events
+// Create a mock EventEmitter instance for events
 const mockEventEmitter = new EventEmitter();
+// Increase max listeners to avoid warnings
+mockEventEmitter.setMaxListeners(20);
 
 // Mock coc.nvim
 jest.mock('coc.nvim', () => {

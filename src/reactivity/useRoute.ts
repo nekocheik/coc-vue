@@ -20,6 +20,12 @@ export interface RouteWatcherOptions {
   useReactiveRouter?: boolean;
 }
 
+/**
+ * A reactive hook for managing buffer navigation and state in Coc.nvim extensions.
+ * Provides a simple, Vue-like API for creating, switching, and tracking buffer routes.
+ * Leverages the reactive BufferRouter to ensure real-time updates across components.
+ * Implements a clean disposal system to prevent memory leaks and resource mismanagement.
+ */
 export function useRoute(context: ExtensionContext, options: RouteWatcherOptions = {}) {
   // Create a buffer router instance
   const bufferRouter = new BufferRouter(context);

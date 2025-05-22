@@ -19,6 +19,8 @@ const mockRoute2: BufferRoute = {
 
 // Create mock event emitter for testing events
 const mockEventEmitter = new EventEmitter();
+// Increase max listeners to avoid warnings
+mockEventEmitter.setMaxListeners(20);
 
 // Mock coc.nvim
 jest.mock('coc.nvim', () => {

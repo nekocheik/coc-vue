@@ -15,6 +15,10 @@ export function registerBufferCommands(context: ExtensionContext) {
       try {
         // Create a managed buffer for the component
         const id = await bufferRouter.createBuffer(componentPath, options);
+        if (!id) {
+          window.showErrorMessage(`Failed to create buffer for component: ${componentPath}`);
+          return null;
+        }
         
         // Switch to the buffer
         const success = await bufferRouter.switchBuffer(id);
@@ -53,6 +57,10 @@ export function registerBufferCommands(context: ExtensionContext) {
         if (!success) {
           // Buffer doesn't exist yet, create it
           const id = await bufferRouter.createBuffer(nextPath);
+          if (!id) {
+            window.showErrorMessage(`Failed to create buffer for path: ${nextPath}`);
+            return false;
+          }
           success = await bufferRouter.switchBuffer(id);
         }
         

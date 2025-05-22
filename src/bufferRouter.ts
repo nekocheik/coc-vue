@@ -25,7 +25,10 @@ export interface BufferRoute {
 
 /**
  * Class that bridges Lua buffer router with Coc.nvim
- * Provides methods to create, delete, and switch buffers
+ * Provides methods to create, delete, and switch buffers with full reactivity support.
+ * Implements an EventEmitter-based reactive system to notify subscribers of buffer changes.
+ * Handles errors gracefully to ensure UI consistency and prevent crashes.
+ * Core component for buffer management that integrates TypeScript with Lua-based Neovim buffers.
  */
 export class BufferRouter implements Disposable {
   private nvim = workspace.nvim;
@@ -45,6 +48,9 @@ export class BufferRouter implements Disposable {
   };
   
   constructor(context: ExtensionContext) {
+    // Increase max listeners to prevent memory leak warnings
+    this.emitter.setMaxListeners(20);
+    
     // Ensure Lua buffer_router is loaded when this class is instantiated
     this.loadLuaModule();
     
