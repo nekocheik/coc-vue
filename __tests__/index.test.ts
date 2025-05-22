@@ -391,9 +391,9 @@ describe('Extension Entry Point', () => {
       // Act
       await windowCommandHandler();
       
-      // Assert
+      // Assert - updated to match the new implementation
       expect(coc.window.showInformationMessage).toHaveBeenCalledWith(
-        expect.stringContaining('Window Demo is not fully implemented yet')
+        expect.stringContaining('Launching Window Manager Demo Layout')
       );
     });
 
