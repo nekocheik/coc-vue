@@ -40,12 +40,30 @@ export async function activate(context: ExtensionContext): Promise<void> {
     
     // Ensure the Lua module is loaded and commands are registered
     await nvim.command('lua print("[VUE-UI] Loading module from TypeScript activation")');
-    await nvim.command('lua if not package.loaded["vue-ui"] then require("vue-ui") end');
-  await nvim.command('lua if not package.loaded["buffer_router"] then require("buffer_router") end');
-    await nvim.command('lua if not package.loaded["vue-ui.init"] then require("vue-ui.init") end');
     
-    // Verify that the module is loaded and commands are registered
-    await nvim.command('lua print("[VUE-UI] Module loaded: " .. tostring(package.loaded["vue-ui"] ~= nil))');
+    // Rechargement forcé des modules Lua au cas où ils auraient été mal initialisés
+    await nvim.command('lua if package.loaded["vue-ui"] then package.loaded["vue-ui"] = nil end');
+    await nvim.command('lua if package.loaded["buffer_router"] then package.loaded["buffer_router"] = nil end');
+    await nvim.command('lua if package.loaded["vue-ui.init"] then package.loaded["vue-ui.init"] = nil end');
+    await nvim.command('lua if package.loaded["vue-ui.utils.window_manager"] then package.loaded["vue-ui.utils.window_manager"] = nil end');
+    await nvim.command('lua if package.loaded["vue-ui.core.bridge"] then package.loaded["vue-ui.core.bridge"] = nil end');
+    
+    // Chargement explicite de tous les modules Lua nécessaires
+    await nvim.command('lua require("vue-ui")');
+    await nvim.command('lua require("buffer_router")');
+    await nvim.command('lua require("vue-ui.init")');
+    
+    // Chargement explicite des modules de gestion de fenêtres
+    await nvim.command('lua require("vue-ui.utils.window_manager")');
+    await nvim.command('lua require("vue-ui.core.bridge")');
+    
+    // Initialisation forcée du gestionnaire de fenêtres
+    await nvim.command('lua local window_manager = require("vue-ui.utils.window_manager"); window_manager.reset_layout_state(); print("[VUE-UI] Window manager reset and initialized")');
+    
+    // Vérification du chargement des modules essentiels
+    await nvim.command('lua print("[VUE-UI] Module vue-ui loaded: " .. tostring(package.loaded["vue-ui"] ~= nil))');
+    await nvim.command('lua print("[VUE-UI] Module window_manager loaded: " .. tostring(package.loaded["vue-ui.utils.window_manager"] ~= nil))');
+    await nvim.command('lua print("[VUE-UI] Module bridge loaded: " .. tostring(package.loaded["vue-ui.core.bridge"] ~= nil))');
     
     // Log available commands for debugging
     console.log('[COC-VUE] Checking available Neovim commands...');
