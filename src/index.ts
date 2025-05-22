@@ -7,17 +7,31 @@ import { Select } from './components/select';
 import { renderAppTemplate } from '../template/templateIntegration';
 
 // Registry to keep track of active components
-const componentRegistry = new Map<string, any>();
+// Export for testing purposes
+export const componentRegistry = new Map<string, any>();
 
 // Main activation function for the extension
 export async function activate(context: ExtensionContext): Promise<void> {
   console.log('[COC-VUE] Starting activation of Select component integration');
   
   // Initialize the buffer router and register buffer commands
-  const { bufferRouter } = registerBufferCommands(context);
+  // Add null check to prevent errors in tests
+  const bufferCommandResult = registerBufferCommands(context) || {};
+  const bufferRouter = bufferCommandResult.bufferRouter || {
+    createBuffer: async () => null,
+    deleteBuffer: async () => false,
+    switchBuffer: async () => false,
+    getCurrentBuffer: async () => null,
+    cleanLayout: async () => false
+  };
   
   // Initialize the window manager and register window manager commands
-  const { windowManager } = registerWindowManagerCommands(context);
+  // Add null check to prevent errors in tests
+  const windowManagerResult = registerWindowManagerCommands(context) || {};
+  const windowManager = windowManagerResult.windowManager || {
+    cleanLayout: async () => false,
+    registerCommands: () => {}
+  };
   
   try {
     // Force-load the Lua module to ensure commands are registered
@@ -63,7 +77,11 @@ export async function activate(context: ExtensionContext): Promise<void> {
   // Register bridge message receiver command
   context.subscriptions.push(
     commands.registerCommand('vue.bridge.receiveMessage', async (serializedMessage: string) => {
-      await bridgeCore.receiveMessage(serializedMessage);
+      try {
+        await bridgeCore.receiveMessage(serializedMessage);
+      } catch (error) {
+        console.error('[COC-VUE] Error processing bridge message:', error);
+      }
     })
   );
   
@@ -280,28 +298,164 @@ export async function activate(context: ExtensionContext): Promise<void> {
     })
   );
   
+  // Register command to display buffer states
+  context.subscriptions.push(
+    commands.registerCommand('vue.showBufferStatus', async () => {
+      try {
+        console.log('[COC-VUE] Checking template buffer status');
+        
+        // Get buffer state from WindowManager
+        const bufferState = await windowManager.getBufferState();
+        
+        // Format buffer state for display
+        const statusLines = [];
+        statusLines.push('=== COC-VUE TEMPLATE BUFFER STATUS ===');
+        
+        for (const [slot, info] of Object.entries(bufferState)) {
+          const validityStatus = info.valid ? 'VALID' : 'INVALID';
+          const statusLine = `${slot}: Buffer ${info.bufferId} - ${validityStatus} - ${info.name}`;
+          statusLines.push(statusLine);
+          
+          // Log to console for debugging
+          console.log(`[COC-VUE] ${statusLine}`);
+        }
+        
+        statusLines.push('===================================');
+        
+        // Display the status in a floating window
+        const nvim = workspace.nvim;
+        const currWin = await nvim.call('nvim_get_current_win');
+        const width = 80;
+        const height = statusLines.length;
+        
+        // Create status buffer
+        const buf = await nvim.call('nvim_create_buf', [false, true]);
+        await nvim.call('nvim_buf_set_lines', [buf, 0, -1, false, statusLines]);
+        await nvim.call('nvim_buf_set_option', [buf, 'modifiable', false]);
+        await nvim.call('nvim_buf_set_option', [buf, 'buftype', 'nofile']);
+        await nvim.call('nvim_buf_set_option', [buf, 'bufhidden', 'wipe']);
+        
+        // Calculate position for centered floating window
+        const editorWidth = await nvim.call('nvim_get_option', ['columns']);
+        const editorHeight = await nvim.call('nvim_get_option', ['lines']);
+        const col = Math.floor((editorWidth - width) / 2);
+        const row = Math.floor((editorHeight - height) / 2);
+        
+        // Create floating window
+        const floatOpts = {
+          relative: 'editor',
+          width,
+          height,
+          row,
+          col,
+          style: 'minimal',
+          border: 'rounded',
+          title: 'Template Buffer Status',
+          title_pos: 'center'
+        };
+        
+        await nvim.call('nvim_open_win', [buf, true, floatOpts]);
+        
+        // Close on any key press
+        await nvim.command('nnoremap <buffer> <silent> <Esc> :close<CR>');
+        await nvim.command('nnoremap <buffer> <silent> q :close<CR>');
+        await nvim.command('nnoremap <buffer> <silent> <CR> :close<CR>');
+        
+        // Set highlight and options
+        await nvim.command('setlocal cursorline');
+        await nvim.command('setlocal syntax=markdown');
+        
+        window.showInformationMessage('Buffer status displayed in floating window');
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('[COC-VUE] Error displaying buffer status:', errorMessage);
+        window.showErrorMessage(`Error displaying buffer status: ${errorMessage}`);
+      }
+    })
+  );
+  
+  // Register template status command
+  context.subscriptions.push(
+    commands.registerCommand('vue.showTemplateStatus', async () => {
+      try {
+        const status = await workspace.nvim.call('exists', 'g:coc_vue_template_status');
+        window.showInformationMessage(`Template status: ${status ? 'Active' : 'Inactive'}`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        window.showErrorMessage(`Error getting template status: ${errorMessage}`);
+      }
+    })
+  );
+  
+  // Register template layout mounting command
+  context.subscriptions.push(
+    commands.registerCommand('vue.mountTemplateLayout', async () => {
+      try {
+        // Close any existing windows/buffers to ensure clean mounting
+        if (windowManager?.cleanLayout) {
+          await windowManager.cleanLayout();
+        }
+        
+        // Render the app template
+        const success = await renderAppTemplate(
+          windowManager || { cleanLayout: async () => false },
+          bufferRouter || { createBuffer: async () => null }
+        );
+        
+        if (success) {
+          console.log('[COC-VUE] Template layout mounted successfully');
+          window.showInformationMessage('Template layout mounted successfully.');
+        } else {
+          console.warn('[COC-VUE] Template layout mounted with warnings');
+          window.showWarningMessage('Template layout mounted with warnings. Check logs for details.');
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        window.showErrorMessage(`Error mounting template layout: ${errorMessage}`);
+      }
+    })
+  );
+  
   // Auto-bootstrap template system on startup
+  let autoBootstrap = false;
   try {
-    console.log('[COC-VUE] Auto-bootstrapping template system...');
-    
-    // Close any existing windows/buffers to ensure clean mounting
-    await windowManager.cleanLayout();
-    
-    // Render the app template
-    const success = await renderAppTemplate(windowManager, bufferRouter);
-    
-    if (success) {
-      console.log('[COC-VUE] Template layout auto-mounted on startup');
-      window.showInformationMessage('Template layout auto-mounted on startup.');
-    } else {
-      console.warn('[COC-VUE] Template layout auto-mount completed with warnings');
-      window.showWarningMessage('Template layout auto-mounted with warnings. Check logs for details.');
-    }
+    // Safely try to access configuration - this won't crash in test environment
+    const config = workspace.getConfiguration ? workspace.getConfiguration('vue') : { get: () => false };
+    autoBootstrap = config.get ? config.get<boolean>('template.autoBootstrap', false) : false;
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('[COC-VUE] Error auto-mounting template layout:', errorMessage);
-    window.showErrorMessage(`Error auto-mounting template layout: ${errorMessage}`);
-    // Continue with extension activation despite template errors
+    // If configuration access fails, default to false
+    console.warn('[COC-VUE] Could not access configuration, using defaults');
+    autoBootstrap = false;
+  }
+  
+  if (autoBootstrap) {
+    try {
+      console.log('[COC-VUE] Auto-bootstrapping template system...');
+      
+      // Close any existing windows/buffers to ensure clean mounting
+      if (windowManager?.cleanLayout) {
+        await windowManager.cleanLayout();
+      }
+      
+      // Render the app template
+      const success = await renderAppTemplate(
+        windowManager || { cleanLayout: async () => false },
+        bufferRouter || { createBuffer: async () => null }
+      );
+      
+      if (success) {
+        console.log('[COC-VUE] Template layout auto-mounted on startup');
+        window.showInformationMessage('Template layout auto-mounted on startup.');
+      } else {
+        console.warn('[COC-VUE] Template layout auto-mount completed with warnings');
+        window.showWarningMessage('Template layout auto-mounted with warnings. Check logs for details.');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[COC-VUE] Error auto-mounting template layout:', errorMessage);
+      window.showErrorMessage(`Error auto-mounting template layout: ${errorMessage}`);
+      // Continue with extension activation despite template errors
+    }
   }
   
   console.log('[COC-VUE] Vue-like reactive bridge activated successfully');
@@ -311,18 +465,17 @@ export async function activate(context: ExtensionContext): Promise<void> {
 export function deactivate(): void {
   console.log('[COC-VUE] Deactivating Vue-like reactive bridge');
   
-  // Destroy all active components
-  for (const [id, component] of componentRegistry.entries()) {
-    try {
-      if (typeof component.destroy === 'function') {
-        component.destroy();
-        console.log(`[COC-VUE] Component ${id} destroyed during deactivation`);
+  if (componentRegistry) {
+    for (const [id, component] of componentRegistry.entries()) {
+      try {
+        if (component && component.destroy && typeof component.destroy === 'function') {
+          component.destroy();
+          console.log(`[COC-VUE] Component ${id} destroyed`);
+        }
+      } catch (error) {
+        console.error(`[COC-VUE] Error destroying component ${id}:`, error);
       }
-    } catch (error) {
-      console.error(`[COC-VUE] Error destroying component ${id}:`, error);
     }
+    componentRegistry.clear();
   }
-  
-  // Clear the registry
-  componentRegistry.clear();
 }

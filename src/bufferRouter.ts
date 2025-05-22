@@ -278,9 +278,36 @@ export class BufferRouter implements Disposable {
    * @returns Current buffer route or null
    */
   public async getCurrentBuffer(): Promise<BufferRoute | null> {
-    return await this.callLuaMethod<BufferRoute | null>('get_current_buffer');
+    try {
+      return await this.callLuaMethod<BufferRoute | null>('get_current_buffer');
+    } catch (error) {
+      console.error('Error refreshing current buffer:', error);
+      return null;
+    }
   }
   
+  /**
+   * Get information about a specific buffer by ID
+   * @param bufferId - The ID of the buffer to get information for
+   * @returns Buffer route information or null if not found
+   */
+  public async getBufferInfo(bufferId: string): Promise<BufferRoute | null> {
+    try {
+      // Get buffer information from Lua
+      const info = await this.callLuaMethod<BufferRoute | null>('get_buffer_info', bufferId);
+      
+      if (!info) {
+        console.warn(`[BufferRouter] No information available for buffer ${bufferId}`);
+        return null;
+      }
+      
+      return info;
+    } catch (error) {
+      console.error(`[BufferRouter] Error getting buffer info for ${bufferId}:`, error);
+      return null;
+    }
+  }
+
   /**
    * Subscribe to buffer events
    * @param event - Event name to subscribe to

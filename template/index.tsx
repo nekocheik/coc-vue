@@ -25,6 +25,8 @@ import Properties from './components/Properties';
  * @returns VNode The root virtual node tree for the application
  */
 export default function App(): VNode {
+  console.log('[Template] Starting App component rendering');
+  
   // Create the FileExplorer component for the left slot
   const fileExplorerNode = createElement(FileExplorer, {});
   

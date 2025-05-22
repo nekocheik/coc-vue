@@ -15,6 +15,11 @@ import { WindowManager } from '../src/windowManager';
 import { BufferRouter } from '../src/bufferRouter';
 
 /**
+ * The required slots that must be present for a complete layout
+ */
+const REQUIRED_SLOTS = ['left', 'center-top', 'center-bottom', 'right'];
+
+/**
  * Renders the template tree to actual Neovim buffers and windows
  * 
  * @param rootNode The root VNode from the template
@@ -22,25 +27,84 @@ import { BufferRouter } from '../src/bufferRouter';
  * @param bufferRouter The BufferRouter instance
  */
 export async function renderTemplate(
-  rootNode: VNode,
+  _rootNode: VNode, // Not directly used, as we use MountRegistry instead
   windowManager: WindowManager,
   bufferRouter: BufferRouter
 ): Promise<boolean> {
   try {
     console.log('[TemplateIntegration] Rendering template tree');
     
+    // Track buffer creation for each slot
+    const slotBufferMap: Record<string, string> = {};
+    const slotPromises: Promise<string | null>[] = [];
+    
     // Step 1: Process the slots from the MountRegistry
     for (const [slotName, node] of MountRegistry.slots.entries()) {
-      await processSlotNode(slotName, node, windowManager, bufferRouter);
+      // Process each slot
+      const promise = processSlotNode(slotName, node, windowManager, bufferRouter);
+      slotPromises.push(promise);
     }
+    
+    // Wait for all slots to be processed and collect buffer IDs
+    const results = await Promise.all(slotPromises);
+    
+    // Map results to slot names (Map doesn't have forEach with index, so convert to array first)
+    const slotEntries = Array.from(MountRegistry.slots.entries());
+    slotEntries.forEach(([slotName, _node], index) => {
+      const bufferId = results[index];
+      if (bufferId) {
+        slotBufferMap[slotName] = bufferId;
+      }
+    });
+    
+    // Verify all required slots have valid buffers
+    const missingSlots = REQUIRED_SLOTS.filter(slot => !slotBufferMap[slot]);
+    
+    // Check if any required slots are missing
+    if (missingSlots.length > 0) {
+      console.warn(`[TemplateIntegration] Missing buffers for slots: ${missingSlots.join(', ')}`);
+      console.warn('[TemplateIntegration] Will create default buffers for missing slots');
+      
+      // Create default buffers for missing slots
+      for (const slotName of missingSlots) {
+        const defaultPath = `default-${slotName}.vue`;
+        console.log(`[TemplateIntegration] Creating default buffer for ${slotName}: ${defaultPath}`);
+        
+        const bufferId = await bufferRouter.createBuffer(defaultPath, {
+          type: 'default',
+          slot: slotName
+        });
+        
+        if (bufferId) {
+          slotBufferMap[slotName] = bufferId;
+          await windowManager.mountBuffer(slotName as any, bufferId, 'DefaultComponent', 30);
+        } else {
+          console.error(`[TemplateIntegration] Failed to create default buffer for ${slotName}`);
+        }
+      }
+    }
+    
+    // Verify again after creating default buffers
+    const stillMissingSlots = REQUIRED_SLOTS.filter(slot => !slotBufferMap[slot]);
+    if (stillMissingSlots.length > 0) {
+      console.error(`[TemplateIntegration] Still missing buffers for slots: ${stillMissingSlots.join(', ')}. Cannot create layout.`);
+      return false;
+    }
+    
+    // Log the slot-to-buffer mapping
+    console.log('[DEBUG] slotMap:', slotBufferMap);
     
     // Step 2: Process the bars from the MountRegistry
+    const barPromises = [];
     for (const [position, node] of MountRegistry.bars.entries()) {
-      await processBarNode(position, node, windowManager);
+      barPromises.push(processBarNode(position, node, windowManager));
     }
     
+    // Wait for all bars to be processed
+    await Promise.all(barPromises);
+    
     // Step 3: Create the visual window layout
-    console.log('[TemplateIntegration] Creating window layout');
+    console.log('[TemplateIntegration] Creating window layout with verified buffers');
     const success = await windowManager.createLayout();
     
     return success;
@@ -57,13 +121,14 @@ export async function renderTemplate(
  * @param node The VNode to process
  * @param windowManager The WindowManager instance
  * @param bufferRouter The BufferRouter instance
+ * @returns The buffer ID if successful, null otherwise
  */
 async function processSlotNode(
   slotName: string,
   node: VNode,
   windowManager: WindowManager,
   bufferRouter: BufferRouter
-): Promise<void> {
+): Promise<string | null> {
   try {
     console.log(`[TemplateIntegration] Processing slot: ${slotName}`);
     
@@ -71,7 +136,7 @@ async function processSlotNode(
     const componentNode = node.children[0];
     if (!componentNode) {
       console.warn(`[TemplateIntegration] No component found for slot ${slotName}`);
-      return;
+      return null;
     }
     
     // Create a buffer for the component
@@ -88,15 +153,19 @@ async function processSlotNode(
     
     if (!bufferId) {
       console.error(`[TemplateIntegration] Failed to create buffer for ${slotName}`);
-      return;
+      return null;
     }
     
     // Mount the buffer in the slot
-    const size = node.props.size || 30; // Default size
+    const size = node.props?.size || 30; // Default size
     await windowManager.mountBuffer(slotName as any, bufferId, componentType, size);
+    
+    // Return the buffer ID for tracking
+    return bufferId;
     
   } catch (error) {
     console.error(`[TemplateIntegration] Error processing slot ${slotName}:`, error);
+    return null;
   }
 }
 
@@ -164,8 +233,8 @@ export async function renderAppTemplate(
   bufferRouter: BufferRouter
 ): Promise<boolean> {
   try {
-    // Dynamically import the App component - specify .tsx extension explicitly
-    const { default: App } = await import('./index.tsx');
+    // Dynamically import the App component without extension (webpack will resolve it)
+    const { default: App } = await import('./index');
     
     // Create the App VNode
     const appNode = App();

@@ -1,4 +1,4 @@
-import { Disposable } from 'coc.nvim';
+import { Disposable, workspace } from 'coc.nvim';
 import { BufferRouter, BufferRoute } from './bufferRouter';
 import { reactive } from './reactivity';
 
@@ -174,7 +174,145 @@ export class WindowManager implements Disposable {
   public hasMount(slot: WindowSlot): boolean {
     return this.slots[slot] !== null;
   }
+  
+  /**
+   * Set content for a bar (top or bottom)
+   * @param position The position of the bar ('top' or 'bottom')
+   * @param content Array of content strings to display in the bar
+   * @returns True if content was set, false otherwise
+   */
+  public setBarContent(position: 'top' | 'bottom', content: string[]): boolean {
+    try {
+      console.log(`[WindowManager] Setting ${position} bar content:`, content);
+      
+      // Get the bar slot name
+      const barSlot = `bar-${position}` as WindowSlot;
+      
+      // Check if there's a buffer mounted in this bar slot
+      const barMount = this.slots[barSlot];
+      if (!barMount || !barMount.bufferId) {
+        console.warn(`[WindowManager] No buffer mounted in ${barSlot}, cannot set content`);
+        return false;
+      }
+      
+      // Use a background process to update the buffer content when possible
+      setTimeout(async () => {
+        try {
+          const nvim = workspace.nvim;
+          const bufferId = parseInt(barMount.bufferId, 10);
+          
+          // Check if buffer is still valid
+          const isValid = await nvim.call('nvim_buf_is_valid', [bufferId]);
+          if (!isValid) {
+            console.warn(`[WindowManager] Buffer ${bufferId} is no longer valid when setting bar content`);
+            return;
+          }
+          
+          // Make buffer modifiable
+          await nvim.call('nvim_buf_set_option', [bufferId, 'modifiable', true]);
+          
+          // Set buffer content
+          await nvim.call('nvim_buf_set_lines', [bufferId, 0, -1, false, content]);
+          
+          // Make buffer unmodifiable again
+          await nvim.call('nvim_buf_set_option', [bufferId, 'modifiable', false]);
+          await nvim.call('nvim_buf_set_option', [bufferId, 'modified', false]);
+          
+          console.log(`[WindowManager] Successfully set ${position} bar content`);
+        } catch (error) {
+          console.error(`[WindowManager] Error setting ${position} bar content:`, error);
+        }
+      }, 10);
+      
+      return true;
+    } catch (error) {
+      console.error(`[WindowManager] Error in setBarContent for ${position}:`, error);
+      return false;
+    }
+  }
 
+  /**
+   * Refresh a specific buffer content
+   * @param bufferId The ID of the buffer to refresh
+   * @returns Promise that resolves to true if refresh was successful
+   */
+  public async refreshBuffer(bufferId: string): Promise<boolean> {
+    try {
+      console.log(`[WindowManager] Refreshing buffer: ${bufferId}`);
+      const nvim = workspace.nvim;
+      
+      // Verify buffer exists and is valid
+      const isValid = await nvim.call('nvim_buf_is_valid', [parseInt(bufferId, 10)]);
+      if (!isValid) {
+        console.warn(`[WindowManager] Buffer ${bufferId} is not valid, cannot refresh`);
+        return false;
+      }
+      
+      // Find which slot this buffer is mounted in
+      let targetSlot: WindowSlot | null = null;
+      let component = '';
+      
+      for (const [slot, mount] of Object.entries(this.slots)) {
+        if (mount && mount.bufferId === bufferId) {
+          targetSlot = slot as WindowSlot;
+          component = mount.component;
+          break;
+        }
+      }
+      
+      if (!targetSlot) {
+        console.warn(`[WindowManager] Buffer ${bufferId} is not mounted in any slot`);
+        return false;
+      }
+      
+      // Get the buffer's path and query if available
+      const bufferInfo = await this.bufferRouter.getBufferInfo(bufferId);
+      if (!bufferInfo) {
+        console.warn(`[WindowManager] No info available for buffer ${bufferId}`);
+        return false;
+      }
+      
+      // For most reliable refresh, create a new buffer and swap it
+      const newBufferId = await this.bufferRouter.createBuffer(
+        bufferInfo.path, 
+        bufferInfo.query || {}
+      );
+      
+      if (!newBufferId) {
+        console.error(`[WindowManager] Failed to create new buffer for refresh`);
+        return false;
+      }
+      
+      // Mount the new buffer in the same slot
+      const size = this.slots[targetSlot]?.size;
+      await this.mountBuffer(targetSlot, newBufferId, component, size);
+      
+      // Close the old buffer
+      try {
+        // Allow some time for the swap to complete
+        setTimeout(async () => {
+          try {
+            // Delete the old buffer if it's still valid
+            const stillValid = await nvim.call('nvim_buf_is_valid', [parseInt(bufferId, 10)]);
+            if (stillValid) {
+              await this.bufferRouter.deleteBuffer(bufferId);
+            }
+          } catch (deleteError) {
+            console.warn(`[WindowManager] Error during cleanup of old buffer:`, deleteError);
+          }
+        }, 100);
+      } catch (closeError) {
+        // Non-critical error, just log it
+        console.warn(`[WindowManager] Error closing old buffer:`, closeError);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error(`[WindowManager] Error refreshing buffer ${bufferId}:`, error);
+      return false;
+    }
+  }
+  
   /**
    * Update route information for all mounted buffers
    * @private
@@ -203,6 +341,295 @@ export class WindowManager implements Disposable {
    */
   public getReactiveSlots(): Record<WindowSlot, WindowBufferMount | null> {
     return this.slots;
+  }
+  
+  /**
+   * Create a fallback buffer with default content
+   * @param slotName The name of the slot
+   * @returns Promise resolving to buffer ID (as string) or null if creation failed
+   * @private
+   */
+  private async createFallbackBuffer(slotName: string): Promise<string | null> {
+    try {
+      const nvim = workspace.nvim;
+      
+      // Create a new buffer (listed=false, scratch=true)
+      const bufferId = await nvim.call('nvim_create_buf', [false, true]);
+      
+      // Generate default content based on slot
+      const content = [
+        `===== COC-VUE FALLBACK BUFFER =====`,
+        `Slot: ${slotName}`,
+        `Created: ${new Date().toISOString()}`,
+        ``,
+        `This is a fallback buffer created automatically by the template system.`,
+        `The original buffer was invalid or unavailable.`,
+        ``,
+        `===== END OF FALLBACK BUFFER =====`
+      ];
+      
+      // Set buffer content
+      await nvim.call('nvim_buf_set_lines', [bufferId, 0, -1, false, content]);
+      
+      // Set buffer name
+      await nvim.call('nvim_buf_set_name', [bufferId, `coc-vue://fallback/${slotName}`]);
+      
+      // Set buffer options
+      await nvim.call('nvim_buf_set_option', [bufferId, 'modifiable', false]);
+      await nvim.call('nvim_buf_set_option', [bufferId, 'buftype', 'nofile']);
+      
+      console.log(`[WindowManager] Created fallback buffer ${bufferId} for slot ${slotName}`);
+      return bufferId.toString();
+    } catch (error) {
+      console.error(`[WindowManager] Error creating fallback buffer for ${slotName}:`, error);
+      return null;
+    }
+  }
+  
+  /**
+   * Validate buffer and replace with fallback if invalid
+   * @param bufferId The buffer ID to validate
+   * @param slotName The name of the slot this buffer belongs to
+   * @returns Promise resolving to a valid buffer ID or null if not possible
+   * @private
+   */
+  private async validateBuffer(bufferId: string, slotName: string): Promise<string | null> {
+    try {
+      const nvim = workspace.nvim;
+      const bufId = parseInt(bufferId, 10);
+      
+      // Check if buffer is valid
+      const isValid = await nvim.call('nvim_buf_is_valid', [bufId]);
+      
+      if (isValid) {
+        // Get buffer name for logging
+        let bufferName = '<unknown>';
+        try {
+          bufferName = await nvim.call('nvim_buf_get_name', [bufId]);
+        } catch (e) {
+          // Ignore errors when getting buffer name
+        }
+        
+        console.log(`[WindowManager] Buffer ${bufferId} (${bufferName}) for slot ${slotName} is VALID`);
+        return bufferId;
+      } else {
+        console.warn(`[WindowManager] Buffer ${bufferId} for slot ${slotName} is INVALID, creating fallback`);
+        
+        // Create a fallback buffer
+        const fallbackId = await this.createFallbackBuffer(slotName);
+        if (fallbackId) {
+          // Update the slot mount with the new buffer ID
+          if (this.slots[slotName as WindowSlot]) {
+            this.slots[slotName as WindowSlot]!.bufferId = fallbackId;
+          }
+          return fallbackId;
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error(`[WindowManager] Error validating buffer ${bufferId} for slot ${slotName}:`, error);
+      return null;
+    }
+  }
+  
+  /**
+   * Get the current state of all template buffers
+   * @returns Record mapping slots to buffer details
+   */
+  public async getBufferState(): Promise<Record<string, {bufferId: string, valid: boolean, name: string}>> {
+    const state: Record<string, {bufferId: string, valid: boolean, name: string}> = {};
+    const nvim = workspace.nvim;
+    
+    for (const [slot, mount] of Object.entries(this.slots)) {
+      if (mount && mount.bufferId) {
+        try {
+          const bufId = parseInt(mount.bufferId, 10);
+          const valid = await nvim.call('nvim_buf_is_valid', [bufId]);
+          let name = '<unknown>';
+          
+          try {
+            if (valid) {
+              name = await nvim.call('nvim_buf_get_name', [bufId]);
+            }
+          } catch (e) {
+            // Ignore errors getting buffer name
+          }
+          
+          state[slot] = {
+            bufferId: mount.bufferId,
+            valid,
+            name
+          };
+        } catch (e) {
+          state[slot] = {
+            bufferId: mount.bufferId,
+            valid: false,
+            name: '<error checking>'
+          };
+        }
+      } else {
+        state[slot] = {
+          bufferId: 'none',
+          valid: false,
+          name: '<not mounted>'
+        };
+      }
+    }
+    
+    return state;
+  }
+  
+  /**
+   * Create the actual visual layout using the configured slots
+   * This calls the Lua window manager to create the layout based on current slots
+   * @returns Promise that resolves to true if layout was created successfully
+   */
+  public async createLayout(): Promise<boolean> {
+    try {
+      console.log('[WindowManager] Creating visual layout from slots');
+      const nvim = workspace.nvim;
+      
+      // Create a buffer map from the current slots
+      const bufferMap: Record<string, string> = {};
+      
+      // Required slots for a complete layout
+      const requiredSlots = ['slot-left', 'slot-center-top', 'slot-center-bottom', 'slot-right'];
+      let missingSlots: string[] = [];
+      
+      // Convert slots to a format the Lua code can understand
+      for (const [slot, mount] of Object.entries(this.slots)) {
+        if (mount && mount.bufferId) {
+          bufferMap[slot] = mount.bufferId;
+        } else if (requiredSlots.includes(slot)) {
+          missingSlots.push(slot);
+        }
+      }
+      
+      // Check if any required slots are missing
+      if (missingSlots.length > 0) {
+        console.warn(`[WindowManager] Missing buffers for required slots: ${missingSlots.join(', ')}`);
+      }
+      
+      // Skip if no buffers are mounted
+      if (Object.keys(bufferMap).length === 0) {
+        console.warn('[WindowManager] No buffers mounted, skipping layout creation');
+        return false;
+      }
+      
+      // Log the initial slot-to-buffer mapping for debugging
+      console.log('[DEBUG] Initial buffer mapping:', bufferMap);
+      
+      // Validate all buffers and replace invalid ones with fallbacks
+      const validationPromises: Array<Promise<{slot: string, bufferId: string | null}>> = [];
+      
+      for (const [slot, bufferId] of Object.entries(bufferMap)) {
+        validationPromises.push(
+          this.validateBuffer(bufferId, slot).then(validId => ({
+            slot,
+            bufferId: validId
+          }))
+        );
+      }
+      
+      // Wait for all buffer validations to complete
+      const validationResults = await Promise.all(validationPromises);
+      
+      // Update the buffer map with validated buffers
+      const validatedBufferMap: Record<string, string> = {};
+      let hasInvalidBuffers = false;
+      
+      for (const result of validationResults) {
+        if (result.bufferId) {
+          validatedBufferMap[result.slot] = result.bufferId;
+        } else {
+          console.error(`[WindowManager] Failed to get valid buffer for slot ${result.slot}`);
+          hasInvalidBuffers = true;
+        }
+      }
+      
+      // If any buffers are still invalid, abort layout creation
+      if (hasInvalidBuffers) {
+        console.error('[WindowManager] Some buffers are still invalid after validation, aborting layout creation');
+        return false;
+      }
+      
+      // Log the validated slot-to-buffer mapping
+      console.log('[DEBUG] Validated buffer mapping:', validatedBufferMap);
+      
+      // Convert the validated buffer map to Lua format
+      const luaBufferMap = Object.entries(validatedBufferMap)
+        .map(([slot, bufferId]) => `['${slot}'] = ${bufferId}`)
+        .join(', ');
+      
+      // Call the Lua function to create the layout with validated buffers
+      await nvim.command(
+        `lua 
+        local buffers = {${luaBufferMap}}
+        -- Add validation in Lua
+        local valid_buffers = {}
+        for slot, buf_id in pairs(buffers) do
+          if vim.api.nvim_buf_is_valid(buf_id) then
+            valid_buffers[slot] = buf_id
+            print(string.format("[window_manager] Buffer %d for slot %s is valid", buf_id, slot))
+          else
+            print(string.format("[window_manager] ERROR: Buffer %d for slot %s is invalid in Lua layer", buf_id, slot))
+            return false
+          end
+        end
+        
+        if next(valid_buffers) == nil then
+          print("[window_manager] ERROR: No valid buffers available for layout creation")
+          return false
+        end
+        
+        require('vue-ui.utils.window_manager').create_layout(valid_buffers)
+        `
+      );
+      
+      // Setup bar content if bars are present (with validation)
+      const barTop = validatedBufferMap['bar-top'];
+      const barBottom = validatedBufferMap['bar-bottom'];
+      
+      if (barTop && barBottom) {
+        console.log('[WindowManager] Setting up both bars');
+        await nvim.command(`
+          lua
+          local top_valid = vim.api.nvim_buf_is_valid(${barTop})
+          local bottom_valid = vim.api.nvim_buf_is_valid(${barBottom})
+          
+          if top_valid and bottom_valid then
+            require('vue-ui.utils.window_manager').setup_bar_content(${barTop}, ${barBottom})
+          elseif top_valid then
+            require('vue-ui.utils.window_manager').setup_bar_content(${barTop}, nil)
+          elseif bottom_valid then
+            require('vue-ui.utils.window_manager').setup_bar_content(nil, ${barBottom})
+          end
+        `);
+      } else if (barTop) {
+        console.log('[WindowManager] Setting up top bar only');
+        await nvim.command(`
+          lua
+          if vim.api.nvim_buf_is_valid(${barTop}) then
+            require('vue-ui.utils.window_manager').setup_bar_content(${barTop}, nil)
+          end
+        `);
+      } else if (barBottom) {
+        console.log('[WindowManager] Setting up bottom bar only');
+        await nvim.command(`
+          lua
+          if vim.api.nvim_buf_is_valid(${barBottom}) then
+            require('vue-ui.utils.window_manager').setup_bar_content(nil, ${barBottom})
+          end
+        `);
+      }
+      
+      console.log('[WindowManager] Layout created successfully with validated buffers');
+      return true;
+    } catch (error) {
+      console.error('[WindowManager] Error creating layout:', error);
+      return false;
+    }
   }
 
   /**
