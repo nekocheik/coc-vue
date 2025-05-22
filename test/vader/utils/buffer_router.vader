@@ -1,0 +1,160 @@
+" buffer_router.vader - Test suite for the buffer routing system
+
+Before (Setup test environment):
+  " Load the buffer_router module
+  lua require('buffer_router')
+  " Store reference to original buffers
+  let g:original_buffers = getbufinfo()
+  " Create a test state object to track created buffers for cleanup
+  let g:test_state = {'buffer_ids': []}
+
+After (Cleanup test environment):
+  " Delete all test buffers created during tests
+  for id in g:test_state.buffer_ids
+    lua require('buffer_router'):delete_buffer(vim.api.nvim_eval('id'))
+  endfor
+  " Reset variables
+  unlet g:test_state
+
+Execute (Buffer Creation):
+  " Test creating a buffer with a simple path
+  let path = '/test/path/simple'
+  let buffer_id = luaeval("require('buffer_router'):create_buffer(_A)", path)
+  
+  " Verify buffer was created and ID is returned
+  Assert !empty(buffer_id), 'Buffer ID should not be empty'
+  let g:test_state.buffer_ids += [buffer_id]
+  
+  " Test creating a buffer with path and query
+  let path_with_query = '/test/path/with/query'
+  let query = 'foo=bar&baz=qux'
+  let buffer_id_with_query = luaeval("require('buffer_router'):create_buffer(_A[1], _A[2])", [path_with_query, query])
+  
+  " Verify buffer with query was created
+  Assert !empty(buffer_id_with_query), 'Buffer ID with query should not be empty'
+  let g:test_state.buffer_ids += [buffer_id_with_query]
+  
+  " Verify the buffer properties via get_current_buffer
+  call luaeval("require('buffer_router'):switch_buffer(_A)", buffer_id_with_query)
+  let current_buffer = luaeval("require('buffer_router'):get_current_buffer()")
+  
+  AssertEqual path_with_query, current_buffer.path, 'Buffer path should match'
+  AssertEqual query, current_buffer.query_string, 'Buffer query string should match'
+  AssertEqual 'bar', current_buffer.query.foo, 'Query parameters should be parsed correctly'
+  AssertEqual 'qux', current_buffer.query.baz, 'Query parameters should be parsed correctly'
+
+Execute (Buffer Deletion):
+  " Create a buffer to delete
+  let path = '/test/path/to/delete'
+  let buffer_id = luaeval("require('buffer_router'):create_buffer(_A)", path)
+  let g:test_state.buffer_ids += [buffer_id]
+  
+  " Verify buffer exists before deletion
+  let success = luaeval("require('buffer_router'):switch_buffer(_A)", buffer_id)
+  Assert success, 'Should be able to switch to buffer before deletion'
+  
+  " Delete the buffer
+  let deletion_success = luaeval("require('buffer_router'):delete_buffer(_A)", buffer_id)
+  Assert deletion_success, 'Buffer deletion should succeed'
+  
+  " Verify buffer no longer exists
+  let switch_result = luaeval("require('buffer_router'):switch_buffer(_A)", buffer_id)
+  Assert !switch_result, 'Should not be able to switch to deleted buffer'
+
+Execute (Buffer Switching by ID):
+  " Create multiple buffers
+  let path1 = '/test/switch/by/id/path1'
+  let path2 = '/test/switch/by/id/path2'
+  
+  let buffer_id1 = luaeval("require('buffer_router'):create_buffer(_A)", path1)
+  let buffer_id2 = luaeval("require('buffer_router'):create_buffer(_A)", path2)
+  
+  let g:test_state.buffer_ids += [buffer_id1, buffer_id2]
+  
+  " Switch to buffer by ID and verify
+  let switch_success1 = luaeval("require('buffer_router'):switch_buffer(_A)", buffer_id1)
+  Assert switch_success1, 'Switching to buffer 1 by ID should succeed'
+  
+  let current = luaeval("require('buffer_router'):get_current_buffer()")
+  AssertEqual buffer_id1, current.id, 'Current buffer ID should match after switch'
+  
+  " Switch to another buffer by ID
+  let switch_success2 = luaeval("require('buffer_router'):switch_buffer(_A)", buffer_id2)
+  Assert switch_success2, 'Switching to buffer 2 by ID should succeed'
+  
+  let current = luaeval("require('buffer_router'):get_current_buffer()")
+  AssertEqual buffer_id2, current.id, 'Current buffer ID should match after second switch'
+
+Execute (Buffer Switching by Path):
+  " Create buffers with distinct paths
+  let path1 = '/test/switch/by/path/buffer1'
+  let path2 = '/test/switch/by/path/buffer2'
+  let query = 'param=value'
+  
+  let buffer_id1 = luaeval("require('buffer_router'):create_buffer(_A)", path1)
+  let buffer_id2 = luaeval("require('buffer_router'):create_buffer(_A[1], _A[2])", [path2, query])
+  
+  let g:test_state.buffer_ids += [buffer_id1, buffer_id2]
+  
+  " Switch to buffer by path (without query) and verify
+  let switch_success1 = luaeval("require('buffer_router'):switch_buffer(_A)", path1)
+  Assert switch_success1, 'Switching to buffer by path should succeed'
+  
+  let current = luaeval("require('buffer_router'):get_current_buffer()")
+  AssertEqual path1, current.path, 'Current buffer path should match after switch by path'
+  
+  " Switch to buffer by full path (with query) and verify
+  let full_path2 = path2 . '?' . query
+  let switch_success2 = luaeval("require('buffer_router'):switch_buffer(_A)", full_path2)
+  Assert switch_success2, 'Switching to buffer by full path with query should succeed'
+  
+  let current = luaeval("require('buffer_router'):get_current_buffer()")
+  AssertEqual path2, current.path, 'Current buffer path should match after switch by full path'
+
+Execute (Buffer State Loss on Switch):
+  " Create two buffers
+  let path1 = '/test/state/buffer1'
+  let path2 = '/test/state/buffer2'
+  
+  let buffer_id1 = luaeval("require('buffer_router'):create_buffer(_A)", path1)
+  let buffer_id2 = luaeval("require('buffer_router'):create_buffer(_A)", path2)
+  
+  let g:test_state.buffer_ids += [buffer_id1, buffer_id2]
+  
+  " Switch to first buffer and add content
+  call luaeval("require('buffer_router'):switch_buffer(_A)", buffer_id1)
+  let buf_handle1 = luaeval("_G.buffers[_A].buf_handle", buffer_id1)
+  call nvim_buf_set_lines(buf_handle1, 0, -1, v:true, ['This is test content in buffer 1'])
+  
+  " Switch to second buffer and add different content
+  call luaeval("require('buffer_router'):switch_buffer(_A)", buffer_id2)
+  let buf_handle2 = luaeval("_G.buffers[_A].buf_handle", buffer_id2)
+  call nvim_buf_set_lines(buf_handle2, 0, -1, v:true, ['This is test content in buffer 2'])
+  
+  " Verify the content in each buffer
+  call luaeval("require('buffer_router'):switch_buffer(_A)", buffer_id1)
+  let lines1 = nvim_buf_get_lines(buf_handle1, 0, -1, v:true)
+  AssertEqual ['This is test content in buffer 1'], lines1, 'Buffer 1 should maintain its state'
+  
+  call luaeval("require('buffer_router'):switch_buffer(_A)", buffer_id2)
+  let lines2 = nvim_buf_get_lines(buf_handle2, 0, -1, v:true)
+  AssertEqual ['This is test content in buffer 2'], lines2, 'Buffer 2 should maintain its state'
+
+Execute (Error Handling):
+  " Test invalid path
+  let result = luaeval("pcall(function() require('buffer_router'):create_buffer(nil) end)")
+  Assert !result, 'Creating buffer without path should fail'
+  
+  " Test deleting non-existent buffer
+  let invalid_id = 'non-existent-id'
+  let delete_result = luaeval("require('buffer_router'):delete_buffer(_A)", invalid_id)
+  Assert !delete_result, 'Deleting non-existent buffer should return false'
+  
+  " Test switching to non-existent buffer
+  let switch_result = luaeval("require('buffer_router'):switch_buffer(_A)", invalid_id)
+  Assert !switch_result, 'Switching to non-existent buffer should return false'
+  
+  " Test getting current buffer without having one
+  let switched = luaeval("_G.current_buffer_id = nil")
+  let current = luaeval("require('buffer_router'):get_current_buffer()")
+  Assert current == v:null, 'Getting current buffer without having one should return nil'

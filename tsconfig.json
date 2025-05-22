@@ -4,10 +4,11 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "lib": ["es2018"],
+    "jsx": "react",
     "declaration": true,
     "sourceMap": true,
     "outDir": "./lib",
-    "rootDir": "./src",
+    "rootDir": "./",
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
@@ -26,6 +27,6 @@
     "resolveJsonModule": true,
     "isolatedModules": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "lib", "**/*.test.ts", ".legacy_ts_tests"]
+  "include": ["src/**/*", "template/**/*"],
+  "exclude": ["node_modules", "lib", "**/*.test.ts", ".legacy_ts_tests", "__tests__/**/*"]
 }

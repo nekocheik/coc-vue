@@ -493,5 +493,218 @@ describe('VimComponent', () => {
         expect.any(Function)
       );
     });
+    
+    it('should create a buffer with left position', async () => {
+      // Arrange
+      const component = new VimComponent({
+        id: 'test-component',
+        type: 'test',
+        bufferOptions: {
+          position: 'left',
+          width: 40
+        }
+      });
+      
+      // Act
+      await component.mount();
+      
+      // Assert
+      expect(coc.workspace.nvim.call).toHaveBeenCalledWith('nvim_create_buf', [false, true]);
+    });
+    
+    it('should create a buffer with right position', async () => {
+      // Arrange
+      const component = new VimComponent({
+        id: 'test-component',
+        type: 'test',
+        bufferOptions: {
+          position: 'right',
+          width: 40
+        }
+      });
+      
+      // Act
+      await component.mount();
+      
+      // Assert
+      expect(coc.workspace.nvim.call).toHaveBeenCalledWith('nvim_create_buf', [false, true]);
+    });
+    
+    it('should create a buffer with top position', async () => {
+      // Arrange
+      const component = new VimComponent({
+        id: 'test-component',
+        type: 'test',
+        bufferOptions: {
+          position: 'top',
+          height: 5
+        }
+      });
+      
+      // Act
+      await component.mount();
+      
+      // Assert
+      expect(coc.workspace.nvim.call).toHaveBeenCalledWith('nvim_create_buf', [false, true]);
+    });
+    
+    it('should create a buffer with bottom position', async () => {
+      // Arrange
+      const component = new VimComponent({
+        id: 'test-component',
+        type: 'test',
+        bufferOptions: {
+          position: 'bottom',
+          height: 5
+        }
+      });
+      
+      // Act
+      await component.mount();
+      
+      // Assert
+      expect(coc.workspace.nvim.call).toHaveBeenCalledWith('nvim_create_buf', [false, true]);
+    });
+    
+    it('should create a buffer with center position', async () => {
+      // Arrange
+      const component = new VimComponent({
+        id: 'test-component',
+        type: 'test',
+        bufferOptions: {
+          position: 'center',
+          width: 60,
+          height: 20
+        }
+      });
+      
+      // Act
+      await component.mount();
+      
+      // Assert
+      expect(coc.workspace.nvim.call).toHaveBeenCalledWith('nvim_create_buf', [false, true]);
+    });
+    
+    it('should update buffer content with render function', async () => {
+      // Arrange
+      const renderFn = jest.fn().mockReturnValue(['Line 1', 'Line 2']);
+      const component = new VimComponent({
+        id: 'test-component',
+        type: 'test',
+        render: renderFn
+      });
+      
+      // Mount the component
+      await component.mount();
+      
+      // Act
+      await component.updateBuffer();
+      
+      // Assert
+      expect(coc.workspace.nvim.call).toHaveBeenCalledWith(
+        'nvim_buf_set_lines',
+        expect.arrayContaining([expect.anything(), 0, -1, false, ['Line 1', 'Line 2']])
+      );
+    });
+    
+    it('should not update buffer if not mounted', async () => {
+      // Arrange
+      const renderFn = jest.fn().mockReturnValue(['Line 1', 'Line 2']);
+      const component = new VimComponent({
+        id: 'test-component',
+        type: 'test',
+        render: renderFn
+      });
+      
+      // Act - Don't mount first
+      await component.updateBuffer();
+      
+      // Assert
+      expect(coc.workspace.nvim.call).not.toHaveBeenCalledWith(
+        'nvim_buf_set_lines',
+        expect.anything()
+      );
+    });
+    
+    it('should call onUpdated hook during buffer update', async () => {
+      // Arrange
+      const onUpdatedFn = jest.fn();
+      const renderFn = jest.fn().mockReturnValue(['Line 1', 'Line 2']);
+      const component = new VimComponent({
+        id: 'test-component',
+        type: 'test',
+        render: renderFn,
+        onUpdated: onUpdatedFn
+      });
+      
+      // Mount the component
+      await component.mount();
+      
+      // Act
+      await component.updateBuffer();
+      
+      // Assert
+      expect(onUpdatedFn).toHaveBeenCalled();
+    });
+    
+    it('should handle errors during window closing in destroy', async () => {
+      // Arrange
+      const component = new VimComponent({
+        id: 'error-component',
+        type: 'test'
+      });
+      
+      // Mock window creation
+      component['_window'] = 999;
+      
+      // Mock nvim.call to throw error on window close
+      const originalCall = coc.workspace.nvim.call;
+      coc.workspace.nvim.call = jest.fn().mockImplementation((method, args) => {
+        if (method === 'nvim_win_close') {
+          throw new Error('Test error closing window');
+        }
+        return originalCall(method, args);
+      });
+      
+      // Act - Should not throw despite the error
+      await component.mount();
+      await component.destroy();
+      
+      // Assert - Should continue despite error
+      expect(bridgeCore.unregisterHandler).toHaveBeenCalled();
+      
+      // Restore original
+      coc.workspace.nvim.call = originalCall;
+    });
+    
+    it('should handle errors during buffer deletion in destroy', async () => {
+      // Arrange
+      const component = new VimComponent({
+        id: 'error-component',
+        type: 'test'
+      });
+      
+      // Mock buffer creation
+      component['_buffer'] = 999;
+      
+      // Mock nvim.command to throw error on buffer deletion
+      const originalCommand = coc.workspace.nvim.command;
+      coc.workspace.nvim.command = jest.fn().mockImplementation((cmd) => {
+        if (cmd.includes('bdelete!')) {
+          throw new Error('Test error deleting buffer');
+        }
+        return originalCommand(cmd);
+      });
+      
+      // Act - Should not throw despite the error
+      await component.mount();
+      await component.destroy();
+      
+      // Assert - Should continue despite error
+      expect(bridgeCore.unregisterHandler).toHaveBeenCalled();
+      
+      // Restore original
+      coc.workspace.nvim.command = originalCommand;
+    });
   });
 });

@@ -8,7 +8,7 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.ts$/,
+        test: /\.tsx?$/,
         loader: 'ts-loader',
         exclude: /node_modules/,
         options: {
@@ -30,7 +30,7 @@ module.exports = {
     new VueLoaderPlugin()
   ],
   resolve: {
-    extensions: ['.ts', '.js', '.vue', '.json'],
+    extensions: ['.ts', '.tsx', '.js', '.vue', '.json'],
     alias: {
       '@': path.resolve(__dirname, '../src')
     }
