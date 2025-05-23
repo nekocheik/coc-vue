@@ -2,6 +2,7 @@
 -- Button component for Vue user interface
 
 local M = {}
+local core_bridge = require('vue-ui.core.bridge')
 local event_bridge = require('vue-ui.utils.event_bridge')
 local render_utils = require('vue-ui.utils.render')
 local validation = require('vue-ui.utils.validation')
@@ -34,11 +35,18 @@ function M.create(id, text, config, callback)
     id = id,
     text = text or "Button",
     config = vim.tbl_deep_extend("force", default_config, config or {}),
-    callback = callback,
+    callback = callback, -- Legacy Lua callback
+    ts_onClick_handler = nil, -- For TypeScript onClick prop
     is_focused = false,
     is_disabled = not (config and config.enabled ~= false)
   }, Button)
   
+  -- Check for TypeScript onClick handler in props (passed via config)
+  if config and config.onClick and type(config.onClick) == "table" and config.onClick.__isCallback == true and type(config.onClick.id) == "string" then
+    button.ts_onClick_handler = config.onClick
+    button.callback = nil -- Prioritize TS handler if present
+  end
+
   -- Register button in global registry
   event_bridge.register_component(id, button)
   
@@ -151,8 +159,16 @@ function Button:click()
     text = self.text
   })
   
-  -- Execute callback if defined
-  if self.callback then
+  -- Execute TypeScript callback if defined via props
+  if self.ts_onClick_handler then
+    local payload = {
+      callbackId = self.ts_onClick_handler.id,
+      args = { { id = self.id, text = self.text } } -- Example event data
+    }
+    local message = core_bridge.create_message(self.id, core_bridge.MESSAGE_TYPE.ACTION, "execute_buffer_callback", payload)
+    core_bridge.sendMessage(message)
+  -- Else, execute legacy Lua callback if defined
+  elseif self.callback then
     self.callback()
   end
   

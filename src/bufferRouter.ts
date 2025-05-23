@@ -1,5 +1,6 @@
 import { ExtensionContext, workspace, Disposable } from 'coc.nvim';
 import { EventEmitter } from 'events';
+import { bridgeCore, BridgeMessage } from './bridge/core'; // Corrected path, removed MessageType
 
 // Import events differently to avoid undefined issues in tests
 let events: any;
@@ -39,6 +40,9 @@ export type BufferUpdate = (string | null | undefined)[];
  * Core component for buffer management that integrates TypeScript with Lua-based Neovim buffers.
  */
 export class BufferRouter implements Disposable {
+  private callbackRegistry: Map<string, (...args: any[]) => void> = new Map();
+  private nextCallbackId = 0;
+
   private nvim = workspace.nvim;
   private disposables: Disposable[] = [];
   private emitter = new EventEmitter();
@@ -67,6 +71,15 @@ export class BufferRouter implements Disposable {
     
     // Initialize the current buffer
     this.refreshCurrentBuffer();
+
+    // Register a handler with bridgeCore to execute callbacks from Lua
+    bridgeCore.registerHandler('execute_buffer_callback', (message: BridgeMessage) => {
+      if (message.payload && typeof message.payload.callbackId === 'string' && Array.isArray(message.payload.args)) {
+        this.executeCallback(message.payload.callbackId, message.payload.args);
+      } else {
+        console.error('[BufferRouter] Invalid payload for execute_buffer_callback:', message.payload);
+      }
+    });
   }
   
   /**
@@ -186,22 +199,63 @@ export class BufferRouter implements Disposable {
    * @param query - Query parameters as object (will be converted to query string)
    * @returns Buffer ID or null if creation failed
    */
+  /**
+   * Register a callback function and return its ID.
+   * @private
+   * @param func - The callback function to register.
+   * @returns The ID of the registered callback.
+   */
+  private registerCallback(func: (...args: any[]) => void): string {
+    const callbackId = `cb_${this.nextCallbackId++}`;
+    this.callbackRegistry.set(callbackId, func);
+    return callbackId;
+  }
+
+  /**
+   * Execute a registered callback by its ID.
+   * This method is called by bridgeCore when Lua requests callback execution.
+   * @param callbackId - The ID of the callback to execute.
+   * @param args - Arguments to pass to the callback function.
+   */
+  public executeCallback(callbackId: string, args: any[]): void {
+    const func = this.callbackRegistry.get(callbackId);
+    if (func) {
+      try {
+        func(...args);
+      } catch (e) {
+        console.error(`[BufferRouter] Error executing callback ${callbackId}:`, e);
+      }
+    } else {
+      console.warn(`[BufferRouter] Callback with ID ${callbackId} not found.`);
+    }
+  }
+
   public async createBuffer(path: string, query?: Record<string, any>): Promise<string | null> {
     try {
       // Convert query object to query string if provided
-      const queryString = query ? 
-        Object.entries(query)
-          .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
-          .join('&') : 
-        undefined;
-        
-      const bufferId = await this.callLuaMethod<string>('create_buffer', path, queryString);
+      const processedQuery: Record<string, any> = {};
+      if (query) {
+        for (const key in query) {
+          if (Object.prototype.hasOwnProperty.call(query, key)) {
+            if (typeof query[key] === 'function' && key.startsWith('on') && key.length > 2 && key[2] === key[2].toUpperCase()) {
+              const callbackId = this.registerCallback(query[key] as (...args: any[]) => void);
+              processedQuery[key] = { __isCallback: true, id: callbackId };
+            } else {
+              // Other props are passed as is. Functions not matching on<Event> convention
+              // will likely become null or be omitted by JSON.stringify in callLuaMethod.
+              processedQuery[key] = query[key];
+            }
+          }
+        }
+      }
+
+      const bufferId = await this.callLuaMethod<string>('create_buffer', path, processedQuery);
       if (bufferId) {
         // Get the full buffer data to emit in the event
         const bufferData = {
           id: bufferId,
           path,
-          query: query || {},
+          query: processedQuery, // Use processedQuery here
           createdAt: Date.now()
         };
         

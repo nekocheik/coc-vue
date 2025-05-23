@@ -10,7 +10,21 @@ local BufferRouter = {}
 _G.buffers = {}
 local current_buffer_id = nil
 
--- Utility to parse query string
+-- Utility to parse JSON query string
+local function parse_query_json(query_json_string)
+  if not query_json_string or query_json_string == "" or query_json_string == "{}" then
+    return {}
+  end
+  
+  local success, decoded_query = pcall(vim.fn.json_decode, query_json_string)
+  if not success then
+    vim.notify("[BufferRouter.lua] Failed to decode query JSON: " .. query_json_string, vim.log.levels.ERROR)
+    return {}
+  end
+  return decoded_query
+end
+
+-- Utility to parse query string (legacy, might be removed or adapted if still needed elsewhere)
 local function parse_query(query_string)
   if not query_string or query_string == "" then
     return {}
@@ -29,9 +43,9 @@ end
 
 -- Create a new buffer with a path and query
 ---@param path string The path for the buffer
----@param query_string string|nil The query string (optional)
+---@param query_json_string string|nil The JSON string representing query parameters (optional)
 ---@return string buffer_id The ID of the created buffer
-function BufferRouter:create_buffer(path, query_string)
+function BufferRouter:create_buffer(path, query_json_string)
   assert(path, "Path is required to create a buffer")
   
   -- Generate a unique ID
@@ -40,8 +54,8 @@ function BufferRouter:create_buffer(path, query_string)
     id = tostring(math.random(100000, 999999))
   end
   
-  -- Parse query if provided
-  local query = parse_query(query_string or "")
+  -- Parse JSON query if provided
+  local query = parse_query_json(query_json_string or "")
   
   -- Create the buffer in Neovim
   local buf = api.nvim_create_buf(false, true)
@@ -50,16 +64,18 @@ function BufferRouter:create_buffer(path, query_string)
   _G.buffers[id] = {
     id = id,
     path = path,
-    query = query,
-    query_string = query_string or "",
+    query = query, -- This is now a Lua table parsed from JSON
+    raw_query_json = query_json_string or "", -- Store the raw JSON string if needed
     buf_handle = buf,
     created_at = os.time()
   }
   
-  -- Set buffer name to path + query
+  -- Set buffer name (simplified, as full JSON might be too long for buffer name)
+  -- Consider using just path or path + a hash/summary of query if needed for uniqueness
   local buffer_name = path
-  if query_string and query_string ~= "" then
-    buffer_name = buffer_name .. "?" .. query_string
+  if query_json_string and query_json_string ~= "" and query_json_string ~= "{}" then
+    -- For simplicity, let's append a marker if query exists, rather than the full JSON
+    buffer_name = buffer_name .. " [q]" 
   end
   api.nvim_buf_set_name(buf, buffer_name)
   
@@ -112,7 +128,9 @@ function BufferRouter:switch_buffer(identifier)
         full_path = full_path .. "?" .. buf.query_string
       end
       
-      if buf.path == identifier or full_path == identifier then
+      -- Matching by full_path might be complex if query_json_string is used for naming
+      -- For now, primarily match by buf.path or expect ID for switching with complex queries.
+      if buf.path == identifier then 
         buffer_info = buf
         break
       end

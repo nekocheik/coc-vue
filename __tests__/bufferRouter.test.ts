@@ -175,7 +175,7 @@ describe('BufferRouter', () => {
     const id = await bufferRouter.createBuffer(mockPath);
     
     expect(workspace.nvim.lua).toHaveBeenCalledWith(
-      `return require('buffer_router'):create_buffer('${mockPath}', nil)` 
+      `return require('buffer_router'):create_buffer('${mockPath}', {})` 
     );
     expect(id).toBe(mockBufferId);
   });

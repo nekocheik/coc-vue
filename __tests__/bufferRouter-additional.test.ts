@@ -306,7 +306,7 @@ describe('BufferRouter Additional Tests', () => {
       
       // Verify Lua was called with the right arguments
       expect(workspace.nvim.lua).toHaveBeenCalledWith(
-        expect.stringContaining("return require('buffer_router'):create_buffer('/test/path', 'param1=value1&param2=value2')")
+        expect.stringContaining("return require('buffer_router'):create_buffer('/test/path', {\"param1\":\"value1\",\"param2\":\"value2\"})")
       );
       
       // Verify result and event emission
