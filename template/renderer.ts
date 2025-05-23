@@ -9,6 +9,7 @@
 // Import types only, no direct dependency on BufferRouter implementation
 import type { BufferUpdate } from '../src/bufferRouter';
 import { VNode as TSXVNode } from './tsxFactory';
+import { componentRegistry } from './registry';
 
 // For dependency injection and testing
 let bufferRouterInstance: {
@@ -42,7 +43,14 @@ export type VNode = TextVNode | ElementVNode;
 /**
  * Convert a TSX factory VNode to a renderer-compatible VNode
  */
-export function convertToRendererVNode(tsxNode: TSXVNode): VNode {
+export function convertToRendererVNode(tsxNode: TSXVNode | null): VNode {
+  if (!tsxNode) {
+    // Return a default element if null
+    return {
+      type: 'TEXT_NODE',
+      content: ''
+    };
+  }
   // For text nodes (special handling)
   if (typeof tsxNode === 'string') {
     return {
@@ -70,6 +78,11 @@ export function convertToRendererVNode(tsxNode: TSXVNode): VNode {
  * Cached buffer lines for computing diffs
  */
 const bufferCache: Record<number, string[]> = {};
+
+/**
+ * Cached vnode trees for computing updates and lifecycle hooks
+ */
+const vnodeCache: Record<number, TSXVNode> = {};
 
 /**
  * Render a VNode tree to an array of strings (buffer lines)
@@ -186,8 +199,9 @@ export function computeDiff(oldLines: string[], newLines: string[]): (string | n
  * 
  * @param bufferId Buffer ID
  * @param newLines New content lines
+ * @param vnode Optional vnode that generated these lines
  */
-export function applyDiff(bufferId: number, newLines: string[]): void {
+export function applyDiff(bufferId: number, newLines: string[], vnode?: TSXVNode): void {
   // Get the current buffer content from cache
   const currentLines = bufferCache[bufferId] || [];
   
@@ -205,7 +219,36 @@ export function applyDiff(bufferId: number, newLines: string[]): void {
     // Update the cache
     bufferCache[bufferId] = [...newLines];
     
-    // Trigger lifecycle hooks for components if needed
-    // This will be implemented when integrating with the registry
+    // Track lifecycle hooks for components
+    const previousVNode = vnodeCache[bufferId];
+    
+    // Process different render scenarios for lifecycle hooks
+    if (vnode) {
+      // Store the new vnode for future reference
+      vnodeCache[bufferId] = vnode;
+      
+      if (previousVNode) {
+        // This is an update - trigger update hooks
+        const componentsWithLifecycle = componentRegistry.getLifecycleComponents();
+        componentsWithLifecycle.forEach(id => {
+          componentRegistry.triggerLifecycle('update', id, vnode, previousVNode);
+        });
+      } else {
+        // This is a first mount - trigger mount hooks
+        const componentsWithLifecycle = componentRegistry.getLifecycleComponents();
+        componentsWithLifecycle.forEach(id => {
+          componentRegistry.triggerLifecycle('mount', id);
+        });
+      }
+    } else if (newLines.length === 0 && currentLines.length > 0) {
+      // Content was cleared - trigger unmount hooks
+      const componentsWithLifecycle = componentRegistry.getLifecycleComponents();
+      componentsWithLifecycle.forEach(id => {
+        componentRegistry.triggerLifecycle('unmount', id);
+      });
+      
+      // Clean up the cache
+      delete vnodeCache[bufferId];
+    }
   }
 }

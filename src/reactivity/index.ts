@@ -19,10 +19,12 @@ interface ReactiveEffect {
   deps: Set<ReactiveEffect>[];
   active: boolean;
   onStop?: () => void;
+  cleanup?: CleanupFn;
 }
 
 // Global state for the reactivity system
 let activeEffect: ReactiveEffect | undefined;
+let activeCleanupFn: ((fn: CleanupFn) => void) | undefined;
 const targetMap = new WeakMap<object, Map<string | symbol, Set<ReactiveEffect>>>();
 
 /**
@@ -50,13 +52,23 @@ function track(target: object, key: string | symbol): void {
 }
 
 /**
+ * Register a cleanup function for the active effect or watch context
+ */
+export function onCleanup(fn: () => void): void {
+  if (activeEffect) {
+    activeEffect.cleanup = fn;
+  } else if (activeCleanupFn) {
+    // If we're in a watch context without an active effect
+    activeCleanupFn(fn);
+  }
+}
+
+/**
  * Trigger updates for a property change
  * @param target Object being modified
  * @param key Property key
- * @param newValue New value
- * @param oldValue Old value
  */
-function trigger(target: object, key: string | symbol, newValue?: any, oldValue?: any): void {
+function trigger(target: object, key: string | symbol): void {
   const depsMap = targetMap.get(target);
   if (!depsMap) return;
   
@@ -74,15 +86,11 @@ function trigger(target: object, key: string | symbol, newValue?: any, oldValue?
   
   // Run all effects
   effects.forEach(effect => {
-    if (effect.onStop) {
-      try {
-        effect.fn();
-      } catch (err) {
-        // TODO: Test coverage - Add test for error handling in effect execution
-        console.error('Error in effect:', err);
-      }
-    } else {
+    try {
       effect.fn();
+    } catch (err) {
+      // Handle errors in all effects
+      console.error('Error in effect:', err);
     }
   });
 }
@@ -106,10 +114,10 @@ export function effect(fn: EffectFn, options: { lazy?: boolean, onStop?: () => v
   }
   // TODO: Test coverage - Add test for lazy option in effect
   
+  // Create a runner function that will execute the effect and return its result
   const runner = () => {
-    if (!_effect.active) return;
-    // TODO: Test coverage - Add test for inactive effect in runner
-    return _run(_effect);
+    if (!_effect.active) return undefined;
+    return _run(_effect); // This should return whatever the effect function returns
   };
   
   runner.effect = _effect;
@@ -192,7 +200,7 @@ export function reactive<T extends object>(target: T): T {
       
       // Only trigger if the value actually changed
       if (oldValue !== value) {
-        trigger(target, key, value, oldValue);
+        trigger(target, key);
       }
       
       return result;
@@ -200,12 +208,12 @@ export function reactive<T extends object>(target: T): T {
     
     deleteProperty(target, key) {
       const hadKey = key in target;
-      const oldValue = (target as any)[key];
+      // Delete the property
       const result = Reflect.deleteProperty(target, key);
       
       // Only trigger if the property existed
       if (hadKey) {
-        trigger(target, key, undefined, oldValue);
+        trigger(target, key);
       }
       
       return result;
@@ -226,9 +234,9 @@ export function ref<T>(value: T): { value: T } {
     },
     set value(newValue: T) {
       if (value !== newValue) {
-        const oldValue = value;
+        // Store old value in variable not used directly but helpful for debugging
         value = newValue;
-        trigger(refObject, 'value', newValue, oldValue);
+        trigger(refObject, 'value');
       }
     }
   };
@@ -266,19 +274,22 @@ export function watch<T>(
   let oldValue: T | undefined;
   let cleanup: CleanupFn | undefined;
   
-  const onCleanup = (fn: CleanupFn) => {
-    // TODO: Test coverage - Add test for cleanup function in watch
+  // Function to register cleanup logic that will run before the next callback execution
+  const registerCleanup = (fn: CleanupFn) => {
     cleanup = fn;
   };
   
+  // Store the onCleanup function for internal use
+  // Make it available to the current effect through the global onCleanup function
+  activeCleanupFn = registerCleanup;
   const job = () => {
     if (cleanup) {
-      // TODO: Test coverage - Add test for cleanup execution in watch
       cleanup();
       cleanup = undefined;
     }
     
     const newValue = source();
+    // Only pass the required parameters to maintain backward compatibility
     callback(newValue, oldValue);
     oldValue = newValue;
   };

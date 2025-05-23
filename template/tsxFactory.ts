@@ -205,8 +205,22 @@ export function createElement(
     const uniqueId = `${nodeId}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     processedProps._nodeId = uniqueId;
     
-    // Register with componentRegistry later (to avoid circular dependencies)
-    // This will be done in the renderer
+    // Register with componentRegistry
+    try {
+      // Dynamically import to avoid circular dependencies
+      const { componentRegistry } = require('./registry');
+      
+      // Register lifecycle hooks but don't trigger mount yet
+      // Mount will be triggered by the renderer
+      componentRegistry.registerLifecycle(uniqueId, {
+        onMount: processedProps.onMount,
+        onUpdate: processedProps.onUpdate,
+        onUnmount: processedProps.onUnmount,
+        events: processedProps.events
+      });
+    } catch (e) {
+      console.error('Error registering component lifecycle hooks:', e);
+    }
   }
   
   return vnode;

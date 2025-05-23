@@ -234,12 +234,16 @@ describe('useRoute', () => {
     const mockBufferRouter = {
       switchBuffer: jest.fn().mockResolvedValue(true),
       getCurrentBuffer: jest.fn().mockResolvedValue({ ...mockRoute, id: 'new-id-after-switch' }),
+      getCurrentBufferSync: jest.fn().mockReturnValue({ ...mockRoute, id: 'new-id-after-switch' }),
+      createBuffer: jest.fn(),
+      deleteBuffer: jest.fn(),
+      refreshCurrentBuffer: jest.fn(),
       on: jest.fn().mockReturnValue({ dispose: jest.fn() }),
       dispose: jest.fn()
     };
     
     // Use the mock implementation
-    (BufferRouter as jest.Mock).mockImplementationOnce(() => mockBufferRouter);
+    (BufferRouter as unknown as jest.Mock).mockImplementationOnce(() => mockBufferRouter);
     
     // Create a hook with the useReactiveRouter option disabled to simplify test
     const routeHook = useRoute(mockContext, { 
@@ -263,7 +267,7 @@ describe('useRoute', () => {
     const mockEmitter = new EventEmitter();
     
     // Mock the BufferRouter implementation for this test
-    (BufferRouter as jest.Mock).mockImplementationOnce(() => ({
+    (BufferRouter as unknown as jest.Mock).mockImplementationOnce(() => ({
       getCurrentBuffer: jest.fn(),
       switchBuffer: jest.fn(),
       createBuffer: jest.fn().mockImplementation(async () => {
@@ -297,18 +301,63 @@ describe('useRoute', () => {
     expect(id).toBe('new-route-id');
   });
 
-  // Skip this test as it relies on event handling that's difficult to test in isolation
-  test.skip('detects buffer changes through Neovim events', async () => {
-    // This test is covered by the integration with the actual Neovim buffer API
-    // in the vader tests
-    expect(true).toBe(true);
+  test('detects buffer changes through Neovim events', async () => {
+    // Create a mock buffer router with EventEmitter capabilities
+    const mockEmitter = new EventEmitter();
+    
+    // Create a proper mock implementation that includes the necessary methods
+    const bufferRouterMock = {
+      getCurrentBuffer: jest.fn().mockResolvedValue(mockRoute),
+      getCurrentBufferSync: jest.fn().mockReturnValue(mockRoute),
+      switchBuffer: jest.fn(),
+      createBuffer: jest.fn(),
+      deleteBuffer: jest.fn(),
+      refreshCurrentBuffer: jest.fn(),
+      // Wire up the on method to use our event emitter
+      on: jest.fn().mockImplementation((event, handler) => {
+        mockEmitter.on(event, handler);
+        return { dispose: jest.fn(() => mockEmitter.removeListener(event, handler)) };
+      }),
+      // Add emit method for testing
+      emit: jest.fn().mockImplementation((event, data) => {
+        mockEmitter.emit(event, data);
+        return true;
+      }),
+      // Store emitter for testing access
+      _emitter: mockEmitter,
+      dispose: jest.fn()
+    };
+    
+    // Replace the actual BufferRouter with our mock
+    (BufferRouter as unknown as jest.Mock).mockImplementationOnce(() => bufferRouterMock);
+    
+    // Create the route hook with reactive router enabled
+    const routeHook = useRoute(mockContext, { 
+      useReactiveRouter: true,
+      initialRoute: null
+    });
+    
+    // Initial route should be null (before events fire)
+    expect(routeHook.route).toBeNull();
+    
+    // Simulate a buffer change event
+    bufferRouterMock.emit(BufferRouter.Events.CURRENT_BUFFER_CHANGED, {
+      oldBuffer: null,
+      newBuffer: mockRoute2
+    });
+    
+    // Route should be updated with the new buffer
+    expect(routeHook.route).toEqual(mockRoute2);
+    
+    // Clean up
+    routeHook.dispose();
   });
   
   test('dispose cleans up all resources', () => {
     const bufferRouterDisposeMock = jest.fn();
     const eventDisposableMock = { dispose: jest.fn() };
     
-    (BufferRouter as jest.Mock).mockImplementationOnce(() => ({
+    (BufferRouter as unknown as jest.Mock).mockImplementationOnce(() => ({
       getCurrentBuffer: jest.fn(),
       switchBuffer: jest.fn(),
       createBuffer: jest.fn(),
