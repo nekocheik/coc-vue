@@ -18,6 +18,10 @@ import Editor from './components/Editor';
 import Console from './components/Console';
 import Properties from './components/Properties';
 
+// We've created a TestComponent for layout testing, but we're not using it now
+// If needed for debugging, uncomment this line
+// import TestComponent from './components/TestComponent';
+
 /**
  * Main application component that defines the full UI layout
  * Each child component is mounted in a specific slot in the Window

@@ -330,8 +330,29 @@ describe('WindowManager', () => {
   });
 
   describe('validateBuffer', () => {
-    it('should validate a valid buffer', async () => {
-      // Act
+    let mockBufferRouter;
+  
+    beforeEach(() => {
+      // Create Jest mocks for buffer router
+      mockBufferRouter = {
+        getBufferInfo: jest.fn(),
+        on: jest.fn().mockReturnValue({ dispose: jest.fn() })
+      };
+      
+      // Set up window manager with mock buffer router
+      windowManager = new WindowManager(mockBufferRouter as any);
+    });
+    
+    it('should return the same buffer ID for valid buffer', async () => {
+      // Arrange
+      mockBufferRouter.getBufferInfo.mockResolvedValue({
+        id: 'buffer-1',
+        path: '/test/path',
+        query: {},
+        createdAt: Date.now(),
+        nvimBufferId: 123
+      });
+      
       const result = await (windowManager as any).validateBuffer('buffer-1', 'slot-test');
       
       // Assert
@@ -492,3 +513,4 @@ describe('WindowManager', () => {
     });
   });
 });
+

@@ -45,7 +45,7 @@ describe('Template System End-to-End Integration', () => {
     // Setup BufferRouter mock with properly typed jest mocks
     bufferRouter = {
       createBuffer: jest.fn().mockImplementation(
-        async (path, query) => {
+        async (path: string, query: any) => {
           const bufferId = `buffer-${path}-${Date.now()}`;
           mockBufferMap.set(bufferId, { id: bufferId, path, query });
           return bufferId;
@@ -55,7 +55,7 @@ describe('Template System End-to-End Integration', () => {
       // Add other methods as needed
       init: jest.fn().mockResolvedValue(true),
       getBufferInfo: jest.fn().mockImplementation(
-        async (bufferId) => mockBufferMap.get(bufferId) || null
+        async (bufferId: string | null) => mockBufferMap.get(bufferId as string) || null
       )
     } as unknown as jest.Mocked<BufferRouter>;
   });
@@ -261,7 +261,9 @@ describe('Template System End-to-End Integration', () => {
     // Manually simulate the creation of these buffers
     for (const path of expectedPaths) {
       const bufferId = await bufferRouter.createBuffer(path);
-      mockBufferMap.set(bufferId, { id: bufferId, path, query: {} });
+      if (bufferId) { // Add null check
+        mockBufferMap.set(bufferId, { id: bufferId, path, query: {} });
+      }
     }
     
     // Get actual paths used
@@ -277,16 +279,16 @@ describe('Template System End-to-End Integration', () => {
     
     // Check buffer mounting to ensure each component went to the right slot
     expect(windowManager.mountBuffer).toHaveBeenCalledWith(
-      'left',
+      'slot-left',
       expect.any(String),
       'FileExplorer',
       expect.any(Number)
     );
     // Map of expected slot to component type
     const slotComponentMap: Record<string, string> = {
-      'left': 'FileExplorer',
-      'center-top': 'Editor',
-      'center-bottom': 'Terminal'
+      'slot-left': 'FileExplorer',
+      'slot-center-top': 'Editor',
+      'slot-center-bottom': 'Terminal'
     };
     
     // Get all mountBuffer calls
@@ -361,8 +363,8 @@ describe('Template System End-to-End Integration', () => {
     const anotherComponentBufferId = await bufferRouter.createBuffer('anothercomponent.vue', { anotherProp: 123 });
     
     // Verify buffers were created with correct props
-    const testBuffer = mockBufferMap.get(testComponentBufferId);
-    const anotherBuffer = mockBufferMap.get(anotherComponentBufferId);
+    const testBuffer = testComponentBufferId ? mockBufferMap.get(testComponentBufferId) : null;
+    const anotherBuffer = anotherComponentBufferId ? mockBufferMap.get(anotherComponentBufferId) : null;
     
     expect(testBuffer).toBeDefined();
     expect(anotherBuffer).toBeDefined();
@@ -467,8 +469,8 @@ describe('Template System End-to-End Integration', () => {
     // Use the buffer ids already created above for verification
     
     // Verify the buffer contents match what we expect
-    const testBuffer = mockBufferMap.get(testComponentBufferId);
-    const anotherBuffer = mockBufferMap.get(anotherComponentBufferId);
+    const testBuffer = testComponentBufferId ? mockBufferMap.get(testComponentBufferId) : null;
+    const anotherBuffer = anotherComponentBufferId ? mockBufferMap.get(anotherComponentBufferId) : null;
     
     expect(testBuffer).toBeDefined();
     expect(anotherBuffer).toBeDefined();

@@ -140,7 +140,10 @@ describe('BufferRouter Additional Tests', () => {
       // Mock successful Lua calls
       workspace.nvim.lua = jest.fn().mockImplementation((command) => {
         if (command.includes('create_buffer')) {
-          return Promise.resolve('test-buffer-id');
+          return Promise.resolve({
+            id: 'test-buffer-id',
+            nvimBufferId: 999
+          });
         } else if (command.includes('switch_buffer')) {
           return Promise.resolve(true);
         } else if (command.includes('delete_buffer')) {
@@ -150,7 +153,8 @@ describe('BufferRouter Additional Tests', () => {
             id: 'test-buffer-id',
             path: '/test/path',
             query: { test: 'value' },
-            createdAt: Date.now()
+            createdAt: Date.now(),
+            nvimBufferId: 999
           });
         }
         return Promise.resolve(null);
@@ -182,10 +186,11 @@ describe('BufferRouter Additional Tests', () => {
       
       // First call succeeds, subsequent calls fail
       let callCount = 0;
-      workspace.nvim.lua = jest.fn().mockImplementation(() => {
+      workspace.nvim.lua = jest.fn().mockImplementation((command) => {
         callCount++;
         if (callCount === 1) {
-          return Promise.resolve('test-buffer-id');
+          // For createBuffer, return the expected object format with id
+          return Promise.resolve({ id: 'test-buffer-id', nvimBufferId: 123 });
         } else {
           return Promise.reject(new Error('Lua method error'));
         }
@@ -298,15 +303,15 @@ describe('BufferRouter Additional Tests', () => {
       const mockQueryObj = { param1: 'value1', param2: 'value2' };
       const expectedQueryString = 'param1=value1&param2=value2';
       
-      // Mock Lua to return a buffer ID
-      workspace.nvim.lua = jest.fn().mockResolvedValue('new-buffer-id');
+      // Mock Lua to return a buffer ID in the expected format
+      workspace.nvim.lua = jest.fn().mockResolvedValue({ id: 'new-buffer-id', nvimBufferId: 456 });
       
       // Call createBuffer with path and query
       const result = await bufferRouter.createBuffer('/test/path', mockQueryObj);
       
       // Verify Lua was called with the right arguments
       expect(workspace.nvim.lua).toHaveBeenCalledWith(
-        expect.stringContaining("return require('buffer_router'):create_buffer('/test/path', {\"param1\":\"value1\",\"param2\":\"value2\"})")
+        expect.stringContaining("return require('buffer_router'):create_buffer('/test/path', {param1 = 'value1', param2 = 'value2'})")
       );
       
       // Verify result and event emission
@@ -435,8 +440,13 @@ describe('BufferRouter Additional Tests', () => {
       const bufferRouter = new BufferRouter(mockContext as ExtensionContext);
       const emitSpy = jest.spyOn(bufferRouter['emitter'], 'emit');
       
-      // Mock Lua to return buffer ID
-      workspace.nvim.lua = jest.fn().mockResolvedValue('test-buffer-id');
+      // Mock Lua to return buffer ID in the expected format
+      workspace.nvim.lua = jest.fn().mockImplementation((command) => {
+        if (command.includes('create_buffer')) {
+          return Promise.resolve({ id: 'test-buffer-id', nvimBufferId: 123 });
+        }
+        return Promise.resolve(null);
+      });
       
       // Create buffer
       await bufferRouter.createBuffer('/test/path', { foo: 'bar' });
@@ -471,8 +481,20 @@ describe('BufferRouter Additional Tests', () => {
       expect(emitSpy).toHaveBeenCalledWith(
         BufferRouter.Events.CURRENT_BUFFER_CHANGED,
         expect.objectContaining({
-          oldBuffer: expect.anything(),
-          newBuffer: expect.anything()
+          // Don't check specific values, just verify the structure
+          oldBuffer: mockBuffer,
+          newBuffer: null
+        })
+      );
+      
+      // It should also be called a second time with different values
+      expect(emitSpy).toHaveBeenCalledWith(
+        BufferRouter.Events.CURRENT_BUFFER_CHANGED,
+        expect.objectContaining({
+          oldBuffer: null,
+          newBuffer: expect.objectContaining({
+            id: mockBuffer2.id
+          })
         })
       );
       

@@ -18,12 +18,12 @@ M.buffers = {}
 
 -- Store sizes for different slots
 M.sizes = {
-  ['left'] = 30,
-  ['center-top'] = 50,
-  ['center-bottom'] = 20,
-  ['right'] = 30,
-  ['bar-top'] = 2,
-  ['bar-bottom'] = 2
+  ['left'] = 25,         -- Left panel width (narrower for better center view)
+  ['center-top'] = 70,    -- Center-top panel height (larger for main editor)
+  ['center-bottom'] = 15, -- Center-bottom panel height (enough for console output)
+  ['right'] = 30,         -- Right panel width (for properties panel)
+  ['bar-top'] = 1,        -- Top bar height (slimmer for menu bar)
+  ['bar-bottom'] = 1      -- Bottom bar height (slimmer for status bar)
 }
 
 -- Logger function to help with debugging

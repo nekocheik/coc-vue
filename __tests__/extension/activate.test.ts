@@ -298,7 +298,8 @@ describe('Extension Activation', () => {
     
     // Assert
     expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Could not access configuration, using defaults')
+      '[COC-VUE] Could not access configuration, using defaults:',
+      expect.any(Error)
     );
   });
   

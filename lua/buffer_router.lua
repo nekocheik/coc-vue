@@ -15,6 +15,11 @@ local function parse_query_json(query_json_string)
   if not query_json_string or query_json_string == "" or query_json_string == "{}" then
     return {}
   end
+  -- Added type check to prevent error if a table is accidentally passed
+  if type(query_json_string) ~= "string" then
+    vim.notify("[BufferRouter.lua] parse_query_json was called with a non-string argument: " .. type(query_json_string), vim.log.levels.WARN)
+    return {} 
+  end
   
   local success, decoded_query = pcall(vim.fn.json_decode, query_json_string)
   if not success then
@@ -43,43 +48,74 @@ end
 
 -- Create a new buffer with a path and query
 ---@param path string The path for the buffer
----@param query_json_string string|nil The JSON string representing query parameters (optional)
+---@param query_params table|string|nil The query parameters. Expected as a Lua table from TypeScript.
+--                                   Can be a URL-like query string from legacy Lua callers (like tests).
 ---@return string buffer_id The ID of the created buffer
-function BufferRouter:create_buffer(path, query_json_string)
+function BufferRouter:create_buffer(path, query_params)
   assert(path, "Path is required to create a buffer")
   
-  -- Generate a unique ID
   local id = tostring(math.random(100000, 999999))
   while _G.buffers[id] do
     id = tostring(math.random(100000, 999999))
   end
   
-  -- Parse JSON query if provided
-  local query = parse_query_json(query_json_string or "")
+  local final_query_table = {}
+  local raw_legacy_query_string = nil -- To store original string if input was string
+
+  if type(query_params) == "table" then
+    final_query_table = query_params
+  elseif type(query_params) == "string" then
+    -- This branch handles legacy callers like test_create_buffer
+    final_query_table = parse_query(query_params) -- Use the legacy URL-like string parser
+    raw_legacy_query_string = query_params 
+  elseif query_params == nil then
+    final_query_table = {} -- Default to empty table if nil
+  else
+    vim.notify("[BufferRouter.lua] create_buffer: query_params is of unhandled type: " .. type(query_params), vim.log.levels.WARN)
+    final_query_table = {}
+  end
   
-  -- Create the buffer in Neovim
   local buf = api.nvim_create_buf(false, true)
   
-  -- Store buffer information
   _G.buffers[id] = {
     id = id,
     path = path,
-    query = query, -- This is now a Lua table parsed from JSON
-    raw_query_json = query_json_string or "", -- Store the raw JSON string if needed
+    query = final_query_table, -- Consistently a Lua table
+    raw_query_string_legacy = raw_legacy_query_string, -- For test assertion or legacy needs
     buf_handle = buf,
     created_at = os.time()
   }
   
-  -- Set buffer name (simplified, as full JSON might be too long for buffer name)
-  -- Consider using just path or path + a hash/summary of query if needed for uniqueness
   local buffer_name = path
-  if query_json_string and query_json_string ~= "" and query_json_string ~= "{}" then
-    -- For simplicity, let's append a marker if query exists, rather than the full JSON
+  if final_query_table and next(final_query_table) ~= nil then
     buffer_name = buffer_name .. " [q]" 
   end
   api.nvim_buf_set_name(buf, buffer_name)
   
-  return id
+  -- Return a table with both id and nvimBufferId for better TS integration
+  return { id = id, nvimBufferId = buf }
+end
+
+-- Get buffer information by ID
+---@param id string The ID of the buffer to get information for
+---@return table|nil buffer_info Information about the buffer, or nil if not found
+function BufferRouter:get_buffer_info(id)
+  if not id then
+    return nil
+  end
+  
+  local buffer = _G.buffers[id]
+  if not buffer then
+    return nil
+  end
+  
+  return {
+    id = buffer.id,
+    path = buffer.path,
+    query = buffer.query,
+    nvimBufferId = buffer.buf_handle,
+    createdAt = buffer.created_at
+  }
 end
 
 -- Delete a buffer by ID
@@ -196,12 +232,20 @@ function BufferRouter:test_create_buffer()
   assert(id, "Buffer ID should be returned")
   assert(_G.buffers[id], "Buffer should be stored")
   assert(_G.buffers[id].path == path, "Path should match")
-  assert(_G.buffers[id].query_string == query, "Query string should match")
+  assert(_G.buffers[id].raw_query_string_legacy == query, "Raw legacy query string should match")
   assert(_G.buffers[id].query.foo == "bar", "Query parameter 'foo' should be parsed")
   assert(_G.buffers[id].query.baz == "qux", "Query parameter 'baz' should be parsed")
   
+  -- Test with nil query
+  local id2 = self:create_buffer("/test/path2", nil)
+  assert(id2, "Buffer ID should be returned with nil query")
+  assert(_G.buffers[id2], "Buffer should be stored with nil query")
+  assert(_G.buffers[id2].path == "/test/path2", "Path should match with nil query")
+  assert(_G.buffers[id2].query == {}, "Query should be empty table with nil query")
+  
   -- Clean up
   self:delete_buffer(id)
+  self:delete_buffer(id2)
   
   print("✓ test_create_buffer passed")
   return true

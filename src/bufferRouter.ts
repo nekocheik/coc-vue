@@ -22,6 +22,7 @@ export interface BufferRoute {
   path: string;
   query: Record<string, any>;
   createdAt: number;
+  nvimBufferId?: number; // Optional Neovim buffer ID for easier validation
 }
 
 /**
@@ -184,21 +185,53 @@ export class BufferRouter implements Disposable {
    * @returns Result from the Lua method
    */
   private async callLuaMethod<T>(method: string, ...args: any[]): Promise<T> {
-    const luaCommand = `return require('buffer_router'):${method}(${args.map(arg => 
-      typeof arg === 'string' ? `'${arg.replace(/'/g, "\\'")}'` : 
-      arg === null || arg === undefined ? 'nil' : 
-      JSON.stringify(arg)
-    ).join(', ')})`;
-    
-    return await this.nvim.lua(luaCommand) as T;
+    const serializeArgForLua = (arg: any): string => {
+      if (typeof arg === 'string') {
+        // Escape single quotes and backslashes for Lua string literals
+        const escaped = arg.replace(/'/g, "\\'").replace(/\\/g, '\\\\');
+        return `'${escaped}'`;
+      }
+      if (arg === null || arg === undefined) {
+        return 'nil';
+      }
+      if (typeof arg === 'boolean') {
+        return arg ? 'true' : 'false';
+      }
+      if (typeof arg === 'number') {
+        return String(arg);
+      }
+      if (Array.isArray(arg)) {
+        return `{${arg.map(serializeArgForLua).join(', ')}}`;
+      }
+      if (typeof arg === 'object') {
+        const L: string[] = [];
+        for (const key in arg) {
+          if (Object.prototype.hasOwnProperty.call(arg, key)) {
+            // Assuming keys are simple identifiers for Lua.
+            // If keys could be complex (e.g., contain spaces or special chars),
+            // they would need to be quoted: `['${key}'] = ${serializeArgForLua(arg[key])}`
+            L.push(`${key} = ${serializeArgForLua(arg[key])}`);
+          }
+        }
+        return `{${L.join(', ')}}`;
+      }
+      // Fallback for unknown types
+      console.warn(`[BufferRouter] Unknown type for Lua serialization: ${typeof arg}`, arg);
+      const escapedFallback = String(arg).replace(/'/g, "\\'").replace(/\\/g, '\\\\');
+      return `'${escapedFallback}'`;
+    };
+
+    const luaArgs = args.map(serializeArgForLua).join(', ');
+    const luaCommand = `return require('buffer_router'):${method}(${luaArgs})`;
+
+    try {
+      return await this.nvim.lua(luaCommand) as T;
+    } catch (error) {
+      console.error(`[BufferRouter] Error executing Lua command: ${luaCommand}`, error);
+      throw error; // Re-throw to be caught by the caller
+    }
   }
-  
-  /**
-   * Create a new buffer with path and query
-   * @param path - Path for the buffer
-   * @param query - Query parameters as object (will be converted to query string)
-   * @returns Buffer ID or null if creation failed
-   */
+
   /**
    * Register a callback function and return its ID.
    * @private
@@ -249,14 +282,16 @@ export class BufferRouter implements Disposable {
         }
       }
 
-      const bufferId = await this.callLuaMethod<string>('create_buffer', path, processedQuery);
-      if (bufferId) {
+      const bufferInfo = await this.callLuaMethod<{id: string, nvimBufferId?: number}>('create_buffer', path, processedQuery);
+      if (bufferInfo && bufferInfo.id) {
+        const bufferId = bufferInfo.id;
         // Get the full buffer data to emit in the event
-        const bufferData = {
+        const bufferData: BufferRoute = {
           id: bufferId,
           path,
           query: processedQuery, // Use processedQuery here
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          nvimBufferId: bufferInfo.nvimBufferId
         };
         
         // Emit event for buffer creation
@@ -264,8 +299,10 @@ export class BufferRouter implements Disposable {
         
         // Refresh current buffer after creation
         await this.refreshCurrentBuffer();
+        
+        return bufferId;
       }
-      return bufferId;
+      return null;
     } catch (error) {
       console.error('Error creating buffer:', error);
       return null;

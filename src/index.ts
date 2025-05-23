@@ -434,48 +434,45 @@ export async function activate(context: ExtensionContext): Promise<void> {
     })
   );
   
-  // Auto-bootstrap template system on startup
+  // Get configuration for auto-bootstrap - safely handle test environment
   let autoBootstrap = false;
   try {
-    // Safely try to access configuration - this won't crash in test environment
-    const config = workspace.getConfiguration ? workspace.getConfiguration('vue') : { get: () => false };
-    autoBootstrap = config.get ? config.get<boolean>('template.autoBootstrap', false) : false;
+    const config = workspace.getConfiguration('vue');
+    if (config && typeof config.get === 'function') {
+      autoBootstrap = config.get<boolean>('template.autoBootstrap', false);
+      console.log(`[COC-VUE] Configuration read: vue.template.autoBootstrap = ${autoBootstrap}`);
+    } else {
+      console.log('[COC-VUE] Configuration not available (test environment)');
+    }
   } catch (error) {
-    // If configuration access fails, default to false
-    console.warn('[COC-VUE] Could not access configuration, using defaults');
-    autoBootstrap = false;
+    console.warn('[COC-VUE] Could not access configuration, using defaults:', error);
   }
-  
+
   if (autoBootstrap) {
+    console.log('[COC-VUE] autoBootstrap is true. Attempting to load template...');
     try {
-      console.log('[COC-VUE] Auto-bootstrapping template system...');
+      console.log('[COC-VUE] Cleaning existing layout before auto-bootstrap...');
+      await windowManager.cleanLayout(); 
+      console.log('[COC-VUE] Layout cleaned. Starting App component rendering via renderAppTemplate...');
       
-      // Close any existing windows/buffers to ensure clean mounting
-      if (windowManager?.cleanLayout) {
-        await windowManager.cleanLayout();
-      }
-      
-      // Render the app template
-      const success = await renderAppTemplate(
-        windowManager || { cleanLayout: async () => false },
-        bufferRouter || { createBuffer: async () => null }
-      );
-      
+      const success = await renderAppTemplate(windowManager, bufferRouter);
+
       if (success) {
-        console.log('[COC-VUE] Template layout auto-mounted on startup');
+        console.log('[COC-VUE] Template layout auto-mount completed successfully.');
         window.showInformationMessage('Template layout auto-mounted on startup.');
       } else {
-        console.warn('[COC-VUE] Template layout auto-mount completed with warnings');
+        console.warn('[COC-VUE] Template layout auto-mount completed with warnings/errors.');
         window.showWarningMessage('Template layout auto-mounted with warnings. Check logs for details.');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('[COC-VUE] Error auto-mounting template layout:', errorMessage);
+      console.error('[COC-VUE] Error during auto-bootstrap:', errorMessage);
       window.showErrorMessage(`Error auto-mounting template layout: ${errorMessage}`);
-      // Continue with extension activation despite template errors
     }
+  } else {
+    console.log('[COC-VUE] autoBootstrap is false. Skipping template auto-loading.');
   }
-  
+
   console.log('[COC-VUE] Vue-like reactive bridge activated successfully');
 }
 

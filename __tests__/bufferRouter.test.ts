@@ -151,14 +151,14 @@ describe('BufferRouter', () => {
     const result = await bufferRouter['callLuaMethod']('test_method', 'arg1', { key: 'value' });
     
     expect(workspace.nvim.lua).toHaveBeenCalledWith(
-      "return require('buffer_router'):test_method('arg1', {\"key\":\"value\"})" 
+      "return require('buffer_router'):test_method('arg1', {key = 'value'})" 
     );
     expect(result).toBe('result');
   });
   
   test('createBuffer creates a buffer and returns its ID', async () => {
     const bufferRouter = new BufferRouter(mockContext as ExtensionContext);
-    workspace.nvim.lua = jest.fn().mockResolvedValue(mockBufferId);
+    workspace.nvim.lua = jest.fn().mockResolvedValue({ id: mockBufferId, nvimBufferId: 123 });
     
     const id = await bufferRouter.createBuffer(mockPath, { foo: 'bar', baz: 'qux' });
     
@@ -170,7 +170,7 @@ describe('BufferRouter', () => {
   
   test('createBuffer handles undefined query', async () => {
     const bufferRouter = new BufferRouter(mockContext as ExtensionContext);
-    workspace.nvim.lua = jest.fn().mockResolvedValue(mockBufferId);
+    workspace.nvim.lua = jest.fn().mockResolvedValue({ id: mockBufferId, nvimBufferId: 123 });
     
     const id = await bufferRouter.createBuffer(mockPath);
     
@@ -260,7 +260,12 @@ describe('BufferRouter', () => {
       const emitSpy = jest.spyOn(bufferRouter['emitter'], 'emit');
       
       // Mock Lua response for buffer creation
-      workspace.nvim.lua = jest.fn().mockResolvedValue(mockBufferId);
+      workspace.nvim.lua = jest.fn().mockImplementation((command) => {
+        if (command.includes('create_buffer')) {
+          return Promise.resolve({ id: mockBufferId, nvimBufferId: 789 });
+        }
+        return Promise.resolve(null);
+      });
       
       // Create a buffer
       const id = await bufferRouter.createBuffer(mockPath, { foo: 'bar', baz: 'qux' });
