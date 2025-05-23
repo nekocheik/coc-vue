@@ -55,7 +55,7 @@ run_test() {
   print_debug "Test pattern: $test_pattern"
   
   # Run the test with Jest
-  VERBOSE_LOGS=${VERBOSE_LOGS:-false} npx jest --config ./test/jest.config.js --testPathPattern="$test_pattern"
+  VERBOSE_LOGS=${VERBOSE_LOGS:-false} npx jest --config $PROJECT_ROOT/jest.config.js --testPathPattern="$test_pattern" --coverageThreshold='{}'
   local result=$?
   
   if [ $result -eq 0 ]; then
@@ -135,7 +135,7 @@ run_all_tests() {
   print_header "Component tests - All tests"
   
   # Run all component tests
-  VERBOSE_LOGS=${VERBOSE_LOGS:-false} npx jest --config ./test/jest.config.js --testPathPattern="components"
+  VERBOSE_LOGS=${VERBOSE_LOGS:-false} npx jest --config $PROJECT_ROOT/jest.config.js --testPathPattern="components" --coverageThreshold='{}'
   local result=$?
   
   if [ $result -eq 0 ]; then

@@ -4,6 +4,7 @@
 
 # Set the path to the project root
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PROJECT_ROOT
 cd "$PROJECT_ROOT"
 
 # Colors for output

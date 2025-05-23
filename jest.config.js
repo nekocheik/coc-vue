@@ -14,8 +14,7 @@ module.exports = {
   // ── tell ts-jest to compile .tsx as well ─────────────────────────────
   transform: {
     '^.+\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: 'tsconfig.json',
-      isolatedModules: true,
+      tsconfig: 'tsconfig.json'
     }],
   },
 
@@ -51,9 +50,4 @@ module.exports = {
     '/node_modules/'
   ],
   moduleDirectories: ['node_modules', 'src', 'helper-test'],
-  globals: {
-    'ts-jest': {
-      isolatedModules: true
-    }
-  }
 };

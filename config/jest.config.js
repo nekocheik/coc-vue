@@ -26,7 +26,7 @@ module.exports = {
     '/dist/'
   ],
   setupFilesAfterEnv: [
-    '<rootDir>/test/setup.js'
+    '<rootDir>/../helper-test/jest.setup.js'
   ],
   
   // Important: This section handles known issues
@@ -48,21 +48,7 @@ module.exports = {
   
   // Project configuration
   projects: [
-    {
-      displayName: 'UNIT',
-      testMatch: ['<rootDir>/test/unit/**/*.test.ts'],
-      setupFilesAfterEnv: [
-        '<rootDir>/test/setup.js'
-      ]
-    },
-    {
-      displayName: 'INTEGRATION',
-      testMatch: ['<rootDir>/test/integration/**/*.test.ts'],
-      setupFilesAfterEnv: [
-        '<rootDir>/test/setup.js',
-        '<rootDir>/test/integration/setup.js'
-      ]
-    }
+    
   ],
   
   // Global timeout configuration
