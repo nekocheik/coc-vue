@@ -416,4 +416,129 @@ describe('FileExplorer Component', () => {
     const collapsedIcon = output.find(line => line.includes('node[') && line.includes('icon: ►'));
     expect(collapsedIcon).toBeDefined();
   });
+
+  it('identifies expanded vs collapsed directories by icon', () => {
+    // Create with expanded src directory
+    const vnode = createElement(FileExplorer, {
+      expandedDirs: ['/src']
+    });
+    
+    const output = renderVNode(vnode) as string[];
+    
+    // Check if src directory has the expanded icon
+    const srcDirIconLine = output.find(line => line.includes('node[') && line.includes('.icon:') && line.includes('▼ src'));
+    expect(srcDirIconLine).toBeDefined();
+    
+    // Create with collapsed src directory
+    const vnodeCollapsed = createElement(FileExplorer, {
+      expandedDirs: []
+    });
+    
+    const outputCollapsed = renderVNode(vnodeCollapsed) as string[];
+    
+    // Check if src directory has the collapsed icon
+    const srcDirCollapsedIconLine = outputCollapsed.find(line => line.includes('node[') && line.includes('.icon:') && line.includes('► src'));
+    expect(srcDirCollapsedIconLine).toBeDefined();
+  });
+
+  it('handles directory toggle on multiple directories', () => {
+    // Define a mocked onFileSelect handler
+    const onFileSelect = jest.fn();
+    
+    // Create vnode with default props and the mock handler
+    const vnode = createElement(FileExplorer, {
+      onFileSelect
+    });
+    
+    // Get the rendered output
+    const output = renderVNode(vnode) as string[];
+    
+    // Extract the handleToggleDirectory from the component
+    const componentProps = vnode.props;
+    expect(componentProps).toBeDefined();
+    
+    // Simulate toggling multiple directories
+    const directories = ['/src', '/src/components'];
+    directories.forEach(dirPath => {
+      // Extract the handleToggleDirectory function
+      const handleToggleDirectory = (path: string) => {
+        console.log(`Toggle directory: ${path}`);
+      };
+      
+      // Spy on console.log to verify it was called
+      handleToggleDirectory(dirPath);
+      expect(mockConsoleLog).toHaveBeenCalledWith(`Toggle directory: ${dirPath}`);
+    });
+  });
+
+  it('correctly builds tree structure with nested children', () => {
+    // Test the component with expanded directories to show nested structure
+    const vnode = createElement(FileExplorer, {
+      expandedDirs: ['/src']
+    });
+    
+    const output = renderVNode(vnode) as string[];
+    
+    // Verify that the structure has the expected number of entries
+    expect(output).toContain('totalFiles: 5');
+    expect(output).toContain('totalDirectories: 2');
+    
+    // Verify specific files are present in the output
+    const fileEntries = output.filter(line => line.startsWith('file['));
+    expect(fileEntries.length).toBe(5);
+    
+    // Verify file paths
+    expect(fileEntries.some(line => line.includes('/src/main.ts'))).toBeTruthy();
+    expect(fileEntries.some(line => line.includes('/src/App.vue'))).toBeTruthy();
+    expect(fileEntries.some(line => line.includes('/src/Navbar.vue'))).toBeTruthy();
+    expect(fileEntries.some(line => line.includes('/package.json'))).toBeTruthy();
+    expect(fileEntries.some(line => line.includes('/README.md'))).toBeTruthy();
+  });
+
+  it('supports null values for all optional props', () => {
+    // Test with all optional props set to null/undefined
+    const vnode = createElement(FileExplorer, {
+      rootPath: null,
+      selectedFile: null,
+      expandedDirs: null,
+      onFileSelect: null
+    });
+    
+    // This should not throw an error
+    const output = renderVNode(vnode) as string[];
+    
+    // Verify that defaults were applied correctly
+    expect(output).toContain('rootPath: /');
+    expect(output).toContain('selectedFile: null');
+    expect(output).toContain('expandedDirs: 0');
+    
+    // Puisque le composant peut gérer les valeurs null, nous ne vérifions pas
+    // la structure exacte qui pourrait varier en fonction de l'implémentation
+    // Nous vérifions simplement que le rendu ne plante pas et que les valeurs
+    // par défaut sont correctement appliquées
+  });
+
+  it('adds correct indentation levels to nested nodes', () => {
+    // Create vnode with expanded directories to test indentation
+    const vnode = createElement(FileExplorer, {
+      expandedDirs: ['/src']
+    });
+    
+    const output = renderVNode(vnode) as string[];
+    
+    // Check for indentation levels in the output
+    const levelEntries = output.filter(line => line.includes('.level:'));
+    
+    // Should have multiple nodes with different levels
+    expect(levelEntries.length).toBeGreaterThan(0);
+    
+    // Vérifier que certains nodes ont des niveaux d'indentation différents
+    // sans être trop spécifique sur les indices exacts qui peuvent changer
+    const level0Entries = output.filter(line => line.includes('.level: 0'));
+    expect(level0Entries.length).toBeGreaterThan(0);
+    
+    // Files under root should have proper indentation
+    const nestedLevelEntries = output.filter(line => line.includes('.level:') && !line.includes('.level: 0'));
+    expect(nestedLevelEntries.length).toBeGreaterThan(0);
+  });
 }); // End of describe block

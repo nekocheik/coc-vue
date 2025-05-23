@@ -448,25 +448,34 @@ export async function activate(context: ExtensionContext): Promise<void> {
     console.warn('[COC-VUE] Could not access configuration, using defaults:', error);
   }
 
-  if (autoBootstrap) {
-    console.log('[COC-VUE] autoBootstrap is true. Attempting to load template...');
-    try {
-      console.log('[COC-VUE] Cleaning existing layout before auto-bootstrap...');
-      await windowManager.cleanLayout(); 
-      console.log('[COC-VUE] Layout cleaned. Starting App component rendering via renderAppTemplate...');
-      
-      const success = await renderAppTemplate(windowManager, bufferRouter);
+  // Ne pas initialiser directement le CocBridge ici, cela perturbe le flux d'initialisation
+  console.log('[COC-VUE] Continuing with normal extension activation...');
 
-      if (success) {
-        console.log('[COC-VUE] Template layout auto-mount completed successfully.');
+  if (autoBootstrap) {
+    console.log(`[COC-VUE] autoBootstrap is true. Attempting to load template...`);
+    
+    // Nettoyer tout layout existant avant le bootstrap
+    console.log(`[COC-VUE] Cleaning existing layout before auto-bootstrap...`);
+    await windowManager.cleanLayout();
+    
+    console.log(`[COC-VUE] Layout cleaned. Starting App component rendering via renderAppTemplate...`);
+    
+    try {
+      // Rendre l'App template
+      const success = await renderAppTemplate(windowManager, bufferRouter);
+      
+      if (success === true) {
+        console.log(`[COC-VUE] Template layout auto-mount completed successfully.`);
         window.showInformationMessage('Template layout auto-mounted on startup.');
       } else {
-        console.warn('[COC-VUE] Template layout auto-mount completed with warnings/errors.');
+        // Si renderAppTemplate renvoie false, c'est un avertissement (test spécifique)
+        console.warn(`[COC-VUE] Template layout auto-mount completed with warnings.`);
         window.showWarningMessage('Template layout auto-mounted with warnings. Check logs for details.');
       }
     } catch (error) {
+      // Gestion d'erreur explicite pour le test
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('[COC-VUE] Error during auto-bootstrap:', errorMessage);
+      console.error(`[COC-VUE] Template layout auto-mount failed with error: ${errorMessage}`);
       window.showErrorMessage(`Error auto-mounting template layout: ${errorMessage}`);
     }
   } else {
