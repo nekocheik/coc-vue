@@ -4,7 +4,8 @@
  * This module provides a registry for tracking component instances
  * and emitting events when components are added, updated, or removed.
  * 
- * It serves as the central hub for component management in the reactive system.
+ * It also manages lifecycle hooks for components (onMount, onUpdate, onUnmount)
+ * and event listeners, serving as the central hub for component management.
  */
 
 // Component interfaces
@@ -15,15 +16,33 @@ export interface Component {
   children?: Component[];
 }
 
+// Lifecycle hook types
+export type OnMountHook = () => void;
+export type OnUpdateHook = (newVNode: any, oldVNode?: any) => void;
+export type OnUnmountHook = () => void;
+export type EventHandler = (eventData: any) => void;
+
+// Component lifecycle data
+export interface ComponentLifecycle {
+  id: string;
+  onMount?: OnMountHook;
+  onUpdate?: OnUpdateHook;
+  onUnmount?: OnUnmountHook;
+  events?: Record<string, EventHandler>;
+  isMounted: boolean;
+  lastVNode?: any;
+}
+
 // Event types for the registry
-type RegistryEventType = 
-  | 'componentAdded'
-  | 'componentUpdated'
-  | 'componentRemoved'
-  | 'registryCleared';
+export enum RegistryEventType {
+  COMPONENT_ADDED = 'componentAdded',
+  COMPONENT_REMOVED = 'componentRemoved',
+  COMPONENT_UPDATED = 'componentUpdated',
+  REGISTRY_CLEARED = 'registryCleared'
+}
 
 // Event listener type
-type EventListener<T = any> = (data: T, ...args: any[]) => void;
+export type EventListener = (data?: any, ...args: any[]) => void;
 
 /**
  * Registry for tracking components and their state
@@ -31,20 +50,18 @@ type EventListener<T = any> = (data: T, ...args: any[]) => void;
 export class ComponentRegistry {
   private components: Map<string, Component> = new Map();
   private eventListeners: Map<string, Set<EventListener>> = new Map();
-  
+  private lifecycles: Map<string, ComponentLifecycle> = new Map();
+
   /**
    * Add a component to the registry
    * 
    * @param component The component to add
    */
   public add(component: Component): void {
-    // Store the component
     this.components.set(component.id, component);
-    
-    // Emit event
-    this.emit('componentAdded', component);
+    this.emit(RegistryEventType.COMPONENT_ADDED, component);
   }
-  
+
   /**
    * Get a component by its ID
    * 
@@ -54,41 +71,44 @@ export class ComponentRegistry {
   public get(id: string): Component | null {
     return this.components.get(id) || null;
   }
-  
+
   /**
    * Remove a component from the registry
    * 
    * @param id The ID of the component to remove
    */
   public remove(id: string): void {
-    // Check if component exists
-    if (!this.components.has(id)) {
-      return;
-    }
+    const component = this.components.get(id);
+    if (!component) return;
+
+    // Trigger unmount lifecycle hook if registered
+    this.triggerLifecycle('unmount', id);
     
-    // Remove the component
     this.components.delete(id);
-    
-    // Emit event
-    this.emit('componentRemoved', id);
+    this.emit(RegistryEventType.COMPONENT_REMOVED, id);
   }
-  
+
   /**
    * Update a component in the registry
    * 
    * @param component The updated component
    */
   public update(component: Component): void {
-    // Get the old component for comparison
-    const oldComponent = this.components.get(component.id);
-    
-    // Update the component
+    const existing = this.components.get(component.id);
+    if (!existing) {
+      this.add(component);
+      return;
+    }
+
+    // Store the updated component
     this.components.set(component.id, component);
     
-    // Emit event with old and new values
-    this.emit('componentUpdated', component, oldComponent);
+    // Trigger update lifecycle hook if registered
+    this.triggerLifecycle('update', component.id, component);
+    
+    this.emit(RegistryEventType.COMPONENT_UPDATED, component, existing);
   }
-  
+
   /**
    * Get all components of a specific type
    * 
@@ -97,24 +117,121 @@ export class ComponentRegistry {
    */
   public getByType(type: string): Component[] {
     const result: Component[] = [];
-    
     this.components.forEach(component => {
       if (component.type === type) {
         result.push(component);
       }
     });
-    
     return result;
   }
-  
+
   /**
    * Clear all components from the registry
    */
   public clear(): void {
+    // Trigger unmount for all components with lifecycle hooks
+    this.getLifecycleComponents().forEach(id => {
+      this.triggerLifecycle('unmount', id);
+    });
+
     this.components.clear();
-    this.emit('registryCleared');
+    this.lifecycles.clear();
+    this.emit(RegistryEventType.REGISTRY_CLEARED);
   }
-  
+
+  /**
+   * Register lifecycle hooks for a component
+   * 
+   * @param id Component ID
+   * @param hooks Lifecycle hooks object
+   */
+  public registerLifecycle(id: string, hooks: {
+    onMount?: OnMountHook;
+    onUpdate?: OnUpdateHook;
+    onUnmount?: OnUnmountHook;
+    events?: Record<string, EventHandler>;
+  }): void {
+    const lifecycle: ComponentLifecycle = {
+      id,
+      ...hooks,
+      isMounted: false
+    };
+    
+    this.lifecycles.set(id, lifecycle);
+  }
+
+  /**
+   * Trigger a lifecycle hook for a component
+   * 
+   * @param hookType Type of hook to trigger ('mount', 'update', 'unmount')
+   * @param id Component ID
+   * @param args Additional arguments to pass to the hook
+   */
+  public triggerLifecycle(hookType: 'mount' | 'update' | 'unmount', id: string, ...args: any[]): void {
+    const lifecycle = this.lifecycles.get(id);
+    if (!lifecycle) return;
+    
+    try {
+      switch (hookType) {
+        case 'mount':
+          if (lifecycle.onMount && !lifecycle.isMounted) {
+            lifecycle.onMount();
+            lifecycle.isMounted = true;
+          }
+          break;
+          
+        case 'update':
+          if (lifecycle.onUpdate && lifecycle.isMounted && args.length >= 1) {
+            const newVNode = args[0];
+            lifecycle.onUpdate(newVNode, lifecycle.lastVNode);
+            lifecycle.lastVNode = newVNode;
+          }
+          break;
+          
+        case 'unmount':
+          if (lifecycle.onUnmount && lifecycle.isMounted) {
+            lifecycle.onUnmount();
+            lifecycle.isMounted = false;
+            // Remove from registry after unmount
+            this.lifecycles.delete(id);
+          }
+          break;
+      }
+    } catch (error) {
+      console.error(`Error in ${hookType} hook for component ${id}:`, error);
+    }
+  }
+
+  /**
+   * Trigger an event for a component
+   * 
+   * @param componentId Component ID
+   * @param eventName Event name
+   * @param eventData Event data
+   */
+  public triggerEvent(componentId: string, eventName: string, eventData: any): void {
+    const lifecycle = this.lifecycles.get(componentId);
+    if (!lifecycle || !lifecycle.events) return;
+    
+    const handler = lifecycle.events[eventName];
+    if (!handler) return;
+    
+    try {
+      handler(eventData);
+    } catch (error) {
+      console.error(`Error in event handler ${eventName} for component ${componentId}:`, error);
+    }
+  }
+
+  /**
+   * Get all registered lifecycle components
+   * 
+   * @returns Array of component IDs with lifecycle hooks
+   */
+  public getLifecycleComponents(): string[] {
+    return Array.from(this.lifecycles.keys());
+  }
+
   /**
    * Register an event listener
    * 
@@ -141,7 +258,7 @@ export class ComponentRegistry {
       }
     };
   }
-  
+
   /**
    * Emit an event to all registered listeners
    * 

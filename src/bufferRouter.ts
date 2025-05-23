@@ -24,6 +24,14 @@ export interface BufferRoute {
 }
 
 /**
+ * Type for buffer content updates
+ * - undefined: keep the line unchanged
+ * - null: delete the line
+ * - string: add or update the line
+ */
+export type BufferUpdate = (string | null | undefined)[];
+
+/**
  * Class that bridges Lua buffer router with Coc.nvim
  * Provides methods to create, delete, and switch buffers with full reactivity support.
  * Implements an EventEmitter-based reactive system to notify subscribers of buffer changes.
@@ -307,45 +315,31 @@ export class BufferRouter implements Disposable {
       return null;
     }
   }
-  
+
   /**
-   * Update buffer content with an array of lines
-   * @param bufferId - The buffer ID to update
-   * @param lines - The array of lines to set in the buffer
-   * @returns Success status
+   * Update the content of a buffer with new lines
+   * @param bufferId - Buffer ID
+   * @param lines - Array of operations (undefined = keep, null = delete, string = insert/replace)
+   * @returns Whether the update was successful
    */
-  public async updateBufferContent(bufferId: number, lines: (string | undefined)[]): Promise<boolean> {
+  public async updateBufferContent(bufferId: number, lines: BufferUpdate): Promise<boolean> {
     try {
-      // Filter out undefined lines (those that don't need updates)
-      const filteredLines = lines.map((line, index) => {
-        return { line, index, update: line !== undefined };
-      }).filter(item => item.update);
+      // Call the Lua utils render_buffer_diff function to apply the diff
+      await this.nvim.lua(`return require('vue-ui.utils.render_buffer').ApplyBufferDiff(${bufferId}, vim.fn.json_decode('${JSON.stringify(lines)}'))`);
       
-      // If there are no lines to update, return success
-      if (filteredLines.length === 0) {
-        return true;
-      }
+      // Emit event for buffer update
+      this.emitter.emit(BufferRouter.Events.BUFFER_UPDATED, { 
+        bufferId, 
+        linesUpdated: lines.filter(line => line !== undefined).length 
+      });
       
-      // Call the Lua render_buffer utility to update buffer content
-      const success = await this.nvim.lua(
-        `return require('vue-ui.utils.render_buffer').RenderBuffer(${bufferId}, vim.fn.json_decode('${JSON.stringify(lines)}'))`
-      );
-      
-      if (success) {
-        // Emit event for buffer content update
-        this.emitter.emit(BufferRouter.Events.BUFFER_UPDATED, {
-          bufferId,
-          linesUpdated: filteredLines.length
-        });
-      }
-      
-      return !!success;
+      return true;
     } catch (error) {
-      console.error(`[BufferRouter] Error updating buffer content for buffer ${bufferId}:`, error);
+      console.error(`Error updating buffer content: ${error}`);
       return false;
     }
   }
-
+  
   /**
    * Subscribe to buffer events
    * @param event - Event name to subscribe to

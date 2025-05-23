@@ -7,12 +7,12 @@
  */
 
 // Import types only, no direct dependency on BufferRouter implementation
-import type { BufferRouter } from '../src/bufferRouter';
+import type { BufferUpdate } from '../src/bufferRouter';
 import { VNode as TSXVNode } from './tsxFactory';
 
 // For dependency injection and testing
 let bufferRouterInstance: {
-  updateBufferContent: (bufferId: number, lines: (string | undefined)[]) => Promise<boolean>
+  updateBufferContent: (bufferId: number, lines: BufferUpdate) => Promise<boolean>
 } | null = null;
 
 /**
@@ -76,6 +76,37 @@ const bufferCache: Record<number, string[]> = {};
  * Accepts both renderer VNodes and TSX factory VNodes
  */
 export function renderVNode(vnode: VNode | TSXVNode): string[] {
+  // Special case for Vum components created by factory
+  if (typeof vnode === 'object' && vnode !== null && 'type' in vnode) {
+    // Check if this is a Vum component (has the marker)
+    if ((vnode.type as any)?.__isVum) {
+      try {
+        // Instantiate the component
+        const Comp = vnode.type as any;
+        // Safely access props and children, handling different VNode types
+        const props = 'props' in vnode ? vnode.props : {};
+        const children = 'children' in vnode ? vnode.children : [];
+        const inst = new Comp(props, children);
+        
+        // Get the render output
+        const output = inst.render();
+        
+        // Return the rendered lines
+        if (output && Array.isArray(output.lines)) {
+          return output.lines;
+        } else if (output && Array.isArray(output)) {
+          return output;
+        }
+        
+        // Fallback if render method returned unexpected format
+        return ['[Vum Component Render Error]'];
+      } catch (err: any) {
+        console.error('Error rendering Vum component:', err);
+        return [`[Vum Render Error: ${err?.message || 'Unknown error'}]`];
+      }
+    }
+  }
+  
   // Convert TSX VNode if necessary
   const rendererNode = 'content' in vnode || typeof vnode.type === 'string' 
     ? vnode as VNode 
@@ -119,32 +150,52 @@ export function renderVNode(vnode: VNode | TSXVNode): string[] {
 
 /**
  * Apply buffer content updates with minimal diffing
+ * 
+ * Returns an array where:
+ * - undefined = keep existing line (no change)
+ * - null = delete line
+ * - string = insert/replace line with this content
+ * 
+ * @param oldLines Previous buffer content
+ * @param newLines New buffer content
+ * @returns Array of operations
+ */
+export function computeDiff(oldLines: string[], newLines: string[]): (string | null | undefined)[] {
+  const diff: (string | null | undefined)[] = [];
+  const maxLines = Math.max(oldLines.length, newLines.length);
+  
+  // Compare line by line
+  for (let i = 0; i < maxLines; i++) {
+    if (i >= newLines.length) {
+      // Line was removed
+      diff[i] = null; // null marks a line for deletion
+    } else if (i >= oldLines.length || newLines[i] !== oldLines[i]) {
+      // Line was added or changed
+      diff[i] = newLines[i];
+    } else {
+      // Line unchanged
+      diff[i] = undefined; // undefined means "keep existing line"
+    }
+  }
+  
+  return diff;
+}
+
+/**
+ * Apply buffer content updates with minimal diffing
+ * 
+ * @param bufferId Buffer ID
+ * @param newLines New content lines
  */
 export function applyDiff(bufferId: number, newLines: string[]): void {
   // Get the current buffer content from cache
   const currentLines = bufferCache[bufferId] || [];
   
   // Compute the minimal diff
-  const diff: (string | undefined)[] = [];
-  const maxLines = Math.max(currentLines.length, newLines.length);
+  const diff = computeDiff(currentLines, newLines);
   
-  let hasChanges = false;
-  
-  // Compare line by line
-  for (let i = 0; i < maxLines; i++) {
-    if (i >= newLines.length) {
-      // Line was removed
-      diff[i] = ''; // Empty string marks a line for deletion
-      hasChanges = true;
-    } else if (i >= currentLines.length || newLines[i] !== currentLines[i]) {
-      // Line was added or changed
-      diff[i] = newLines[i];
-      hasChanges = true;
-    } else {
-      // Line unchanged
-      diff[i] = undefined; // undefined means "keep existing line"
-    }
-  }
+  // Check if there are any changes
+  const hasChanges = diff.some(line => line !== undefined);
   
   // Only update if there are changes
   if (hasChanges && bufferRouterInstance) {
@@ -153,5 +204,8 @@ export function applyDiff(bufferId: number, newLines: string[]): void {
     
     // Update the cache
     bufferCache[bufferId] = [...newLines];
+    
+    // Trigger lifecycle hooks for components if needed
+    // This will be implemented when integrating with the registry
   }
 }
